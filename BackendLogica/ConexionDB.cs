@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using MySql.Data.MySqlClient; // Cambia esto si usas MySQL o PostgreSQL
 
+// Probando Git
 namespace BackendLogica
 {
     public class ConexionDB
