@@ -69,7 +69,7 @@ namespace BackendLogica
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error en la consulta: {ex.Message}");
+                Console.WriteLine($"Error en la consulta : {ex.Message}");
             }
             finally
             {
