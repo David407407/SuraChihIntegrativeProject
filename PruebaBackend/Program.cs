@@ -10,7 +10,7 @@ if (db.TestConnection())
 {
     Console.WriteLine("¡Conectado! Extrayendo datos...");
     
-    bool exito = db.EliminarUsuario(2);
+    // bool exito = db.EliminarUsuario(2);
 
     // Prueba 1: Traer toda la tabla (Reemplaza "tu_tabla" con una real)
     DataTable usersData = db.ObtenerDatos("users");

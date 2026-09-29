@@ -219,5 +219,26 @@ namespace BackendLogica
             }
         }
 
+        public DataTable ValidarLogin(string identificador, string password)
+        {
+            DataTable resultado = new DataTable();
+            try
+            {
+                dbConnection.Open();
+                string query = @"SELECT id_user, name, email, is_mod FROM users
+                                WHERE (email = @id OR name = @id) AND password = @pw LIMIT 1";
+                using (MySqlCommand cmd = new MySqlCommand(query, dbConnection))
+                {
+                    cmd.Parameters.AddWithValue("@id", identificador);
+                    cmd.Parameters.AddWithValue("@pw", password);
+                    using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
+                        adapter.Fill(resultado);
+                }
+            }
+            catch (Exception ex) { Console.WriteLine($"Error en login: {ex.Message}"); }
+            finally { if (dbConnection.State == ConnectionState.Open) dbConnection.Close(); }
+            return resultado;
+        }
+
     }
 }
