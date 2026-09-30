@@ -8,4 +8,19 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <!-- Las subcarpetas son proyectos propios; no compilarlas dentro de este -->
+  <ItemGroup>
+    <Compile Remove="BackendLogica\**;PruebaBackend\**" />
+    <EmbeddedResource Remove="BackendLogica\**;PruebaBackend\**" />
+    <None Remove="BackendLogica\**;PruebaBackend\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MySql.Data" Version="26.7.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="BackendLogica\BackendLogica.csproj" />
+  </ItemGroup>
+
 </Project>
