@@ -1,7 +1,9 @@
 using System;
 using System.Data;
+using System.Text.Json;
 using MySql.Data.MySqlClient;
 
+// Probando Git
 namespace BackendLogica
 {
     public class ConexionDB
@@ -31,11 +33,35 @@ namespace BackendLogica
             }
         }
 
+        // Busca dbsettings.local.json subiendo desde la carpeta del ejecutable hasta la raíz de la solución
+        private static string? FindLocalConfig() {
+            DirectoryInfo? dir = new DirectoryInfo(AppContext.BaseDirectory);
+            while (dir != null)
+            {
+                string candidate = Path.Combine(dir.FullName, "dbsettings.local.json");
+                if (File.Exists(candidate)) return candidate;
+                dir = dir.Parent;
+            }
+            return null;
+        }
+
         private void CreateConnection() {
+            // Valores por defecto; se sobrescriben con dbsettings.local.json (ignorado por git)
             string dblocation = "localhost";
             string user = "root";
             string password = "";
             string dbName = "database";
+
+            string? configPath = FindLocalConfig();
+            if (configPath != null)
+            {
+                using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(configPath));
+                JsonElement root = doc.RootElement;
+                if (root.TryGetProperty("Server", out JsonElement s)) dblocation = s.GetString() ?? dblocation;
+                if (root.TryGetProperty("User", out JsonElement u)) user = u.GetString() ?? user;
+                if (root.TryGetProperty("Password", out JsonElement p)) password = p.GetString() ?? password;
+                if (root.TryGetProperty("Database", out JsonElement d)) dbName = d.GetString() ?? dbName;
+            }
 
             string connectionString = $"Server={dblocation};Database={dbName};Uid={user};Pwd={password};";
 
@@ -216,6 +242,27 @@ namespace BackendLogica
                     dbConnection.Close();
                 }
             }
+        }
+
+        public DataTable ValidarLogin(string identificador, string password)
+        {
+            DataTable resultado = new DataTable();
+            try
+            {
+                dbConnection.Open();
+                string query = @"SELECT id_user, name, email, is_mod FROM users
+                                WHERE (email = @id OR name = @id) AND password = @pw LIMIT 1";
+                using (MySqlCommand cmd = new MySqlCommand(query, dbConnection))
+                {
+                    cmd.Parameters.AddWithValue("@id", identificador);
+                    cmd.Parameters.AddWithValue("@pw", password);
+                    using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
+                        adapter.Fill(resultado);
+                }
+            }
+            catch (Exception ex) { Console.WriteLine($"Error en login: {ex.Message}"); }
+            finally { if (dbConnection.State == ConnectionState.Open) dbConnection.Close(); }
+            return resultado;
         }
 
     }

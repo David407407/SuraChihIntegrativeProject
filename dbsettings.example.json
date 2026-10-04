@@ -1,0 +1,6 @@
+{
+  "Server": "localhost",
+  "User": "root",
+  "Password": "",
+  "Database": "nombre_de_tu_base"
+}

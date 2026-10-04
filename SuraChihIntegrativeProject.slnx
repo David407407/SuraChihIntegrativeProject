@@ -1,3 +1,5 @@
 <Solution>
   <Project Path="SuraChihIntegrativeProject.csproj" />
+  <Project Path="BackendLogica/BackendLogica.csproj" />
+  <Project Path="PruebaBackend/PruebaBackend.csproj" />
 </Solution>
