@@ -61,8 +61,10 @@ namespace SuraChihIntegrativeProject
                 }
 
                 var fila = tabla.Rows[0];
-                MessageBox.Show($"Bienvenido, {fila["name"]}");
-                // TODO: abrir tu formulario principal y ocultar/cerrar este
+                var home = new Home();
+                home.FormClosed += (_, _) => Close();
+                home.Show();
+                Hide();
             }
             finally
             {

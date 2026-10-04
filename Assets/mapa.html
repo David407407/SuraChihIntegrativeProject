@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  html, body, #map { height: 100%; margin: 0; background: #F9FAFB; }
+  .pin { width: 16px; height: 16px; border-radius: 50%; background: #3E816A; border: 3px solid #F9FAFB;
+         box-shadow: 0 1px 5px rgba(0,0,0,.45); transition: transform .15s, background .15s; }
+  .pin.activo { background: #18181B; transform: scale(1.35); }
+  .leaflet-tooltip { font: 600 12px 'Plus Jakarta Sans', 'Segoe UI', sans-serif; color: #18181B; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const map = L.map('map').setView([28.6353, -106.0889], 12);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+
+  const marcadores = {};
+  let activo = null;
+
+  // Lo llama la aplicación con la lista de eventos: [{ id, titulo, lat, lng }]
+  function setEventos(lista) {
+    Object.values(marcadores).forEach(m => map.removeLayer(m));
+    for (const k in marcadores) delete marcadores[k];
+    const puntos = [];
+    for (const e of lista) {
+      const icono = L.divIcon({ className: '', html: '<div class="pin"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
+      const m = L.marker([e.lat, e.lng], { icon: icono }).addTo(map);
+      m.bindTooltip(e.titulo, { direction: 'top', offset: [0, -8] });
+      m.on('click', () => window.chrome.webview.postMessage(String(e.id)));
+      marcadores[e.id] = m;
+      puntos.push([e.lat, e.lng]);
+    }
+    if (puntos.length) map.fitBounds(puntos, { padding: [60, 60], maxZoom: 14 });
+  }
+
+  // Lo llama la aplicación al elegir un elemento de la lista
+  function seleccionar(id) {
+    if (activo) activo.getElement().firstChild.classList.remove('activo');
+    activo = marcadores[id] || null;
+    if (!activo) return;
+    activo.getElement().firstChild.classList.add('activo');
+    map.flyTo(activo.getLatLng(), Math.max(map.getZoom(), 15), { duration: 0.6 });
+    activo.openTooltip();
+  }
+
+  window.chrome.webview.postMessage('listo');
+</script>
+</body>
+</html>

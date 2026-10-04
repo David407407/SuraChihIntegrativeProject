@@ -16,7 +16,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="FontAwesome.Sharp" Version="6.6.0" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
     <PackageReference Include="MySql.Data" Version="26.7.0" />
+  </ItemGroup>
+
+  <!-- Tipografías (.ttf) e imágenes (hero.jpg, evento1.jpg...) se copian junto al ejecutable -->
+  <ItemGroup>
+    <None Include="Fonts\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Assets\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
