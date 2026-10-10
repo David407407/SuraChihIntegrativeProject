@@ -5,7 +5,7 @@
 
 import { html } from '../nucleo/componente.js';
 import { icono, chip, boton } from './atomos.js';
-import { diaYMes, rangoFechas, precio, horarioLugar, calificacion } from '../utilidades/formato.js';
+import { diaYMes, rangoFechas, precio, horarioLugar, calificacion, fechaEvento, precioEvento } from '../utilidades/formato.js';
 
 /** Nombre del lugar o, si el evento es en la calle, su dirección. */
 const ubicacionEvento = (e) => e.lugarNombre ?? e.direccion ?? '';
@@ -67,29 +67,75 @@ export function tarjetaEventoFila(e, orden = 0) {
 }
 
 /**
- * Tarjeta de "Lugares para descubrir" ("Card lugar" de Figma, estados Normal y Hover).
- * @param {object} l LugarTarjeta
- * @param {number} orden
+ * Imagen de una card con el favorito y "Ver detalles" (parte común de Card evento y Card lugar).
+ * @param {object} p
+ * @param {'evento'|'lugar'} p.tipo
+ * @param {object} p.item EventoTarjeta o LugarTarjeta
+ * @param {string} p.nombre
+ * @param {boolean} p.favorito
+ * @param {import('../nucleo/componente.js').HtmlSeguro} [p.extra] Lo que va encima de la foto (chip de tipo).
  */
-export function tarjetaLugar(l, orden = 0) {
+function imagenTarjeta({ tipo, item, nombre, favorito, extra }) {
+  return html`
+    <div class="tarjeta__imagen">
+      <sc-imagen src="${item.imagenUrl ?? ''}" alt="${nombre}" ancho="282" alto="282"></sc-imagen>
+      ${extra}
+      <sc-boton-favorito class="tarjeta__favorito" tipo="${tipo}" objetivo="${item.id}" etiqueta="${nombre}"${favorito && html` activo`}></sc-boton-favorito>
+      <span class="tarjeta__ver t-small-fuerte" aria-hidden="true">Ver detalles ${icono('chevron-tinta-10', 10)}</span>
+    </div>`;
+}
+
+/**
+ * "Card evento" de Figma (Normal / Hover): foto cuadrada, fecha, título (2 líneas), lugar y precio.
+ * Se usa en el inicio, resultados de búsqueda, Mis favoritos y "Te podría interesar".
+ *
+ * @example
+ * html`<div class="rejilla-tarjetas">${eventos.map((e, i) => tarjetaEvento(e, { orden: i, favorito: ids.has(e.id) }))}</div>`
+ *
+ * @param {object} e EventoTarjeta
+ * @param {{orden?:number, favorito?:boolean}} [opciones] `favorito`: pinta el corazón lleno
+ *   (usa `Favoritos.ListarIdsAsync` para saber cuáles).
+ */
+export function tarjetaEvento(e, { orden = 0, favorito = false } = {}) {
+  return html`
+    <article class="tarjeta" data-revelar style="--orden:${orden}">
+      ${imagenTarjeta({ tipo: 'evento', item: e, nombre: e.titulo, favorito })}
+      <div class="tarjeta__info">
+        <p class="t-small-fuerte tarjeta__fecha tarjeta__linea">${fechaEvento(e)}</p>
+        <h3 class="t-card-titulo tarjeta__titulo">
+          <button type="button" class="tarjeta__enlace" data-accion="ver-evento" data-id="${e.id}"><span class="tarjeta__titulo-texto">${e.titulo}</span></button>
+        </h3>
+        ${ubicacionEvento(e) && html`<p class="t-small texto-2 tarjeta__linea">${ubicacionEvento(e)}</p>`}
+        ${precioEvento(e) && html`<p class="t-small-fuerte tarjeta__linea">${precioEvento(e)}</p>`}
+      </div>
+    </article>`;
+}
+
+/**
+ * "Card lugar" de Figma (Normal / Hover): foto con chip de tipo, nombre, dirección,
+ * calificación, precio y horario de hoy.
+ * @param {object} l LugarTarjeta
+ * @param {number|{orden?:number, favorito?:boolean}} [opciones] Un número se toma como `orden`
+ *   (así lo llamaba la landing antes).
+ */
+export function tarjetaLugar(l, opciones = {}) {
+  const { orden = 0, favorito = false } = typeof opciones === 'number' ? { orden: opciones } : opciones;
   const horario = horarioLugar(l.horarioAhora);
   return html`
-    <article class="tarjeta-lugar" data-revelar style="--orden:${orden}">
-      <div class="tarjeta-lugar__imagen">
-        <sc-imagen src="${l.imagenUrl ?? ''}" alt="${l.nombre}" ancho="282" alto="282"></sc-imagen>
-        ${categoria(l) && html`<span class="tarjeta-lugar__tipo">${chip(categoria(l), 'superficie')}</span>`}
-        <sc-boton-favorito class="tarjeta-lugar__favorito" tipo="lugar" objetivo="${l.id}" etiqueta="${l.nombre}"></sc-boton-favorito>
-        <span class="tarjeta-lugar__ver t-small-fuerte" aria-hidden="true">Ver detalles ${icono('chevron-tinta-10', 10)}</span>
-      </div>
-      <div class="tarjeta-lugar__info">
-        <h3 class="t-card-titulo tarjeta-lugar__titulo">
-          <button type="button" class="tarjeta-lugar__enlace" data-accion="ver-lugar" data-id="${l.id}">${l.nombre}</button>
+    <article class="tarjeta" data-revelar style="--orden:${orden}">
+      ${imagenTarjeta({
+        tipo: 'lugar', item: l, nombre: l.nombre, favorito,
+        extra: categoria(l) && html`<span class="tarjeta__tipo">${chip(categoria(l), 'superficie')}</span>`,
+      })}
+      <div class="tarjeta__info">
+        <h3 class="t-card-titulo tarjeta__titulo">
+          <button type="button" class="tarjeta__enlace" data-accion="ver-lugar" data-id="${l.id}"><span class="tarjeta__titulo-texto">${l.nombre}</span></button>
         </h3>
-        <p class="t-small texto-2 tarjeta-lugar__direccion">${l.direccion}</p>
-        <p class="t-small tarjeta-lugar__meta">
-          ${l.calificacion != null && html`<span class="tarjeta-lugar__calificacion t-small-fuerte">${icono('estrella', 13)}${calificacion(l.calificacion)}</span>`}
+        <p class="t-small texto-2 tarjeta__linea">${l.direccion}</p>
+        <p class="t-small tarjeta__meta">
+          ${l.calificacion != null && html`<span class="tarjeta__calificacion t-small-fuerte">${icono('estrella', 13)}${calificacion(l.calificacion)}</span>`}
           ${precio(l.precioMin, l.precioMax) && html`<span class="texto-2">${precio(l.precioMin, l.precioMax)}</span>`}
-          <span class="${horario.abierto ? 'tarjeta-lugar__abierto' : 'texto-2'}">${horario.texto}</span>
+          <span class="${horario.abierto ? 'tarjeta__abierto' : 'texto-2'}">${horario.texto}</span>
         </p>
       </div>
     </article>`;

@@ -19,10 +19,19 @@
   --color-estrella: #ffc400;
   --color-favorito: #e11d48;     /* corazón */
   --color-favorito-suave: #ffe4e6;
+  --color-error: #d93636;        /* botón "Peligro", campo con error */
+
+  /* Fondos del "Chip categoría" (uno por categoría de evento) */
+  --categoria-familiar: #ffe4e6;
+  --categoria-musica: #ede9fe;
+  --categoria-deportes: #d1fae5;
+  --categoria-tecnologia: #e0f2fe;
+  --categoria-gastronomia: #fef3c7;
 
   /* Derivados para estados (hover/active) */
   --color-sol-hover: #f5c518;
   --color-tinta-hover: #1a2d57;
+  --color-error-hover: #c12b2b;
   --color-velo-tarjeta: rgba(23, 20, 59, 0.85);
 
   /* Degradado del hero */

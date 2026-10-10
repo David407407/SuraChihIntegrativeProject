@@ -1,5 +1,5 @@
 /* =====================================================================
-   Navbar (estado Visitante)
+   Navbar (estados Visitante y Logueado)
    ===================================================================== */
 
 sc-navbar {
@@ -69,11 +69,39 @@ sc-navbar {
   gap: 8px;
   padding: 0 4px;
   color: var(--color-tinta);
+  white-space: nowrap;
   transition: color var(--duracion-rapida);
 }
 .navbar__enlace:hover { color: var(--color-cielo-texto); }
 
+/* Logueado: Mapa · Mis planes · Favoritos · Avatar, con 32px entre ellos */
+.navbar--logueado .navbar__acciones { gap: 32px; }
+
+.navbar__circulo {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: var(--radio-pildora);
+  transition: border-color var(--duracion-rapida), background-color var(--duracion-rapida), transform var(--duracion-rapida);
+}
+.navbar__circulo:active { transform: scale(0.94); }
+
+.navbar__favoritos { border: 1.5px solid var(--color-linea); }
+.navbar__favoritos:hover { border-color: var(--color-favorito); background: var(--color-favorito-suave); }
+
+.navbar__avatar {
+  background: var(--color-sol-suave);
+  color: var(--color-cielo-texto);
+  font: 700 18px/24px var(--fuente-titulos);
+}
+.navbar__avatar:hover { background: var(--color-sol); }
+.navbar__avatar img { width: 100%; height: 100%; object-fit: cover; }
+
 @media (max-width: 900px) {
   .navbar__buscador { display: none; }
-  .navbar__acciones { gap: 12px; }
+  .navbar__acciones,
+  .navbar--logueado .navbar__acciones { gap: 12px; }
 }

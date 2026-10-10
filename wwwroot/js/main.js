@@ -9,6 +9,7 @@
 
 import './componentes/sc-imagen.js';
 import './componentes/sc-boton-favorito.js';
+import './componentes/sc-chip-categoria.js';
 import './componentes/secciones/sc-navbar.js';
 import './componentes/secciones/sc-hero.js';
 import './componentes/secciones/sc-secciones-fijas.js';
@@ -19,6 +20,7 @@ import { mostrarToast } from './componentes/sc-toast.js';
 import { observarRevelado } from './utilidades/animaciones.js';
 
 const secciones = {
+  navbar: document.querySelector('sc-navbar'),
   hero: document.querySelector('sc-hero'),
   eventos: document.querySelector('sc-eventos-destacados'),
   lugares: document.querySelector('sc-lugares'),
@@ -43,6 +45,15 @@ async function cargarLanding() {
   }
 }
 
+/** Navbar Visitante o Logueado según la sesión de C#. */
+async function cargarSesion() {
+  try {
+    secciones.navbar.datos = { usuario: await invocar('sesion.obtener') };
+  } catch (error) {
+    console.error(error);   // sin sesión se queda como visitante
+  }
+}
+
 // ---------------------------------------------------------------------
 // Acciones (las pantallas de destino se construirán en las siguientes entregas)
 // ---------------------------------------------------------------------
@@ -54,6 +65,9 @@ const acciones = {
   'mapa': () => proximamente('El mapa'),
   'iniciar-sesion': () => proximamente('Iniciar sesión'),
   'crear-cuenta': () => proximamente('Crear cuenta'),
+  'mis-planes': () => proximamente('Mis planes'),
+  'favoritos': () => proximamente('Mis favoritos'),
+  'menu-cuenta': () => proximamente('El menú de tu cuenta'),
   'publicar-evento': () => requiereSesion('publicar tu evento'),
   'inscribirse': () => requiereSesion('inscribirte'),
   'ver-evento': (id) => proximamente(`El detalle del evento #${id}`),
@@ -96,4 +110,5 @@ document.addEventListener('sc:favorito', async ({ detail }) => {
 
 document.documentElement.dataset.entorno = enApp ? 'app' : 'navegador';
 observarRevelado();
+cargarSesion();
 cargarLanding();
