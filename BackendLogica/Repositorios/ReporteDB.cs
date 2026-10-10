@@ -1,12 +1,13 @@
 using System.Data.Common;
 using BackendLogica.Configuracion;
+using BackendLogica.Contratos;
 using BackendLogica.Datos;
 using BackendLogica.Modelos;
 
 namespace BackendLogica.Repositorios
 {
     /// <summary>Reportes de usuarios sobre eventos, lugares o reseñas, y su resolución por moderadores.</summary>
-    public sealed class ReporteDB : ConexionDB
+    public sealed class ReporteDB : ConexionDB, IReportRepository
     {
         public ReporteDB(ConfiguracionBD? configuracion = null) : base(configuracion) { }
 

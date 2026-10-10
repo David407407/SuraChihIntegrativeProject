@@ -32,6 +32,16 @@ namespace BackendLogica.Datos
         public DatosInvalidosException(string mensaje, Exception? causa = null) : base(mensaje, causa) { }
     }
 
+    /// <summary>
+    /// El diseño lo pide pero la BD v1 todavía no lo puede guardar (favoritos de lugares, fecha o precio
+    /// por confirmar, borradores sin ubicación). Solo lo lanza el repositorio real; el falso sí lo soporta.
+    /// </summary>
+    public sealed class PendienteBDException : SuraChihException
+    {
+        public PendienteBDException(string funcion)
+            : base($"{funcion} todavía no está disponible: falta actualizar la base de datos.") { }
+    }
+
     /// <summary>No hay conexión con el servidor MySQL.</summary>
     public sealed class SinConexionException : SuraChihException
     {
@@ -40,10 +50,15 @@ namespace BackendLogica.Datos
     }
 
     /// <summary>Traduce los códigos de error de MySQL a excepciones de la librería.</summary>
+    /// <remarks>
+    /// Convención del equipo: <c>MySqlException.Number == 1644</c> (SIGNAL de un trigger) se convierte en
+    /// <see cref="ReglaNegocioException"/> con el mensaje del trigger TAL CUAL, para mostrarlo sin reescribirlo.
+    /// El repositorio falso lanza la misma excepción con los mismos textos (ver <c>Falso/MensajesTrigger</c>).
+    /// </remarks>
     internal static class TraductorErrores
     {
         // https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
-        private const int SignalPersonalizado = 1644;  // SIGNAL SQLSTATE '45000' de los triggers
+        internal const int SignalPersonalizado = 1644;  // SIGNAL SQLSTATE '45000' de los triggers
         private const int LlaveDuplicada = 1062;
         private const int CheckViolado = 3819;
         private const int LlaveForaneaHijo = 1452;

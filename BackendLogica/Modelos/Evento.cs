@@ -11,10 +11,20 @@ namespace BackendLogica.Modelos
         public required string Descripcion { get; init; }
         public required DateTime Inicio { get; init; }
         public required DateTime Fin { get; init; }
+        /// <summary>
+        /// "Fecha por confirmar" del diseño: si es true, ignora <see cref="Inicio"/> y <see cref="Fin"/>.
+        /// La BD v1 todavía no lo soporta (start_at es NOT NULL); solo el repositorio falso lo devuelve en true.
+        /// </summary>
+        public bool FechaPorConfirmar { get; init; }
 
         public decimal PrecioMin { get; init; }
         public decimal PrecioMax { get; init; }
         public bool EsGratis { get; init; }
+        /// <summary>
+        /// "Precio por confirmar" del diseño: si es true, ignora los precios y <see cref="EsGratis"/>.
+        /// Igual que <see cref="FechaPorConfirmar"/>, la BD v1 todavía no lo soporta.
+        /// </summary>
+        public bool PrecioPorConfirmar { get; init; }
         /// <summary>Página oficial para comprar boletos (la app no vende boletos).</summary>
         public string? BoletosUrl { get; init; }
         /// <summary>Foto principal (URL de Cloudinary). Puede ser null mientras no se suba.</summary>
@@ -50,6 +60,10 @@ namespace BackendLogica.Modelos
     /// <remarks>
     /// Si <see cref="LugarId"/> es null (parque, explanada), la dirección y las coordenadas son obligatorias.
     /// Precio 0–0 = gratis.
+    /// <para>Un borrador ("Guardar borrador") puede ir sin ubicación o con fecha / precio por confirmar,
+    /// como en el panel del diseño ("Sin fecha", "Sin ubicación"). Para enviarlo a revisión todo es obligatorio.
+    /// La BD v1 todavía no guarda esos borradores incompletos: el repositorio real lanza
+    /// <see cref="Datos.PendienteBDException"/>.</para>
     /// </remarks>
     public sealed record DatosEvento
     {
@@ -58,6 +72,10 @@ namespace BackendLogica.Modelos
         public required string Descripcion { get; init; }
         public required DateTime Inicio { get; init; }
         public required DateTime Fin { get; init; }
+        /// <summary>Solo en borradores: la fecha se decide después (se ignoran Inicio y Fin).</summary>
+        public bool FechaPorConfirmar { get; init; }
+        /// <summary>Solo en borradores: el precio se decide después (se ignoran los precios).</summary>
+        public bool PrecioPorConfirmar { get; init; }
         public string? Direccion { get; init; }
         public decimal? Latitud { get; init; }
         public decimal? Longitud { get; init; }

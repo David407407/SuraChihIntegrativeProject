@@ -1,4 +1,5 @@
 using BackendLogica.Configuracion;
+using BackendLogica.Contratos;
 using BackendLogica.Datos;
 using BackendLogica.Modelos;
 
@@ -13,7 +14,7 @@ namespace BackendLogica.Repositorios
     /// Para obtener lo pendiente usa <see cref="EventoDB.ListarPorEstadoAsync"/>,
     /// <see cref="LugarDB.ListarPorEstadoAsync"/> y <see cref="OrganizadorDB.ListarPorEstadoAsync"/>.
     /// </remarks>
-    public sealed class ModeracionDB : ConexionDB
+    public sealed class ModeracionDB : ConexionDB, IModerationRepository
     {
         public ModeracionDB(ConfiguracionBD? configuracion = null) : base(configuracion) { }
 
@@ -52,16 +53,26 @@ namespace BackendLogica.Repositorios
                 FROM moderation m JOIN user u ON u.id = m.mod_id
                 ORDER BY m.decided_at DESC, m.id DESC
                 LIMIT @limite
-                """, r =>
+                """, Mapear, new { limite }, ct);
+
+        /// <summary>"Ver motivo" del panel del organizador: la decisión más reciente sobre ese objetivo.</summary>
+        public Task<RegistroModeracion?> ObtenerUltimaDecisionAsync(TipoObjetivoModeracion tipo, int objetivoId, CancellationToken ct = default)
+        {
+            // Nombre de columna constante según el tipo: nunca viene del usuario.
+            string columna = tipo switch
             {
-                var (tipo, objetivo) =
-                    !r.EsNulo("event_id") ? (TipoObjetivoModeracion.Evento, r.Entero("event_id")) :
-                    !r.EsNulo("place_id") ? (TipoObjetivoModeracion.Lugar, r.Entero("place_id")) :
-                    (TipoObjetivoModeracion.Organizador, r.Entero("organizer_id"));
-                return new RegistroModeracion(
-                    r.Entero("id"), r.Entero("mod_id"), r.Texto("mod_name"), tipo, objetivo,
-                    r.Enum<DecisionModeracion>("decision"), r.TextoONulo("comment"), r.Fecha("decided_at"));
-            }, new { limite }, ct);
+                TipoObjetivoModeracion.Evento => "event_id",
+                TipoObjetivoModeracion.Lugar => "place_id",
+                _ => "organizer_id"
+            };
+            return ConsultarUnoAsync($"""
+                SELECT m.*, u.username AS mod_name
+                FROM moderation m JOIN user u ON u.id = m.mod_id
+                WHERE m.{columna} = @objetivoId
+                ORDER BY m.decided_at DESC, m.id DESC
+                LIMIT 1
+                """, Mapear, new { objetivoId }, ct);
+        }
 
         /// <summary>
         /// Pone (o quita, con <paramref name="orden"/> null) un evento aprobado en el carrusel del hero.
@@ -71,5 +82,16 @@ namespace BackendLogica.Repositorios
                 UPDATE event SET is_featured = @destacado, featured_order = @orden
                 WHERE id = @eventoId AND status = 'approved'
                 """, new { eventoId, orden, destacado = orden.HasValue }, ct) > 0;
+
+        private static RegistroModeracion Mapear(System.Data.Common.DbDataReader r)
+        {
+            var (tipo, objetivo) =
+                !r.EsNulo("event_id") ? (TipoObjetivoModeracion.Evento, r.Entero("event_id")) :
+                !r.EsNulo("place_id") ? (TipoObjetivoModeracion.Lugar, r.Entero("place_id")) :
+                (TipoObjetivoModeracion.Organizador, r.Entero("organizer_id"));
+            return new RegistroModeracion(
+                r.Entero("id"), r.Entero("mod_id"), r.Texto("mod_name"), tipo, objetivo,
+                r.Enum<DecisionModeracion>("decision"), r.TextoONulo("comment"), r.Fecha("decided_at"));
+        }
     }
 }

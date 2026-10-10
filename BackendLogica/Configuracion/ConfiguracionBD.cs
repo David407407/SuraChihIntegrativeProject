@@ -17,6 +17,12 @@ namespace BackendLogica.Configuracion
         public string Contrasena { get; init; } = "";
         public string BaseDeDatos { get; init; } = "surachih";
 
+        /// <summary>
+        /// Llave <c>"UseFakeData": true</c>: <see cref="FabricaBD.Crear"/> devuelve el repositorio falso
+        /// en memoria (datos de prueba de surachih_v1.sql) y no se toca MySQL.
+        /// </summary>
+        public bool UsarDatosFalsos { get; init; }
+
         /// <summary>Configuración cargada una sola vez y compartida por todos los repositorios.</summary>
         public static ConfiguracionBD Predeterminada => _predeterminada.Value;
         private static readonly Lazy<ConfiguracionBD> _predeterminada = new(Cargar);
@@ -52,7 +58,8 @@ namespace BackendLogica.Configuracion
                 Puerto = uint.TryParse(Leer(raiz, "Port"), out uint puerto) ? puerto : config.Puerto,
                 Usuario = Leer(raiz, "User") ?? config.Usuario,
                 Contrasena = Leer(raiz, "Password") ?? config.Contrasena,
-                BaseDeDatos = Leer(raiz, "Database") ?? config.BaseDeDatos
+                BaseDeDatos = Leer(raiz, "Database") ?? config.BaseDeDatos,
+                UsarDatosFalsos = raiz.TryGetProperty("UseFakeData", out JsonElement falso) && falso.ValueKind == JsonValueKind.True
             };
         }
 

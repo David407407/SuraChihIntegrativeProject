@@ -3,5 +3,6 @@
   "Port": 3306,
   "User": "root",
   "Password": "",
-  "Database": "surachih"
+  "Database": "surachih",
+  "UseFakeData": false
 }

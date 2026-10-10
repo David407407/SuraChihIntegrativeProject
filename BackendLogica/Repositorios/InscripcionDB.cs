@@ -1,4 +1,5 @@
 using BackendLogica.Configuracion;
+using BackendLogica.Contratos;
 using BackendLogica.Datos;
 using BackendLogica.Modelos;
 
@@ -7,12 +8,9 @@ namespace BackendLogica.Repositorios
     /// <summary>
     /// Inscripciones ("Voy a ir"). No reservan cupo: los boletos se compran en la página del evento.
     /// </summary>
-    public sealed class InscripcionDB : ConsultasEventoDB
+    public sealed class InscripcionDB : ConsultasEventoDB, IInscriptionRepository
     {
         public InscripcionDB(ConfiguracionBD? configuracion = null) : base(configuracion) { }
-
-        /// <summary>Filtro de la pantalla "Mis planes".</summary>
-        public enum Pestana { Proximos, Pasados, Cancelados }
 
         /// <summary>
         /// Inscribe al usuario. Si había cancelado antes, reactiva la inscripción.
@@ -38,15 +36,15 @@ namespace BackendLogica.Repositorios
                 """, new { usuarioId, eventoId }, ct) > 0;
 
         /// <summary>Pantalla "Mis planes" (próximos, pasados o cancelados).</summary>
-        public async Task<List<PlanUsuario>> ListarPlanesAsync(int usuarioId, Pestana pestana, CancellationToken ct = default)
+        public async Task<List<PlanUsuario>> ListarPlanesAsync(int usuarioId, PestanaPlanes pestana, CancellationToken ct = default)
         {
             string filtro = pestana switch
             {
-                Pestana.Proximos => "i.status = 'active' AND c.end_at > NOW() AND c.status = 'approved'",
-                Pestana.Pasados => "i.status = 'active' AND c.end_at <= NOW()",
+                PestanaPlanes.Proximos => "i.status = 'active' AND c.end_at > NOW() AND c.status = 'approved'",
+                PestanaPlanes.Pasados => "i.status = 'active' AND c.end_at <= NOW()",
                 _ => "(i.status = 'cancelled' OR c.status = 'cancelled')"
             };
-            string orden = pestana == Pestana.Proximos ? "c.start_at" : "c.start_at DESC";
+            string orden = pestana == PestanaPlanes.Proximos ? "c.start_at" : "c.start_at DESC";
 
             // 1) Inscripciones de la pestaña, ya ordenadas. 2) Sus tarjetas completas (con etiquetas).
             var filas = await ConsultarAsync($"""
@@ -68,5 +66,19 @@ namespace BackendLogica.Repositorios
                         .Select(f => new PlanUsuario(eventos[f.Id], f.Estado, f.Creada, f.Cancelada))
                         .ToList();
         }
+
+        /// <summary>Tabla "Inscritos" de las estadísticas. Vacía si el evento no es de este organizador.</summary>
+        public Task<List<Inscrito>> ListarInscritosAsync(int eventoId, int organizadorId, CancellationToken ct = default) =>
+            ConsultarAsync("""
+                SELECT i.user_id, u.username, u.avatar_url, i.status, i.created_at, i.cancelled_at
+                FROM inscription i
+                JOIN event e ON e.id = i.event_id AND e.organizer_id = @organizadorId
+                JOIN user u ON u.id = i.user_id
+                WHERE i.event_id = @eventoId
+                ORDER BY i.created_at, i.user_id
+                """, r => new Inscrito(
+                    r.Entero("user_id"), r.Texto("username"), r.TextoONulo("avatar_url"),
+                    r.Enum<EstadoInscripcion>("status"), r.Fecha("created_at"), r.FechaONula("cancelled_at")),
+                new { eventoId, organizadorId }, ct);
     }
 }

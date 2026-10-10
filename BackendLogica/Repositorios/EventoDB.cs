@@ -1,4 +1,5 @@
 using BackendLogica.Configuracion;
+using BackendLogica.Contratos;
 using BackendLogica.Datos;
 using BackendLogica.Modelos;
 using BackendLogica.Seguridad;
@@ -10,7 +11,7 @@ namespace BackendLogica.Repositorios
     /// Las reglas de publicación (solo organizadores aprobados, volver a moderación al editar...)
     /// viven en los triggers de la BD y llegan como <see cref="ReglaNegocioException"/>.
     /// </summary>
-    public sealed class EventoDB : ConsultasEventoDB
+    public sealed class EventoDB : ConsultasEventoDB, IEventRepository
     {
         public EventoDB(ConfiguracionBD? configuracion = null) : base(configuracion) { }
 
@@ -76,6 +77,40 @@ namespace BackendLogica.Repositorios
                 """, new { etiquetas = etiquetaIds, total = etiquetaIds.Distinct().Count(), limite }, ct);
         }
 
+        /// <summary>
+        /// Modal "Filtros" y chips del inicio. Las etiquetas se combinan con O (cualquiera de las elegidas)
+        /// y la fecha con traslape: entra un evento de varios días aunque haya empezado antes del rango.
+        /// </summary>
+        public Task<List<EventoTarjeta>> FiltrarAsync(FiltroEventos filtro, CancellationToken ct = default)
+        {
+            var rango = filtro.RangoFechas(DateTime.Now);
+            string? texto = string.IsNullOrWhiteSpace(filtro.Texto) ? null : filtro.Texto.Trim();
+            return ConsultarTarjetasAsync($"""
+                {SelectTarjeta}
+                WHERE {Vigente}
+                  AND (@texto IS NULL
+                       OR c.title LIKE CONCAT('%', @texto, '%')
+                       OR c.place_name LIKE CONCAT('%', @texto, '%')
+                       OR EXISTS (SELECT 1 FROM event_tag et JOIN tag t ON t.id = et.tag_id
+                                  WHERE et.event_id = c.id AND t.name LIKE CONCAT('%', @texto, '%')))
+                  AND (@todasEtiquetas OR EXISTS (SELECT 1 FROM event_tag et
+                                                  WHERE et.event_id = c.id AND et.tag_id IN @etiquetas))
+                  AND (@precio = 0 OR (@precio = 1 AND c.is_free) OR (@precio = 2 AND NOT c.is_free))
+                  AND (@desde IS NULL OR (c.start_at < @hasta AND c.end_at > @desde))
+                ORDER BY c.start_at
+                LIMIT @limite
+                """, new
+            {
+                texto,
+                todasEtiquetas = filtro.EtiquetaIds.Count == 0,
+                etiquetas = filtro.EtiquetaIds,
+                precio = (int)filtro.Precio,
+                desde = rango?.Desde,
+                hasta = rango?.Hasta,
+                limite = filtro.Limite
+            }, ct);
+        }
+
         /// <summary>Eventos vigentes que ocurren entre hoy y el domingo (inclusive).</summary>
         public async Task<int> ContarEstaSemanaAsync(CancellationToken ct = default) =>
             await EscalarAsync<int>($"""
@@ -137,13 +172,28 @@ namespace BackendLogica.Repositorios
                     r.Entero("inscribed"), r.DecimalONulo("avg_rating"), r.Entero("review_count")),
                 new { organizadorId }, ct);
 
+        /// <summary>Gráfica "Últimos 7 días": vistas por día, incluidos los días sin vistas.</summary>
+        public async Task<List<VistasDia>> ListarVistasPorDiaAsync(int eventoId, int dias = 7, CancellationToken ct = default)
+        {
+            DateTime desde = DateTime.Today.AddDays(1 - dias);
+            var filas = await ConsultarAsync("""
+                SELECT DATE(viewed_at) AS dia, COUNT(*) AS vistas
+                FROM event_view
+                WHERE event_id = @eventoId AND viewed_at >= @desde
+                GROUP BY DATE(viewed_at)
+                """, r => (Dia: DateOnly.FromDateTime(r.Fecha("dia")), Vistas: r.Entero("vistas")),
+                new { eventoId, desde }, ct);
+            return CompletarDias(filas, dias, DateTime.Today);
+        }
+
         /// <summary>
         /// Crea un evento con sus etiquetas. Con <paramref name="enviarARevision"/> = false queda como borrador.
         /// </summary>
         /// <returns>Id del evento nuevo.</returns>
         public Task<int> CrearAsync(int organizadorId, DatosEvento datos, bool enviarARevision = true, CancellationToken ct = default)
         {
-            ValidarDatos(datos);
+            ValidarDatos(datos, esBorrador: !enviarARevision);
+            RechazarPendientesBD(datos);
             return EnTransaccionAsync(async tx =>
             {
                 int id = await tx.InsertarAsync("""
@@ -165,7 +215,8 @@ namespace BackendLogica.Repositorios
         /// <returns>false si el evento no existe o no es de este organizador.</returns>
         public Task<bool> ActualizarAsync(int eventoId, int organizadorId, DatosEvento datos, CancellationToken ct = default)
         {
-            ValidarDatos(datos);
+            // La BD v1 no guarda borradores incompletos, así que al editar se exige todo (igual que antes).
+            ValidarDatos(datos, esBorrador: false);
             return EnTransaccionAsync(async tx =>
             {
                 int filas = await tx.EjecutarAsync("""
@@ -224,13 +275,21 @@ namespace BackendLogica.Repositorios
                 await tx.EjecutarAsync("INSERT INTO event_tag (event_id, tag_id) VALUES (@eventoId, @etiquetaId)", new { eventoId, etiquetaId });
         }
 
-        private static void ValidarDatos(DatosEvento d)
+        /// <summary>
+        /// Validaciones del formulario "Publicar evento". Un borrador puede ir sin ubicación y con fecha o
+        /// precio por confirmar; para enviar a revisión todo es obligatorio. La usa también el repositorio falso.
+        /// </summary>
+        internal static void ValidarDatos(DatosEvento d, bool esBorrador)
         {
             Validar.Requerido(d.Titulo, "El título");
             Validar.Requerido(d.Descripcion, "La descripción");
-            if (d.Fin <= d.Inicio) throw new DatosInvalidosException("La fecha de fin debe ser posterior al inicio.");
-            Validar.RangoPrecio(d.PrecioMin, d.PrecioMax);
-            if (d.LugarId == null)
+            if (!esBorrador && (d.FechaPorConfirmar || d.PrecioPorConfirmar))
+                throw new DatosInvalidosException("Confirma la fecha y el precio antes de enviar a revisión.");
+            if (!d.FechaPorConfirmar && d.Fin <= d.Inicio)
+                throw new DatosInvalidosException("La fecha de fin debe ser posterior al inicio.");
+            if (!d.PrecioPorConfirmar)
+                Validar.RangoPrecio(d.PrecioMin, d.PrecioMax);
+            if (d.LugarId == null && !esBorrador)
             {
                 Validar.Requerido(d.Direccion, "La dirección");
                 if (d.Latitud == null || d.Longitud == null)
@@ -238,6 +297,26 @@ namespace BackendLogica.Repositorios
             }
             if (d.Latitud.HasValue && d.Longitud.HasValue)
                 Validar.CoordenadasChihuahua(d.Latitud.Value, d.Longitud.Value);
+        }
+
+        /// <summary>Lo que el diseño permite pero la BD v1 todavía no puede guardar.</summary>
+        private static void RechazarPendientesBD(DatosEvento d)
+        {
+            if (d.FechaPorConfirmar) throw new PendienteBDException("Guardar un evento con fecha por confirmar");
+            if (d.PrecioPorConfirmar) throw new PendienteBDException("Guardar un evento con precio por confirmar");
+            if (d.LugarId == null && (string.IsNullOrWhiteSpace(d.Direccion) || d.Latitud == null || d.Longitud == null))
+                throw new PendienteBDException("Guardar un borrador sin ubicación");
+        }
+
+        /// <summary>Rellena con 0 los días sin vistas, del más antiguo a hoy. La usa también el repositorio falso.</summary>
+        internal static List<VistasDia> CompletarDias(IEnumerable<(DateOnly Dia, int Vistas)> filas, int dias, DateTime hoy)
+        {
+            var porDia = filas.ToDictionary(f => f.Dia, f => f.Vistas);
+            DateOnly ultimo = DateOnly.FromDateTime(hoy);
+            return Enumerable.Range(0, dias)
+                .Select(i => ultimo.AddDays(i - dias + 1))
+                .Select(dia => new VistasDia(dia, porDia.GetValueOrDefault(dia)))
+                .ToList();
         }
 
         /// <summary>Lunes siguiente a las 00:00 (la semana termina el domingo).</summary>

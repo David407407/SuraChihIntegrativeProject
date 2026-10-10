@@ -1,12 +1,13 @@
 using System.Data.Common;
 using BackendLogica.Configuracion;
+using BackendLogica.Contratos;
 using BackendLogica.Datos;
 using BackendLogica.Modelos;
 
 namespace BackendLogica.Repositorios
 {
     /// <summary>Etiquetas / categorías (chips de filtro).</summary>
-    public sealed class EtiquetaDB : ConexionDB
+    public sealed class EtiquetaDB : ConexionDB, ITagRepository
     {
         public EtiquetaDB(ConfiguracionBD? configuracion = null) : base(configuracion) { }
 

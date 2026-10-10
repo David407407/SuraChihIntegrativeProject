@@ -1,5 +1,6 @@
 using System.Data.Common;
 using BackendLogica.Configuracion;
+using BackendLogica.Contratos;
 using BackendLogica.Datos;
 using BackendLogica.Modelos;
 using BackendLogica.Seguridad;
@@ -10,7 +11,7 @@ namespace BackendLogica.Repositorios
     /// Lugares (cafés, museos, parques...). Solo organizadores aprobados los registran y pasan por
     /// moderación; cualquier edición de un lugar aprobado lo regresa a revisión (trigger).
     /// </summary>
-    public sealed class LugarDB : ConexionDB
+    public sealed class LugarDB : ConexionDB, IPlaceRepository
     {
         private const string SelectTarjeta = """
             SELECT p.*, r.avg_rating, r.review_count
@@ -70,6 +71,12 @@ namespace BackendLogica.Repositorios
                 r => r.Texto("url"), new { lugarId }, ct);
             return new LugarDetalle(lugar, galeria);
         }
+
+        /// <summary>Una fila de la vista <c>v_place_rating</c>. null si el lugar no existe.</summary>
+        public Task<CalificacionLugar?> ObtenerCalificacionAsync(int lugarId, CancellationToken ct = default) =>
+            ConsultarUnoAsync("SELECT * FROM v_place_rating WHERE place_id = @lugarId",
+                r => new CalificacionLugar(r.Entero("place_id"), r.DecimalONulo("avg_rating"), r.Entero("review_count")),
+                new { lugarId }, ct);
 
         // ------------------------------------------------------------------
         // Dueño / moderación
@@ -201,7 +208,8 @@ namespace BackendLogica.Repositorios
                     """, new { lugarId, dia = (int)h.Dia, abre = h.Abre, cierra = h.Cierra });
         }
 
-        private static void ValidarDatos(DatosLugar d)
+        /// <summary>Validaciones del formulario de lugar. La usa también el repositorio falso.</summary>
+        internal static void ValidarDatos(DatosLugar d)
         {
             Validar.Requerido(d.Nombre, "El nombre");
             Validar.Requerido(d.Direccion, "La dirección");

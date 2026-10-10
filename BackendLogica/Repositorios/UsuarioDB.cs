@@ -1,5 +1,6 @@
 using System.Data.Common;
 using BackendLogica.Configuracion;
+using BackendLogica.Contratos;
 using BackendLogica.Datos;
 using BackendLogica.Modelos;
 using BackendLogica.Seguridad;
@@ -7,7 +8,7 @@ using BackendLogica.Seguridad;
 namespace BackendLogica.Repositorios
 {
     /// <summary>Cuentas de usuario: registro, inicio de sesión y perfil.</summary>
-    public sealed class UsuarioDB : ConexionDB
+    public sealed class UsuarioDB : ConexionDB, IUserRepository
     {
         private const string Columnas = "id, username, email, avatar_url, is_mod, is_active, created_at";
 
