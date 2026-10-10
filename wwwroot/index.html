@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SuraChih · Eventos y lugares de Chihuahua</title>
+  <meta name="description" content="Conciertos, talleres, cafés y lugares para salir en Chihuahua, reunidos en un solo lugar.">
+  <link rel="icon" href="assets/iconos/logo-sol.svg" type="image/svg+xml">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+
+  <link rel="stylesheet" href="css/estilos.css">
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <!--
+    Cada etiqueta <sc-...> es un componente de js/componentes. El orden sigue las capas del
+    frame "Landing" de Figma. Las secciones con datos los reciben desde js/main.js.
+  -->
+  <sc-navbar></sc-navbar>
+
+  <main>
+    <sc-hero></sc-hero>
+    <sc-cinta-categorias></sc-cinta-categorias>
+    <sc-como-funciona></sc-como-funciona>
+    <sc-eventos-destacados></sc-eventos-destacados>
+    <sc-encuesta></sc-encuesta>
+    <sc-lugares></sc-lugares>
+    <sc-banda-organizadores></sc-banda-organizadores>
+    <sc-llamado-final></sc-llamado-final>
+  </main>
+
+  <sc-pie></sc-pie>
+</body>
+</html>

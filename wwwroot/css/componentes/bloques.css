@@ -1,0 +1,46 @@
+/* =====================================================================
+   Bloques de llamado: "Para organizadores" y "Llamado final".
+   ===================================================================== */
+
+sc-banda-organizadores, sc-llamado-final { display: block; }
+
+.banda-organizadores-envoltura,
+.llamado-final-envoltura { padding-bottom: var(--espacio-seccion); }
+
+/* ---- Para organizadores ---- */
+.banda-organizadores {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  overflow: hidden;
+  padding: 56px;
+  border-radius: var(--radio-2xl);
+  background: var(--color-tinta);
+  color: var(--color-superficie);
+}
+.banda-organizadores__sol {
+  position: absolute; top: -120px; right: -90px; width: 260px; height: 260px; pointer-events: none;
+  transition: transform 900ms var(--curva-salida);
+}
+.banda-organizadores:hover .banda-organizadores__sol { transform: scale(1.12) translate(-10px, 10px); }
+.banda-organizadores__mensaje { position: relative; display: flex; flex-direction: column; gap: 14px; flex: 1; max-width: 840px; }
+
+/* ---- Llamado final ---- */
+.llamado-final {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 80px 56px;
+  border-radius: var(--radio-3xl);
+  background: var(--color-sol);
+  color: var(--color-tinta);
+  text-align: center;
+}
+.llamado-final__acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+
+@media (max-width: 860px) {
+  .banda-organizadores { flex-direction: column; align-items: flex-start; padding: 40px 32px; }
+  .llamado-final .t-display { font-size: 40px; line-height: 46px; }
+}

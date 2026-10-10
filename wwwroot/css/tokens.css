@@ -1,0 +1,61 @@
+/* =====================================================================
+   Tokens de diseño de SuraChih
+   Fuente: variables y estilos de texto del archivo de Figma "Surachih web"
+   (color/*, SC/*). Si cambia el diseño, se cambia aquí y se actualiza toda la app.
+   ===================================================================== */
+
+:root {
+  /* ---- Color (variables color/* de Figma) ---- */
+  --color-tinta: #0b1b3a;        /* texto principal, botones oscuros, pie */
+  --color-texto-2: #5b6b85;      /* texto secundario */
+  --color-fondo: #f3f6fb;        /* secciones alternas, buscador */
+  --color-superficie: #ffffff;   /* tarjetas */
+  --color-linea: #e3e8f2;        /* bordes */
+  --color-cielo: #2f7bff;        /* cinta de categorías, foco */
+  --color-cielo-texto: #1c64f2;  /* fechas y enlaces */
+  --color-sol: #ffd43b;          /* botón primario, acentos */
+  --color-sol-suave: #fff3c4;    /* chips, sección de encuesta */
+  --color-exito: #1f9d61;        /* "Abierto hasta..." */
+  --color-estrella: #ffc400;
+  --color-favorito: #e11d48;     /* corazón */
+  --color-favorito-suave: #ffe4e6;
+
+  /* Derivados para estados (hover/active) */
+  --color-sol-hover: #f5c518;
+  --color-tinta-hover: #1a2d57;
+  --color-velo-tarjeta: rgba(23, 20, 59, 0.85);
+
+  /* Degradado del hero */
+  --degradado-hero: linear-gradient(153.43deg, #1f5cf2 14.29%, #6bb8ff 85.71%);
+
+  /* ---- Tipografía ---- */
+  --fuente-titulos: "Montserrat", system-ui, sans-serif;
+  --fuente-cuerpo: "Plus Jakarta Sans", system-ui, sans-serif;
+
+  /* ---- Radios ---- */
+  --radio-pildora: 999px;
+  --radio-s: 12px;
+  --radio-m: 16px;
+  --radio-l: 20px;
+  --radio-xl: 24px;
+  --radio-2xl: 28px;
+  --radio-3xl: 32px;
+
+  /* ---- Sombras ---- */
+  --sombra-chip: 0 8px 24px rgba(0, 0, 0, 0.25);
+  --sombra-tarjeta-flotante: 0 24px 48px rgba(0, 0, 0, 0.35);
+  --sombra-hover-cielo: 0 12px 24px rgba(46, 122, 255, 0.22);
+  --sombra-suave: 0 12px 32px rgba(23, 20, 59, 0.14);
+
+  /* ---- Layout ---- */
+  --ancho-contenido: 1200px;
+  --margen-lateral: clamp(24px, 8.33vw, 120px);   /* 120px a 1440px de ancho, como en Figma */
+  --espacio-seccion: clamp(64px, 6.67vw, 96px);   /* 96px a 1440px */
+  --altura-navbar: 72px;
+
+  /* ---- Movimiento ---- */
+  --curva-salida: cubic-bezier(0.22, 1, 0.36, 1);
+  --duracion-rapida: 160ms;
+  --duracion-media: 320ms;
+  --duracion-lenta: 700ms;
+}

@@ -1,5 +1,5 @@
 <Solution>
   <Project Path="SuraChihIntegrativeProject.csproj" />
   <Project Path="BackendLogica/BackendLogica.csproj" />
-  <Project Path="PruebaBackend/PruebaBackend.csproj" />
+  <Project Path="BackendLogica.Pruebas/BackendLogica.Pruebas.csproj" />
 </Solution>

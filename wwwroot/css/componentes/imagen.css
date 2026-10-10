@@ -1,0 +1,35 @@
+/* =====================================================================
+   <sc-imagen>: foto remota con estados cargando / cargada / vacia.
+   El padre define tamaño y redondeo (overflow: hidden).
+   ===================================================================== */
+
+sc-imagen {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-fondo);
+}
+
+sc-imagen img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 450ms ease;
+}
+sc-imagen[data-estado="cargada"] img { opacity: 1; }
+
+/* Brillo mientras descarga */
+sc-imagen[data-estado="cargando"] {
+  background: linear-gradient(100deg, #e9eef6 30%, #f6f8fc 50%, #e9eef6 70%) 0 0 / 300% 100%;
+  animation: brillo 1.4s linear infinite;
+}
+
+/* Sin foto (aún no se sube a Cloudinary) o con error: relleno de marca */
+sc-imagen[data-estado="vacia"] {
+  background:
+    url("../../assets/iconos/logo-sol.svg") center / 22% no-repeat,
+    linear-gradient(153deg, #e6eefc 0%, var(--color-sol-suave) 100%);
+}

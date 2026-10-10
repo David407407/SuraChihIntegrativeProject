@@ -1,0 +1,33 @@
+/* =====================================================================
+   Cinta de categorías: desplazamiento infinito (Posición A → B en Figma).
+   La pista tiene dos copias idénticas; moverla -50% equivale a una copia exacta.
+   ===================================================================== */
+
+sc-cinta-categorias { display: block; }
+
+.cinta {
+  height: 72px;
+  overflow: hidden;
+  background: var(--color-cielo);
+  color: #fff;
+  display: flex;
+  align-items: center;
+}
+
+.cinta__pista {
+  display: flex;
+  width: max-content;
+  animation: cinta-avanza 38s linear infinite;
+}
+.cinta:hover .cinta__pista { animation-play-state: paused; }
+
+.cinta__fila {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding-right: 28px;   /* mismo espacio entre el final de una copia y el inicio de la otra */
+  white-space: nowrap;
+}
+.cinta__punto { display: flex; }
+
+@keyframes cinta-avanza { to { transform: translateX(-50%); } }

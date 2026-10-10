@@ -1,0 +1,96 @@
+/* =====================================================================
+   Base: reset, tipografía (estilos SC/* de Figma) y utilidades de layout.
+   ===================================================================== */
+
+/* Respaldo sin internet para el cuerpo (Montserrat y los pesos 500/600 vienen de Google Fonts). */
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("../fonts/PlusJakartaSans-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("../fonts/PlusJakartaSans-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+  font-family: var(--fuente-cuerpo);
+  font-size: 16px;
+  line-height: 24px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, p { margin: 0; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+dl, dd { margin: 0; }
+img { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; }
+input { font: inherit; color: inherit; }
+
+:focus-visible {
+  outline: 3px solid var(--color-cielo);
+  outline-offset: 2px;
+}
+
+/* ---- Tipografía (nombres = estilos de texto de Figma) ---- */
+.t-display     { font: 800 56px/62px var(--fuente-titulos); letter-spacing: -1.12px; }
+.t-h1          { font: 700 44px/48px var(--fuente-titulos); letter-spacing: -0.88px; }
+.t-h2          { font: 700 28px/34px var(--fuente-titulos); letter-spacing: -0.28px; }
+.t-h3          { font: 600 20px/26px var(--fuente-titulos); letter-spacing: -0.2px; }
+.t-card-titulo { font: 600 18px/23px var(--fuente-titulos); letter-spacing: -0.18px; }
+.t-lead        { font: 400 18px/28px var(--fuente-cuerpo); }
+.t-body        { font: 400 16px/24px var(--fuente-cuerpo); }
+.t-body-fuerte { font: 600 16px/24px var(--fuente-cuerpo); }
+.t-small       { font: 400 14px/20px var(--fuente-cuerpo); }
+.t-small-fuerte{ font: 600 14px/20px var(--fuente-cuerpo); }
+.t-caption     { font: 500 12px/16px var(--fuente-cuerpo); letter-spacing: 0.2px; }
+
+.texto-2 { color: var(--color-texto-2); }
+
+/* ---- Layout ---- */
+.contenedor {
+  width: 100%;
+  max-width: calc(var(--ancho-contenido) + 2 * var(--margen-lateral));
+  margin-inline: auto;
+  padding-inline: var(--margen-lateral);
+}
+
+.seccion { padding-block: var(--espacio-seccion); }
+.seccion--fondo { background: var(--color-fondo); }
+
+.solo-lectores {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* ---- Aparición al hacer scroll (ver js/utilidades/animaciones.js) ---- */
+[data-revelar] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity var(--duracion-lenta) var(--curva-salida),
+              transform var(--duracion-lenta) var(--curva-salida);
+  transition-delay: calc(var(--orden, 0) * 80ms);
+}
+[data-revelar].revelado { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  [data-revelar] { opacity: 1; transform: none; }
+}

@@ -1,0 +1,13 @@
+/* Hoja principal: solo junta las demás en orden (tokens → base → componentes). */
+@import url("tokens.css");
+@import url("base.css");
+@import url("componentes/atomos.css");
+@import url("componentes/imagen.css");
+@import url("componentes/navbar.css");
+@import url("componentes/hero.css");
+@import url("componentes/cinta.css");
+@import url("componentes/secciones.css");
+@import url("componentes/tarjetas.css");
+@import url("componentes/bloques.css");
+@import url("componentes/pie.css");
+@import url("componentes/toast.css");

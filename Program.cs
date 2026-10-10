@@ -1,17 +1,15 @@
+using SuraChihIntegrativeProject.Ventanas;
+
 namespace SuraChihIntegrativeProject
 {
     internal static class Program
     {
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
+        /// <summary>Punto de entrada: abre la ventana principal que hospeda la interfaz web.</summary>
         [STAThread]
         static void Main()
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
-            Application.Run(new Login());
+            Application.Run(new VentanaPrincipal());
         }
     }
 }

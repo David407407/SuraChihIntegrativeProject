@@ -1,0 +1,114 @@
+/* =====================================================================
+   Átomos: icono, botón ("Botón" de Figma), chip y botón favorito.
+   ===================================================================== */
+
+/* ---- Icono: caja cuadrada con el SVG centrado a su tamaño original ---- */
+.icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--caja, 16px);
+  height: var(--caja, 16px);
+}
+
+/* ---- Botón ---- */
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: none;
+  border-radius: var(--radio-pildora);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--duracion-rapida), border-color var(--duracion-rapida),
+              color var(--duracion-rapida), transform var(--duracion-rapida), box-shadow var(--duracion-rapida);
+}
+.boton:active { transform: scale(0.97); }
+
+.boton--m { height: 48px; padding: 0 20px; font-size: 16px; line-height: 20px; }
+.boton--s { height: 36px; padding: 0 14px; font-size: 14px; line-height: 20px; }
+
+.boton--primario { background: var(--color-sol); color: var(--color-tinta); }
+.boton--primario:hover { background: var(--color-sol-hover); box-shadow: 0 6px 16px rgba(255, 196, 0, 0.35); }
+
+.boton--oscuro { background: var(--color-tinta); color: var(--color-superficie); }
+.boton--oscuro:hover { background: var(--color-tinta-hover); }
+
+.boton--secundario {
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+  border: 1.5px solid var(--color-linea);
+}
+.boton--secundario:hover { border-color: var(--color-tinta); }
+
+.boton--fantasma { color: var(--color-tinta); }
+.boton--fantasma:hover { background: var(--color-fondo); }
+
+/* Sobre el azul del hero ("Btn Crear cuenta gratis") */
+.boton--contorno-claro {
+  color: var(--color-superficie);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--radio-s);
+}
+.boton--contorno-claro:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.8); }
+
+/* ---- Chip ("Chip tipo") ---- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: var(--radio-pildora);
+  color: var(--color-tinta);
+  font: 500 12px/16px var(--fuente-cuerpo);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.chip--sol-suave { background: var(--color-sol-suave); }
+.chip--superficie { background: var(--color-superficie); }
+.chip--sol { background: var(--color-sol); padding: 5px 12px 5px 10px; }
+
+/* ---- Botón favorito: Vacío / Hover / Lleno ---- */
+sc-boton-favorito { display: block; width: 36px; height: 36px; }
+sc-boton-favorito[tamano="m"] { width: 40px; height: 40px; }
+
+.boton-favorito__boton {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radio-pildora);
+  background: var(--color-superficie);
+  border: 1.5px solid transparent;
+  transition: background-color var(--duracion-rapida), border-color var(--duracion-rapida);
+}
+.boton-favorito__boton img { grid-area: 1 / 1; transition: opacity var(--duracion-rapida); }
+.boton-favorito__hover, .boton-favorito__lleno { opacity: 0; }
+
+.boton-favorito__boton:hover { border-color: var(--color-favorito); }
+.boton-favorito__boton:hover .boton-favorito__vacio { opacity: 0; }
+.boton-favorito__boton:hover .boton-favorito__hover { opacity: 1; }
+
+sc-boton-favorito[activo] .boton-favorito__boton { background: var(--color-favorito-suave); border-color: transparent; }
+sc-boton-favorito[activo] .boton-favorito__vacio,
+sc-boton-favorito[activo] .boton-favorito__hover { opacity: 0; }
+sc-boton-favorito[activo] .boton-favorito__lleno { opacity: 1; }
+
+sc-boton-favorito.latido .boton-favorito__lleno { animation: latido 420ms var(--curva-salida); }
+@keyframes latido {
+  0% { transform: scale(0.6); }
+  55% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+/* ---- Esqueleto de carga ---- */
+.esqueleto {
+  border-radius: var(--radio-l);
+  background: linear-gradient(100deg, #e9eef6 30%, #f6f8fc 50%, #e9eef6 70%) 0 0 / 300% 100%;
+  animation: brillo 1.4s linear infinite;
+}
+@keyframes brillo { to { background-position: -150% 0; } }

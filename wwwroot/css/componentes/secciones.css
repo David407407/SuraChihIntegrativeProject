@@ -1,0 +1,81 @@
+/* =====================================================================
+   Secciones: encabezado común, "Tu plan en tres pasos", "No te los pierdas",
+   encuesta y "Lugares para descubrir".
+   ===================================================================== */
+
+sc-como-funciona, sc-eventos-destacados, sc-encuesta, sc-lugares { display: block; }
+
+/* ---- Encabezado de sección (título + bajada + acción opcional) ---- */
+.encabezado-seccion {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  margin-bottom: 40px;
+}
+.encabezado-seccion__textos { display: flex; flex-direction: column; gap: 12px; flex: 1; min-width: 0; }
+.encabezado-seccion__textos h2 { max-width: 760px; }
+.encabezado-seccion__textos p { max-width: 640px; }
+
+.seccion__vacio {
+  padding: 48px 24px;
+  border-radius: var(--radio-xl);
+  border: 1.5px dashed var(--color-linea);
+  text-align: center;
+}
+
+/* ---- Tu plan, en tres pasos ---- */
+.pasos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+
+.paso {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 32px;
+  border-radius: var(--radio-xl);
+  background: var(--color-fondo);
+  transition: transform var(--duracion-media) var(--curva-salida), box-shadow var(--duracion-media);
+}
+.paso:hover { transform: translateY(-4px); box-shadow: var(--sombra-suave); }
+
+.paso__marcas { display: flex; gap: 12px; }
+.paso__numero, .paso__icono {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radio-pildora);
+}
+.paso__numero { background: var(--color-tinta); color: var(--color-superficie); }
+.paso__icono { background: var(--color-sol-suave); }
+
+/* ---- No te los pierdas ---- */
+.destacados {
+  display: grid;
+  grid-template-columns: minmax(0, 588fr) minmax(0, 588fr);
+  gap: 24px;
+  align-items: start;
+}
+.destacados__lista { display: flex; flex-direction: column; gap: 16px; }
+.esqueleto--principal { height: 622px; border-radius: var(--radio-2xl); }
+.esqueleto--fila { height: 136px; }
+
+/* ---- Encuesta ---- */
+.encuesta { background: var(--color-sol-suave); }
+.encuesta__titulo { max-width: 760px; margin-bottom: 40px; }
+.encuesta__datos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin: 0 0 40px; }
+.encuesta__dato { display: flex; flex-direction: column; gap: 8px; padding-top: 24px; border-top: 2px solid var(--color-tinta); }
+.encuesta__dato dd { margin: 0; }
+.encuesta__fuente { color: var(--color-cielo-texto); }
+
+/* ---- Lugares para descubrir ---- */
+.lugares { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.esqueleto--lugar { aspect-ratio: 282 / 365; border-radius: var(--radio-m); }
+
+@media (max-width: 960px) {
+  .destacados { grid-template-columns: minmax(0, 1fr); }
+  .lugares { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .pasos, .encuesta__datos { grid-template-columns: minmax(0, 1fr); }
+  .encabezado-seccion { flex-direction: column; align-items: flex-start; }
+}

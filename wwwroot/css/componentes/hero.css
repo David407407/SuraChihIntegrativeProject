@@ -1,0 +1,133 @@
+/* =====================================================================
+   Hero + Collage hero
+   Medidas de Figma (frame de 1440×720): mensaje de 600px a 120px del borde,
+   collage de 600×560 en x=760, y=80.
+   ===================================================================== */
+
+sc-hero { display: block; }
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--degradado-hero);
+  color: var(--color-superficie);
+}
+
+/* Decoración: brillo radial y sol amarillo en la esquina superior derecha */
+.hero__brillo { position: absolute; width: 760px; height: 760px; top: -280px; right: -220px; max-width: none; pointer-events: none; }
+.hero__sol {
+  position: absolute; width: 320px; height: 320px; top: -90px; right: 10px; pointer-events: none;
+  animation: sol-flota 9s ease-in-out infinite alternate;
+}
+@keyframes sol-flota { to { transform: translate(-14px, 10px) scale(1.03); } }
+
+.hero__contenido {
+  position: relative;
+  display: grid;
+  /* 600 + 40 + 560 = 1200; el collage mide 600 y sobresale 40px a la derecha, como en Figma */
+  grid-template-columns: minmax(0, 600px) minmax(0, 560px);
+  justify-content: space-between;
+  align-items: center;
+  gap: 40px;
+  min-height: 720px;
+  padding-block: 70px;
+}
+
+.hero__mensaje { display: flex; flex-direction: column; align-items: flex-start; gap: 24px; }
+
+.hero__sello {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 12px;
+  border-radius: var(--radio-pildora);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.hero__titulo {
+  font: 800 clamp(44px, 4.45vw, 64px) / 1.094 var(--fuente-titulos);   /* 64/70 en Figma */
+  letter-spacing: -1.28px;
+}
+.hero__bajada { max-width: 520px; }
+
+.hero__acciones { display: flex; flex-wrap: wrap; gap: 12px; }
+
+.hero__cifras { display: flex; gap: 20px; margin: 0; padding-top: 12px; }
+.hero__cifra { display: flex; flex-direction: column-reverse; }   /* número arriba, texto abajo */
+.hero__cifra dd { margin: 0; color: var(--color-sol); font-variant-numeric: tabular-nums; }
+
+/* El collage conserva la composición de 600×560 y se escala (--escala) si no cabe */
+.hero__collage {
+  display: block;
+  width: calc(100% + 40px);
+  max-width: 600px;
+  aspect-ratio: 600 / 560;
+}
+
+.collage {
+  position: relative;
+  width: 600px;
+  height: 560px;
+  transform: scale(var(--escala, 1));
+  transform-origin: top left;
+}
+
+.collage__tarjeta {
+  position: absolute;
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--radio-xl);
+  box-shadow: var(--sombra-tarjeta-flotante);
+  transition: left 900ms var(--curva-salida), top 900ms var(--curva-salida),
+              width 900ms var(--curva-salida), height 900ms var(--curva-salida),
+              transform 900ms var(--curva-salida), opacity 900ms ease;
+}
+
+/* Posiciones de Paso=1 (Tarjeta 1, 2 y 3 en Figma) */
+.collage__tarjeta[data-pos="centro"] { left: 150px; top: 70px; width: 300px; height: 390px; z-index: 3; }
+.collage__tarjeta[data-pos="izq"] { left: 31px; top: 101px; width: 250px; height: 320px; transform: rotate(-8deg); opacity: 0.92; z-index: 1; }
+.collage__tarjeta[data-pos="der"] { left: 310px; top: 154px; width: 250px; height: 320px; transform: rotate(7deg); opacity: 0.92; z-index: 2; }
+
+.collage__sombra {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(23, 20, 59, 0) 45%, var(--color-velo-tarjeta));
+}
+
+.collage__texto {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--color-superficie);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.collage__texto span { overflow: hidden; text-overflow: ellipsis; }
+
+/* Chips flotantes "Ya vas a ir" y "Guardado en favoritos" */
+.collage__chip {
+  position: absolute;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 8px 12px;
+  border-radius: var(--radio-pildora);
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+  box-shadow: var(--sombra-chip);
+  animation: chip-flota 3.6s ease-in-out infinite alternate;
+}
+.collage__chip--inscrito { left: 400px; top: 40px; }
+.collage__chip--favorito { left: 60px; top: 470px; animation-delay: -1.8s; }
+@keyframes chip-flota { to { transform: translateY(-8px); } }
+
+@media (max-width: 1000px) {
+  .hero__contenido { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  .hero__collage { width: 100%; margin: 0 auto; }
+}

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -6,25 +6,24 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Permite compilar (no ejecutar) desde macOS/Linux; en Windows no cambia nada -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
-  <!-- Las subcarpetas son proyectos propios; no compilarlas dentro de este -->
+  <!-- Otros proyectos y código viejo viven en subcarpetas: no compilarlos dentro de este -->
   <ItemGroup>
-    <Compile Remove="BackendLogica\**;PruebaBackend\**" />
-    <EmbeddedResource Remove="BackendLogica\**;PruebaBackend\**" />
-    <None Remove="BackendLogica\**;PruebaBackend\**" />
+    <Compile Remove="BackendLogica\**;BackendLogica.Pruebas\**;Legacy\**" />
+    <EmbeddedResource Remove="BackendLogica\**;BackendLogica.Pruebas\**;Legacy\**" />
+    <None Remove="BackendLogica\**;BackendLogica.Pruebas\**;Legacy\**" />
+  </ItemGroup>
+
+  <!-- La interfaz (HTML/CSS/JS + imágenes) se copia junto al ejecutable y la carga WebView2 -->
+  <ItemGroup>
+    <None Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FontAwesome.Sharp" Version="6.6.0" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
-    <PackageReference Include="MySql.Data" Version="26.7.0" />
-  </ItemGroup>
-
-  <!-- Tipografías (.ttf) e imágenes (hero.jpg, evento1.jpg...) se copian junto al ejecutable -->
-  <ItemGroup>
-    <None Include="Fonts\**" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="Assets\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

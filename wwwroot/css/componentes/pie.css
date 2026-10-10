@@ -1,0 +1,22 @@
+/* =====================================================================
+   Pie de página
+   ===================================================================== */
+
+sc-pie { display: block; }
+
+.pie { background: var(--color-tinta); color: var(--color-superficie); padding-block: 64px; }
+
+.pie__contenido { display: flex; align-items: flex-start; gap: 48px; }
+
+.pie__marca { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+.pie__marca p { max-width: 300px; }
+.pie__logo { display: inline-flex; align-items: center; gap: 8px; }
+
+.pie__columna { display: flex; flex-direction: column; gap: 10px; white-space: nowrap; }
+.pie__enlace { opacity: 0.85; transition: opacity var(--duracion-rapida), color var(--duracion-rapida); }
+.pie__enlace:hover { opacity: 1; color: var(--color-sol); }
+
+@media (max-width: 760px) {
+  .pie__contenido { flex-wrap: wrap; gap: 32px; }
+  .pie__marca { flex-basis: 100%; }
+}
