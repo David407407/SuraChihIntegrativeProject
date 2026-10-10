@@ -1,5 +1,6 @@
 using System.Data.Common;
 using BackendLogica.Configuracion;
+using BackendLogica.Contratos;
 using BackendLogica.Datos;
 using BackendLogica.Modelos;
 using BackendLogica.Seguridad;
@@ -10,7 +11,7 @@ namespace BackendLogica.Repositorios
     /// Solicitudes y perfiles de organizador. Un organizador es un usuario normal cuya solicitud
     /// fue aprobada por un moderador (ver <see cref="ModeracionDB"/>).
     /// </summary>
-    public sealed class OrganizadorDB : ConexionDB
+    public sealed class OrganizadorDB : ConexionDB, IOrganizerRepository
     {
         public OrganizadorDB(ConfiguracionBD? configuracion = null) : base(configuracion) { }
 

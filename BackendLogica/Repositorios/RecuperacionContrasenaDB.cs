@@ -1,4 +1,5 @@
 using BackendLogica.Configuracion;
+using BackendLogica.Contratos;
 using BackendLogica.Datos;
 using BackendLogica.Seguridad;
 
@@ -8,7 +9,7 @@ namespace BackendLogica.Repositorios
     /// "¿Olvidaste tu contraseña?". Genera un token de un solo uso que se manda por correo;
     /// la BD solo guarda su SHA-256, así que un respaldo filtrado no sirve para entrar.
     /// </summary>
-    public sealed class RecuperacionContrasenaDB : ConexionDB
+    public sealed class RecuperacionContrasenaDB : ConexionDB, IPasswordResetRepository
     {
         /// <summary>Tiempo que dura válido el enlace del correo.</summary>
         public static readonly TimeSpan Vigencia = TimeSpan.FromHours(1);

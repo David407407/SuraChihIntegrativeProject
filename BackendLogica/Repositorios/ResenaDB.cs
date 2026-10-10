@@ -1,4 +1,5 @@
 using BackendLogica.Configuracion;
+using BackendLogica.Contratos;
 using BackendLogica.Datos;
 using BackendLogica.Modelos;
 using BackendLogica.Seguridad;
@@ -13,7 +14,7 @@ namespace BackendLogica.Repositorios
     /// Reglas en la BD: un evento solo se reseña cuando ya terminó; nadie reseña lo propio;
     /// una reseña por usuario.
     /// </remarks>
-    public sealed class ResenaDB : ConexionDB
+    public sealed class ResenaDB : ConexionDB, IReviewRepository
     {
         /// <summary>Nombres de tabla/columnas de cada tipo. Son constantes: nunca vienen del usuario.</summary>
         private sealed record Tabla(string Resenas, string ColObjetivo, string ColRespuesta, string Objetivos, string ColDueno);
@@ -72,6 +73,32 @@ namespace BackendLogica.Repositorios
                     r.TextoONulo("avatar_url"), r.Entero("rating"), r.TextoONulo("comment"), r.TextoONulo("reply"),
                     r.FechaONula("replied_at"), r.Bool("is_hidden"), r.Fecha("created_at")),
                 new { objetivoId, incluirOcultas }, ct);
+        }
+
+        /// <summary>Promedio, total y barras por estrellas (solo reseñas visibles, como las vistas de la BD).</summary>
+        public async Task<ResumenResenas> ObtenerResumenAsync(TipoResena tipo, int objetivoId, CancellationToken ct = default)
+        {
+            var t = De(tipo);
+            var filas = await ConsultarAsync($"""
+                SELECT rating, COUNT(*) AS total
+                FROM {t.Resenas}
+                WHERE {t.ColObjetivo} = @objetivoId AND NOT is_hidden
+                GROUP BY rating
+                """, r => (Estrellas: r.Entero("rating"), Total: r.Entero("total")), new { objetivoId }, ct);
+            return Resumir(filas);
+        }
+
+        /// <summary>Arma el resumen a partir de (estrellas, cuántas). La usa también el repositorio falso.</summary>
+        internal static ResumenResenas Resumir(IEnumerable<(int Estrellas, int Total)> filas)
+        {
+            var porEstrellas = Enumerable.Range(1, 5).ToDictionary(e => e, _ => 0);
+            foreach (var (estrellas, total) in filas) porEstrellas[estrellas] += total;
+
+            int cuantas = porEstrellas.Values.Sum();
+            // ROUND(AVG(rating), 1) de MySQL redondea alejándose del cero.
+            decimal? promedio = cuantas == 0 ? null
+                : Math.Round((decimal)porEstrellas.Sum(p => p.Key * p.Value) / cuantas, 1, MidpointRounding.AwayFromZero);
+            return new ResumenResenas(promedio, cuantas, porEstrellas);
         }
 
         /// <summary>Un moderador oculta (o vuelve a mostrar) una reseña tras un reporte.</summary>

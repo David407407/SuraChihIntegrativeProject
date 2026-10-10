@@ -1,4 +1,5 @@
 using BackendLogica.Configuracion;
+using BackendLogica.Contratos;
 using BackendLogica.Datos;
 using BackendLogica.Modelos;
 
@@ -8,7 +9,7 @@ namespace BackendLogica.Repositorios
     /// Favoritos ("me interesa", el corazón). Priorizan el evento en el inicio del usuario y
     /// cuentan como "interesados" en el panel del organizador.
     /// </summary>
-    public sealed class FavoritoDB : ConsultasEventoDB
+    public sealed class FavoritoDB : ConsultasEventoDB, IFavoriteRepository
     {
         public FavoritoDB(ConfiguracionBD? configuracion = null) : base(configuracion) { }
 
@@ -45,5 +46,20 @@ namespace BackendLogica.Repositorios
                 WHERE c.status = 'approved'
                 ORDER BY fav.created_at DESC
                 """, new { usuarioId }, ct);
+
+        // ------------------------------------------------------------------
+        // Lugares: el diseño los pide, pero la BD v1 no tiene tabla de favoritos de lugares.
+        // ------------------------------------------------------------------
+
+        private const string FavoritosLugares = "Guardar lugares en favoritos";
+
+        public Task<bool> AlternarLugarAsync(int usuarioId, int lugarId, CancellationToken ct = default) =>
+            throw new PendienteBDException(FavoritosLugares);
+
+        public Task<HashSet<int>> ListarIdsLugaresAsync(int usuarioId, CancellationToken ct = default) =>
+            throw new PendienteBDException(FavoritosLugares);
+
+        public Task<List<LugarTarjeta>> ListarLugaresAsync(int usuarioId, CancellationToken ct = default) =>
+            throw new PendienteBDException(FavoritosLugares);
     }
 }
