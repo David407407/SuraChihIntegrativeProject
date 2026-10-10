@@ -54,6 +54,16 @@ export function precio(min, max, estilo = 'rango') {
   return `${dinero(bajo)}–${numero.format(alto)}`;
 }
 
+/** Fecha de un EventoTarjeta: rango compacto o "Fecha por confirmar". */
+export function fechaEvento(e) {
+  return e.fechaPorConfirmar ? 'Fecha por confirmar' : rangoFechas(e.inicio, e.fin);
+}
+
+/** Precio de un EventoTarjeta: "$600–850", "Gratis" o "Precio por confirmar". */
+export function precioEvento(e, estilo = 'rango') {
+  return e.precioPorConfirmar ? 'Precio por confirmar' : precio(e.precioMin, e.precioMax, estilo);
+}
+
 /** "18:00:00" → "6 p.m." · "21:30:00" → "9:30 p.m." · "00:00:00" → "12 a.m." */
 export function hora(valor) {
   const [h, m] = String(valor).split(':').map(Number);

@@ -77,18 +77,22 @@
 .evento-fila__titulo { transition: color var(--duracion-rapida); }
 .evento-fila__precio { flex: none; }
 
-/* ---- Card lugar ---- */
-.tarjeta-lugar { position: relative; display: flex; flex-direction: column; gap: 12px; }
+/* ---- "Card evento" y "Card lugar" (estados Normal / Hover) ----
+   Misma estructura en Figma: imagen cuadrada de 282px con favorito, "Ver detalles" en hover y la
+   información debajo. El ancho lo pone la cuadrícula que las contiene. */
+.tarjeta { position: relative; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 
-.tarjeta-lugar__imagen {
+.tarjeta__imagen {
   position: relative;
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: var(--radio-m);
+  background: var(--color-fondo);
   transition: box-shadow var(--duracion-media);
 }
+.tarjeta__imagen sc-imagen { transition: transform 700ms var(--curva-salida); }
 /* Borde azul del estado Hover (3px por dentro, sin mover el contenido) */
-.tarjeta-lugar__imagen::after {
+.tarjeta__imagen::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -99,10 +103,10 @@
   pointer-events: none;
 }
 
-.tarjeta-lugar__tipo { position: absolute; top: 12px; left: 12px; }
-.tarjeta-lugar__favorito { position: absolute; top: 12px; right: 12px; z-index: 2; }
+.tarjeta__tipo { position: absolute; top: 12px; left: 12px; }
+.tarjeta__favorito { position: absolute; top: 12px; right: 12px; z-index: 2; }
 
-.tarjeta-lugar__ver {
+.tarjeta__ver {
   position: absolute;
   left: 12px;
   bottom: 12px;
@@ -117,20 +121,40 @@
   transition: opacity var(--duracion-media), transform var(--duracion-media) var(--curva-salida);
 }
 
-.tarjeta-lugar__info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.tarjeta-lugar__titulo { transition: color var(--duracion-rapida); }
+.tarjeta__info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+.tarjeta__titulo { transition: color var(--duracion-rapida); }
+
+/* Título: dos líneas como máximo, con "…" (Card evento: "Nombre del evento con dos líneas como máximo").
+   Va en un span dentro del botón: un <button> no se puede recortar por líneas. */
+.tarjeta__titulo-texto {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
 
 /* Toda la tarjeta es clicable: el botón del título se extiende sobre ella */
-.tarjeta-lugar__enlace { font: inherit; text-align: left; }
-.tarjeta-lugar__enlace::after { content: ""; position: absolute; inset: 0; z-index: 1; }
+.tarjeta__enlace { font: inherit; text-align: left; }
+.tarjeta__enlace::after { content: ""; position: absolute; inset: 0; z-index: 1; }
 
-.tarjeta-lugar__direccion { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tarjeta-lugar__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
-.tarjeta-lugar__calificacion { display: inline-flex; align-items: center; gap: 4px; }
-.tarjeta-lugar__abierto { color: var(--color-exito); }
+.tarjeta__fecha { color: var(--color-cielo-texto); }
+.tarjeta__linea { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tarjeta__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.tarjeta__calificacion { display: inline-flex; align-items: center; gap: 4px; }
+.tarjeta__abierto { color: var(--color-exito); }
 
-.tarjeta-lugar:hover .tarjeta-lugar__imagen { box-shadow: var(--sombra-hover-cielo); }
-.tarjeta-lugar:hover .tarjeta-lugar__imagen::after { opacity: 1; }
-.tarjeta-lugar:hover .tarjeta-lugar__ver { opacity: 1; transform: none; }
-.tarjeta-lugar:hover .tarjeta-lugar__titulo { color: var(--color-cielo-texto); }
-.tarjeta-lugar:has(.tarjeta-lugar__enlace:focus-visible) .tarjeta-lugar__imagen::after { opacity: 1; }
+.tarjeta:hover .tarjeta__imagen { box-shadow: var(--sombra-hover-cielo); }
+.tarjeta:hover .tarjeta__imagen::after { opacity: 1; }
+.tarjeta:hover .tarjeta__imagen sc-imagen { transform: scale(1.04); }
+.tarjeta:hover .tarjeta__ver { opacity: 1; transform: none; }
+.tarjeta:hover .tarjeta__titulo { color: var(--color-cielo-texto); }
+.tarjeta:has(.tarjeta__enlace:focus-visible) .tarjeta__imagen::after { opacity: 1; }
+.tarjeta:has(.tarjeta__enlace:focus-visible) .tarjeta__ver { opacity: 1; transform: none; }
+
+/* Cuadrícula para filas de tarjetas (282px a 1200px de ancho = 4 columnas con 24px de separación) */
+.rejilla-tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+  gap: 32px 24px;
+}

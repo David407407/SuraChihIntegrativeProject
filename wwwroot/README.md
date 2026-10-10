@@ -28,14 +28,51 @@ js/
   contenido/landing.js     textos fijos de la landing
   contenido/datos-demo.js  datos de ejemplo
   componentes/
-    atomos.js              icono(), boton(), chip(), encabezadoSeccion()
-    tarjetas.js            tarjetaEventoPrincipal(), tarjetaEventoFila(), tarjetaLugar()
+    atomos.js              icono(), boton(), campo(), marcarError(), chip(), chipCategoria(), encabezadoSeccion()
+    tarjetas.js            tarjetaEvento(), tarjetaLugar(), tarjetaEventoPrincipal(), tarjetaEventoFila()
     sc-imagen.js           <sc-imagen> foto de Cloudinary con carga y relleno
     sc-boton-favorito.js   <sc-boton-favorito> corazón (Vacío / Hover / Lleno)
+    sc-chip-categoria.js   <sc-chip-categoria> filtro por categoría (Normal / Activo)
     sc-toast.js            mostrarToast()
     secciones/             <sc-navbar>, <sc-hero>, <sc-collage-hero>, secciones fijas y con datos
 assets/iconos              SVG exportados de Figma (conservan tamaño y color)
 assets/demo                fotos solo para los datos demo
+```
+
+## Componentes base (WBS 4.1)
+
+Úsalos en todas las pantallas en vez de hacer tu propia versión. **`componentes.html`** muestra
+cada variante con el código para crearla (ábrela con el servidor de "Probar sin la app de escritorio").
+
+| Figma (página Rediseño) | Cómo se usa | Variantes |
+|---|---|---|
+| Botón | `boton({ texto, variante, tamano, icono, accion })` | `primario` · `oscuro` · `secundario` · `peligro` · `fantasma` × `m` (48px) · `s` (36px). Además `tipo: 'submit'`, `deshabilitado` |
+| Campo | `campo({ nombre, etiqueta, tipo, icono, ayuda, error })` | normal · foco · error · deshabilitado; contraseña con "Mostrar". `marcarError(input, mensaje)` para errores de C# |
+| Chip categoría | `chipCategoria(etiqueta, { activo, interactivo })` | Normal / Activo. El color sale de `etiqueta.icono` (family, music, run, robot, food). Emite `sc:categoria` |
+| Navbar | `<sc-navbar>` con `navbar.datos = { usuario }` | Visitante (`usuario: null`) / Logueado |
+| Card evento | `tarjetaEvento(evento, { orden, favorito })` | Normal / Hover. "Fecha por confirmar" y "Precio por confirmar" incluidos |
+| Card lugar | `tarjetaLugar(lugar, { orden, favorito })` | Normal / Hover |
+| Botón favorito | `<sc-boton-favorito tipo objetivo tamano activo>` | Vacío / Hover / Lleno × `s` (36px) · `m` (40px). Emite `sc:favorito` |
+
+Las cards reciben los records de BackendLogica tal cual (`EventoTarjeta`, `LugarTarjeta`) y van dentro de
+`<div class="rejilla-tarjetas">`, que acomoda 4 por fila a 1200px como en Figma.
+
+Ejemplo de un formulario:
+
+```js
+html`
+  <form id="login">
+    ${campo({ nombre: 'identificador', etiqueta: 'Correo o usuario', icono: 'correo', requerido: true })}
+    ${campo({ nombre: 'contrasena', etiqueta: 'Contraseña', tipo: 'password' })}
+    ${boton({ texto: 'Iniciar sesión', tipo: 'submit' })}
+  </form>`;
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const datos = Object.fromEntries(new FormData(form));
+  try { await invocar('sesion.iniciar', datos); }
+  catch (error) { marcarError(form.elements.contrasena, error.message); }   // texto de C# tal cual
+});
 ```
 
 ## Fotos de eventos y lugares (Cloudinary)
@@ -75,7 +112,8 @@ definir('sc-mi-seccion', MiSeccion);
 |---|---|
 | Collage hero (Paso 1 → 2 → 3) | `sc-collage-hero.js` rota posiciones cada 4 s; transiciones en `hero.css` |
 | Cinta categorías (Posición A → B) | desplazamiento infinito en `cinta.css` |
-| Card lugar (Normal → Hover) | borde azul, sombra, título azul y "Ver detalles" en `tarjetas.css` |
+| Card evento y Card lugar (Normal → Hover) | borde azul, sombra, zoom de la foto, título azul y "Ver detalles" en `tarjetas.css` |
 | Botón favorito (Vacío / Hover / Lleno) | `atomos.css` + latido al guardar |
+| Chip categoría (Normal → Activo) | borde tinta dibujado por dentro para que el chip no cambie de tamaño |
 
 Todas respetan "reducir movimiento" del sistema operativo.

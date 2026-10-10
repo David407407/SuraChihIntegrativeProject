@@ -43,8 +43,18 @@
 }
 .boton--secundario:hover { border-color: var(--color-tinta); }
 
+.boton--peligro { background: var(--color-error); color: var(--color-superficie); }
+.boton--peligro:hover { background: var(--color-error-hover); }
+
+/* Los SVG de Figma vienen en tinta; sobre fondo oscuro o rojo se pintan blancos, como en el diseño. */
+.boton--oscuro .icono img,
+.boton--peligro .icono img { filter: brightness(0) invert(1); }
+
 .boton--fantasma { color: var(--color-tinta); }
 .boton--fantasma:hover { background: var(--color-fondo); }
+
+.boton:disabled,
+.boton[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
 
 /* Sobre el azul del hero ("Btn Crear cuenta gratis") */
 .boton--contorno-claro {
@@ -70,6 +80,80 @@
 .chip--sol-suave { background: var(--color-sol-suave); }
 .chip--superficie { background: var(--color-superficie); }
 .chip--sol { background: var(--color-sol); padding: 5px 12px 5px 10px; }
+
+/* ---- Campo ("Campo" de Figma): 48px, borde línea, icono + texto ---- */
+.campo { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.campo__etiqueta { color: var(--color-tinta); }
+
+.campo__caja {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: var(--radio-s);
+  background: var(--color-superficie);
+  border: 1.5px solid var(--color-linea);
+  transition: border-color var(--duracion-rapida), box-shadow var(--duracion-rapida);
+}
+.campo__caja:hover { border-color: #c9d3e3; }
+.campo__caja:focus-within { border-color: var(--color-cielo); box-shadow: 0 0 0 3px rgba(47, 123, 255, 0.15); }
+
+.campo__entrada {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-tinta);
+  font: 400 16px/24px var(--fuente-cuerpo);
+}
+.campo__entrada::placeholder { color: var(--color-texto-2); }
+
+/* Botón de mostrar / ocultar contraseña */
+.campo__ver { flex: none; color: var(--color-texto-2); font: 600 13px/20px var(--fuente-cuerpo); }
+.campo__ver:hover { color: var(--color-tinta); }
+
+.campo__ayuda { color: var(--color-texto-2); }
+.campo__error { display: none; color: var(--color-error); }
+
+.campo--error .campo__caja { border-color: var(--color-error); }
+.campo--error .campo__caja:focus-within { box-shadow: 0 0 0 3px rgba(217, 54, 54, 0.15); }
+.campo--error .campo__error { display: block; }
+.campo--error .campo__ayuda { display: none; }
+
+.campo--deshabilitado .campo__caja { background: var(--color-fondo); }
+.campo--deshabilitado .campo__entrada { color: var(--color-texto-2); cursor: not-allowed; }
+
+/* ---- Chip categoría ("Chip categoría" de Figma): fondo por categoría, Activo = borde tinta ---- */
+sc-chip-categoria { display: inline-flex; }
+
+.chip-categoria {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px 5px 10px;   /* 26px de alto, como en Figma */
+  border-radius: var(--radio-pildora);
+  background: var(--fondo-categoria, var(--color-fondo));
+  color: var(--color-tinta);
+  font: 500 12px/16px var(--fuente-cuerpo);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  transition: box-shadow var(--duracion-rapida), transform var(--duracion-rapida);
+}
+/* El borde de 1.5px de Activo se dibuja por dentro (sombra) para que el chip no cambie de tamaño
+   al activarse y la fila de filtros no salte. */
+button.chip-categoria:hover { box-shadow: inset 0 0 0 1.5px rgba(11, 27, 58, 0.25); }
+button.chip-categoria:active { transform: scale(0.96); }
+.chip-categoria[aria-pressed="true"],
+button.chip-categoria[aria-pressed="true"]:hover { box-shadow: inset 0 0 0 1.5px var(--color-tinta); }
+
+.chip-categoria--familiar    { --fondo-categoria: var(--categoria-familiar); }
+.chip-categoria--musica      { --fondo-categoria: var(--categoria-musica); }
+.chip-categoria--deportes    { --fondo-categoria: var(--categoria-deportes); }
+.chip-categoria--tecnologia  { --fondo-categoria: var(--categoria-tecnologia); }
+.chip-categoria--gastronomia { --fondo-categoria: var(--categoria-gastronomia); }
 
 /* ---- Botón favorito: Vacío / Hover / Lleno ---- */
 sc-boton-favorito { display: block; width: 36px; height: 36px; }
