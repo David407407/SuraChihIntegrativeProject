@@ -80,4 +80,15 @@ namespace BackendLogica.Modelos
 
     /// <summary>Reseñas de eventos (event_review) o de lugares (place_review).</summary>
     public enum TipoResena { Evento, Lugar }
+
+    /// <summary>Pestañas de la pantalla "Mis planes".</summary>
+    public enum PestanaPlanes { Proximos, Pasados, Cancelados }
+
+    /// <summary>Filtro "Precio" del modal de filtros.</summary>
+    public enum FiltroPrecio { Todos, Gratis, DePago }
+
+    /// <summary>
+    /// Filtro "Cuándo" (chips Hoy / Mañana / Este fin de semana / Próxima semana, o un rango del calendario).
+    /// </summary>
+    public enum FiltroCuando { Cualquiera, Hoy, Manana, EsteFinDeSemana, ProximaSemana, Rango }
 }
