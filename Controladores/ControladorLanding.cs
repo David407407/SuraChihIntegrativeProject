@@ -1,4 +1,4 @@
-using BackendLogica;
+using BackendLogica.Contratos;
 using BackendLogica.Modelos;
 using SuraChihIntegrativeProject.Puente;
 using SuraChihIntegrativeProject.Servicios;
@@ -11,10 +11,10 @@ namespace SuraChihIntegrativeProject.Controladores
     /// </summary>
     public sealed class ControladorLanding
     {
-        private readonly SuraChihBD _bd;
+        private readonly ISuraChihBD _bd;
         private readonly Sesion _sesion;
 
-        public ControladorLanding(SuraChihBD bd, Sesion sesion)
+        public ControladorLanding(ISuraChihBD bd, Sesion sesion)
         {
             _bd = bd;
             _sesion = sesion;
