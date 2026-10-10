@@ -33,6 +33,8 @@ con **WebView2**. Los datos vienen de MySQL a través de la librería **BackendL
 1. Crea la BD ejecutando `BaseDeDatos/surachih_v1.sql` completo en MySQL Workbench o en la consola
    `mysql` (MySQL 8.0.16+; los triggers usan `DELIMITER`).
 2. Copia `dbsettings.example.json` como `dbsettings.local.json` (git lo ignora) y pon tus datos.
+   Para trabajar pantallas **sin MySQL**, pon `"UseFakeData": true`: la app usa los datos de prueba
+   en memoria (ver [BackendLogica/README.md](BackendLogica/README.md#trabajar-sin-mysql-repositorio-falso)).
 3. Verifica la conexión y la librería:
    ```bash
    dotnet run --project BackendLogica.Pruebas
