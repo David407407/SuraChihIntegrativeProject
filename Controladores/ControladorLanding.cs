@@ -23,7 +23,6 @@ namespace SuraChihIntegrativeProject.Controladores
         public void Registrar(PuenteWeb puente)
         {
             puente.Registrar("landing.obtener", async () => await ObtenerLandingAsync());
-            puente.Registrar("sesion.obtener", () => Task.FromResult<object?>(_sesion.Usuario));
             puente.Registrar<SolicitudFavorito>("favoritos.alternar", async s => await AlternarFavoritoAsync(s));
         }
 

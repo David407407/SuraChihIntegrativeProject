@@ -22,6 +22,7 @@ namespace SuraChihIntegrativeProject.Ventanas
         /// <summary>MySQL o datos de prueba en memoria, según "UseFakeData" en dbsettings.local.json.</summary>
         private readonly BackendLogica.Contratos.ISuraChihBD _bd = FabricaBD.Crear();
         private readonly Sesion _sesion = new();
+        private readonly CorreoSimulado _correo = new();
 
         public VentanaPrincipal()
         {
@@ -57,6 +58,7 @@ namespace SuraChihIntegrativeProject.Ventanas
 
             var puente = new PuenteWeb(core);
             new ControladorLanding(_bd, _sesion).Registrar(puente);
+            new ControladorCuenta(_bd, _sesion, _correo).Registrar(puente);
 
             core.Navigate(UrlInicio);
         }

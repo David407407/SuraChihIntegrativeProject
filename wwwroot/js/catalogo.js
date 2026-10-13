@@ -12,6 +12,8 @@ import { html } from './nucleo/componente.js';
 import { boton, campo, chipCategoria, marcarError } from './componentes/atomos.js';
 import { tarjetaEvento, tarjetaLugar } from './componentes/tarjetas.js';
 import { mostrarToast } from './componentes/sc-toast.js';
+import * as modalesCuenta from './componentes/modales/cuenta.js';
+import { alternarMenuCuenta } from './componentes/menu-cuenta.js';
 
 const VARIANTES = ['primario', 'oscuro', 'secundario', 'peligro', 'fantasma'];
 
@@ -98,6 +100,15 @@ document.getElementById('catalogo').innerHTML = String(html`
     </div>
   `, 'muestra__panel--blanco')}
 
+  ${muestra('Modales de cuenta (WBS 4.2) · usan los datos demo: mariana_r / Test1234!', 'abrirIniciarSesion() · abrirCrearCuenta() · abrirRecuperarContrasena() · abrirContrasenaNueva(token) · abrirRequiereSesion() · alternarMenuCuenta(boton, usuario)', html`
+    <div class="muestra__fila">
+      ${[['abrirIniciarSesion', 'Iniciar sesión'], ['abrirCrearCuenta', 'Crear cuenta'], ['abrirRecuperarContrasena', 'Recuperar contraseña'],
+        ['abrirContrasenaNueva', 'Contraseña nueva'], ['abrirRequiereSesion', 'Inicia sesión para continuar']]
+        .map(([funcion, texto]) => html`<button type="button" class="boton boton--secundario boton--s" data-modal="${funcion}"><span>${texto}</span></button>`)}
+      <button type="button" class="boton boton--oscuro boton--s" data-menu-cuenta><span>Menú de cuenta</span></button>
+    </div>
+  `)}
+
   ${muestra('Card evento · Normal / Hover (pasa el mouse)', 'tarjetaEvento(evento, { orden, favorito })', html`
     <div class="rejilla-tarjetas">${EVENTOS.map((e, i) => tarjetaEvento(e, { orden: i, favorito: i === 1 }))}</div>
   `, 'muestra__panel--blanco')}
@@ -119,6 +130,16 @@ document.getElementById('formulario-demo').addEventListener('submit', (e) => {
   const correo = e.target.elements.correo;
   marcarError(correo, correo.value.includes('@') ? null : 'Escribe un correo válido.');
 });
+
+document.addEventListener('click', (e) => {
+  const modal = e.target.closest('[data-modal]')?.dataset.modal;
+  if (modal) modalesCuenta[modal](modal === 'abrirContrasenaNueva' ? 'token-de-ejemplo' : undefined);
+  const menu = e.target.closest('[data-menu-cuenta]');
+  if (menu) {
+    alternarMenuCuenta(menu, { id: 1, nombreUsuario: 'Andy', correo: 'andy@correo.com', avatarUrl: null, esModerador: true, esOrganizador: true });
+  }
+});
+document.addEventListener('sc:sesion', ({ detail }) => mostrarToast(`Sesión iniciada: ${detail.usuario.nombreUsuario}`));
 
 document.addEventListener('sc:categoria', ({ detail }) =>
   mostrarToast(`${detail.nombre}: ${detail.activo ? 'filtro activado' : 'filtro quitado'}`));

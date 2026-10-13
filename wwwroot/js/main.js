@@ -17,6 +17,8 @@ import './componentes/secciones/sc-secciones-datos.js';
 
 import { invocar, enApp, ErrorPuente } from './nucleo/puente.js';
 import { mostrarToast } from './componentes/sc-toast.js';
+import { abrirIniciarSesion, abrirCrearCuenta, abrirRequiereSesion } from './componentes/modales/cuenta.js';
+import { alternarMenuCuenta, cerrarMenuCuenta } from './componentes/menu-cuenta.js';
 import { observarRevelado } from './utilidades/animaciones.js';
 
 const secciones = {
@@ -45,17 +47,43 @@ async function cargarLanding() {
   }
 }
 
+/** Usuario con sesión (UsuarioSesion de C#) o null para el visitante. */
+let usuarioActual = null;
+
+function ponerUsuario(usuario) {
+  usuarioActual = usuario ?? null;
+  cerrarMenuCuenta();
+  secciones.navbar.datos = { usuario: usuarioActual };
+}
+
 /** Navbar Visitante o Logueado según la sesión de C#. */
 async function cargarSesion() {
   try {
-    secciones.navbar.datos = { usuario: await invocar('sesion.obtener') };
+    ponerUsuario(await invocar('sesion.obtener'));
   } catch (error) {
     console.error(error);   // sin sesión se queda como visitante
   }
 }
 
+async function cerrarSesion() {
+  try {
+    await invocar('sesion.cerrar');
+    ponerUsuario(null);
+    mostrarToast('Cerraste sesión');
+  } catch (error) {
+    mostrarToast(error.message, { tipo: 'error' });
+  }
+}
+
+// Lo lanzan los modales de cuenta al iniciar sesión o crear la cuenta.
+document.addEventListener('sc:sesion', ({ detail }) => {
+  ponerUsuario(detail.usuario);
+  const nombre = detail.usuario.nombreUsuario;
+  mostrarToast(detail.nuevo ? `¡Bienvenido a SuraChih, ${nombre}!` : `¡Hola de nuevo, ${nombre}!`);
+});
+
 // ---------------------------------------------------------------------
-// Acciones (las pantallas de destino se construirán en las siguientes entregas)
+// Acciones (las pantallas que faltan se construirán en las siguientes entregas)
 // ---------------------------------------------------------------------
 
 /** Qué hace cada `data-accion`. Las que aún no tienen pantalla muestran un aviso. */
@@ -63,13 +91,18 @@ const acciones = {
   'explorar-eventos': () => proximamente('Explorar eventos'),
   'explorar-lugares': () => proximamente('Explorar lugares'),
   'mapa': () => proximamente('El mapa'),
-  'iniciar-sesion': () => proximamente('Iniciar sesión'),
-  'crear-cuenta': () => proximamente('Crear cuenta'),
-  'mis-planes': () => proximamente('Mis planes'),
-  'favoritos': () => proximamente('Mis favoritos'),
-  'menu-cuenta': () => proximamente('El menú de tu cuenta'),
-  'publicar-evento': () => requiereSesion('publicar tu evento'),
-  'inscribirse': () => requiereSesion('inscribirte'),
+  'iniciar-sesion': () => abrirIniciarSesion(),
+  'crear-cuenta': () => (usuarioActual ? mostrarToast('Ya tienes una sesión iniciada.', { tipo: 'info' }) : abrirCrearCuenta()),
+  'mis-planes': () => (usuarioActual ? proximamente('Mis planes') : abrirRequiereSesion()),
+  'favoritos': () => (usuarioActual ? proximamente('Mis favoritos') : abrirRequiereSesion()),
+  'menu-cuenta': (_id, origen) => alternarMenuCuenta(origen, usuarioActual),
+  // Menú de cuenta
+  'mi-perfil': () => proximamente('Mi perfil'),
+  'panel-organizador': () => proximamente('El panel de organizador'),
+  'moderacion': () => proximamente('Moderación'),
+  'cerrar-sesion': () => cerrarSesion(),
+  'publicar-evento': () => requiereSesion('Publicar eventos'),
+  'inscribirse': () => requiereSesion('La inscripción a eventos'),
   'ver-evento': (id) => proximamente(`El detalle del evento #${id}`),
   'ver-lugar': (id) => proximamente(`El detalle del lugar #${id}`),
 };
@@ -78,8 +111,10 @@ function proximamente(que) {
   mostrarToast(`${que} llega en la siguiente versión.`, { tipo: 'info' });
 }
 
-function requiereSesion(para) {
-  mostrarToast(`Inicia sesión para ${para}.`, { tipo: 'info' });
+/** Sin sesión: modal "Inicia sesión para continuar". Con sesión, la pantalla aún no existe. */
+function requiereSesion(que) {
+  if (usuarioActual) proximamente(que);
+  else abrirRequiereSesion();
 }
 
 document.addEventListener('click', (e) => {
@@ -87,7 +122,7 @@ document.addEventListener('click', (e) => {
   const accion = origen?.dataset.accion;
   if (!accion || !acciones[accion]) return;
   e.preventDefault();
-  acciones[accion](origen.dataset.id ? Number(origen.dataset.id) : undefined);
+  acciones[accion](origen.dataset.id ? Number(origen.dataset.id) : undefined, origen);
 });
 
 document.addEventListener('sc:buscar', (e) => proximamente(`La búsqueda de “${e.detail.texto}”`));
@@ -99,8 +134,8 @@ document.addEventListener('sc:favorito', async ({ detail }) => {
     mostrarToast(activo ? 'Guardado en favoritos' : 'Quitado de favoritos');
   } catch (error) {
     detail.boton.revertir();
-    const tipo = error instanceof ErrorPuente && error.codigo === 'requiere-sesion' ? 'info' : 'error';
-    mostrarToast(error.message, { tipo });
+    if (error instanceof ErrorPuente && error.codigo === 'requiere-sesion') abrirRequiereSesion();
+    else mostrarToast(error.message, { tipo: 'error' });
   }
 });
 
