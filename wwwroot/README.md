@@ -38,6 +38,9 @@ js/
     sc-boton-favorito.js   <sc-boton-favorito> corazón (Vacío / Hover / Lleno)
     sc-chip-categoria.js   <sc-chip-categoria> filtro por categoría (Normal / Activo)
     sc-toast.js            mostrarToast()
+    sc-modal.js            mostrarModal() / cerrarModal(): ventana modal base (<dialog>)
+    menu-cuenta.js         alternarMenuCuenta(): menú bajo el avatar del navbar
+    modales/cuenta.js      modales de cuenta: iniciar sesión, crear cuenta, recuperar contraseña...
     secciones/             <sc-navbar>, <sc-hero>, <sc-collage-hero>, secciones fijas y con datos
 assets/iconos              SVG exportados de Figma (conservan tamaño y color)
 assets/demo                fotos solo para los datos demo
@@ -145,6 +148,31 @@ Cada pantalla es un `.html` con su script de entrada. Para ir de una a otra se u
 3. Agrega la página en `PAGINAS` y su acción en `acciones` de `nucleo/navegacion.js`.
 4. Si necesita datos, registra la acción en un controlador de C# y agrega su ejemplo en
    `contenido/datos-demo.js`.
+## Modales de cuenta + menú de cuenta (WBS 4.2)
+
+| Figma (página Rediseño) | Cómo se abre | Acción de C# (`ControladorCuenta`) |
+|---|---|---|
+| Modal / Iniciar sesión | `abrirIniciarSesion({ correo, aviso })` · `data-accion="iniciar-sesion"` | `cuenta.iniciarSesion` |
+| Modal / Crear cuenta | `abrirCrearCuenta()` · `data-accion="crear-cuenta"` | `cuenta.registrar` |
+| Modal / Recuperar contraseña | `abrirRecuperarContrasena()` · "¿Olvidaste tu contraseña?" | `cuenta.recuperar` |
+| Modal / Revisa tu correo | sigue solo después de Recuperar | `cuenta.abrirEnlace` (correo simulado) |
+| Modal / Contraseña nueva | `abrirContrasenaNueva(token)` · al abrir el enlace | `cuenta.restablecer` |
+| Modal / Inicia sesión para continuar | `abrirRequiereSesion()` · acciones que piden cuenta y errores `requiere-sesion` | — |
+| Menú de cuenta | `alternarMenuCuenta(avatar, usuario)` · `data-accion="menu-cuenta"` | `sesion.obtener`, `sesion.cerrar` |
+
+- Todos usan la misma ventana (`sc-modal.js`), así que ir de "Inicia sesión" a "Crea tu cuenta" no la cierra.
+- Al entrar o crear la cuenta se lanza `sc:sesion` (`detail: { usuario, nuevo }`); `nucleo/navegacion.js` cambia el navbar a Logueado
+  (en todas las pantallas, también en el mapa).
+- Las reglas del formulario son las de la BD: usuario de 3 a 30 caracteres con letras, números, punto o guion bajo
+  (`ck_user_username`), correo válido y contraseña de 8+ caracteres con letras y números. Se revisan antes de mandar y
+  C# las vuelve a revisar; los errores de C# (correo repetido, credenciales...) se pintan en su campo.
+- El `<dialog>` queda por encima de los toasts: para avisar algo con la modal abierta se usa `.modal__aviso`.
+- **Correo:** el proyecto aún no tiene servidor de correo. `Servicios/CorreoSimulado.cs` guarda el enlace y el botón
+  "Abrir enlace del correo" lo abre directo. Cuando haya SMTP solo cambia esa clase (ver sus comentarios).
+- "Continuar con Google / Apple" están como en Figma pero todavía no hacen login (muestran un aviso).
+- En el navegador (sin la app) funcionan con cuentas demo: `mariana_r`, `mod_ana`, `cafe_dande`, contraseña `Test1234!`.
+- Mi perfil, Mis planes, Mis favoritos, Panel de organizador y Moderación del menú aún muestran "llega en la siguiente versión".
+  "Panel de organizador" solo aparece a organizadores aprobados y "Moderación" a moderadores.
 
 ## Fotos de eventos y lugares (Cloudinary)
 

@@ -19,6 +19,7 @@ import './componentes/secciones/sc-secciones-datos.js';
 import { invocar, enApp, ErrorPuente } from './nucleo/puente.js';
 import { atenderAcciones, cargarSesion } from './nucleo/navegacion.js';
 import { mostrarToast } from './componentes/sc-toast.js';
+import { abrirRequiereSesion } from './componentes/modales/cuenta.js';
 import { observarRevelado } from './utilidades/animaciones.js';
 
 const secciones = {
@@ -60,8 +61,8 @@ document.addEventListener('sc:favorito', async ({ detail }) => {
     mostrarToast(activo ? 'Guardado en favoritos' : 'Quitado de favoritos');
   } catch (error) {
     detail.boton.revertir();
-    const tipo = error instanceof ErrorPuente && error.codigo === 'requiere-sesion' ? 'info' : 'error';
-    mostrarToast(error.message, { tipo });
+    if (error instanceof ErrorPuente && error.codigo === 'requiere-sesion') abrirRequiereSesion();
+    else mostrarToast(error.message, { tipo: 'error' });
   }
 });
 

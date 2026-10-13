@@ -33,6 +33,7 @@
   --color-tinta-hover: #1a2d57;
   --color-error-hover: #c12b2b;
   --color-velo-tarjeta: rgba(23, 20, 59, 0.85);
+  --color-velo-modal: rgba(0, 0, 0, 0.44);  /* fondo detrás de los modales */
 
   /* Degradado del hero */
   --degradado-hero: linear-gradient(153.43deg, #1f5cf2 14.29%, #6bb8ff 85.71%);
@@ -55,6 +56,7 @@
   --sombra-tarjeta-flotante: 0 24px 48px rgba(0, 0, 0, 0.35);
   --sombra-hover-cielo: 0 12px 24px rgba(46, 122, 255, 0.22);
   --sombra-suave: 0 12px 32px rgba(23, 20, 59, 0.14);
+  --sombra-modal: 0 24px 64px rgba(11, 27, 58, 0.24);
 
   /* ---- Layout ---- */
   --ancho-contenido: 1200px;
