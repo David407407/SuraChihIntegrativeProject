@@ -57,6 +57,7 @@ namespace SuraChihIntegrativeProject.Ventanas
 
             var puente = new PuenteWeb(core);
             new ControladorLanding(_bd, _sesion).Registrar(puente);
+            new ControladorMapa(_bd).Registrar(puente);
 
             core.Navigate(UrlInicio);
         }

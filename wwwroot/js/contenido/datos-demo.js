@@ -60,11 +60,31 @@ const landing = {
   ],
 };
 
+/** Agrega a un lugar lo que usa el mapa: coordenadas y el icono de su etiqueta (tag.icon decide el pin). */
+const enMapa = (base, latitud, longitud, icono) => ({
+  ...base, latitud, longitud,
+  etiquetas: base.etiquetas.map((t) => ({ ...t, icono, alcance: 'lugar' })),
+});
+
+/** Respuesta de 'mapa.obtener': los 7 lugares del frame "Mapa" de Figma. */
+const mapa = {
+  lugares: [
+    enMapa(lugar(2, 'Café de la Tercera', 'C. Tercera 805, Zona Centro', 'Café', 4.5, 200, 300, '21:00:00', 'cafe-tercera.jpg'), 28.6355, -106.077, 'coffee'),
+    enMapa(lugar(10, 'Centro Cultural Quinta Gameros', 'Av. Paseo Bolívar 401', 'Museo', 4.8, 37, 37, '18:00:00', 'quinta-gameros.jpg'), 28.6361, -106.0722, 'museum'),
+    enMapa(lugar(11, 'Catedral Metropolitana de Chihuahua', 'Calle Guadalupe Victoria', 'Templo', 4.8, 0, 0, '20:00:00', 'catedral.jpg'), 28.6359, -106.0762, 'museum'),
+    enMapa(lugar(14, 'Museo de la Revolución', 'C. 10a 3010', 'Museo', 4.8, 10, 10, '17:00:00', 'museo-revolucion.jpg'), 28.6283, -106.0727, 'museum'),
+    enMapa(lugar(15, 'Unidad Deportiva Sur', 'Blvd. José Fuentes Mares', 'Parque', 4.4, 0, 0, '22:00:00', 'deportiva-sur.jpg'), 28.603, -106.035, 'tree'),
+    enMapa(lugar(16, 'Parque Metropolitano Presa El Rejón', 'JV7H+88, 31207', 'Parque', 4.9, 0, 0, '22:00:00', 'presa-rejon.jpg'), 28.6133, -106.1217, 'tree'),
+    enMapa(lugar(13, 'Dandelion Coffee', 'C. Monte Bello 4334', 'Café', 4.9, 100, 200, '21:00:00', 'dandelion.jpg'), 28.652, -106.119, 'coffee'),
+  ],
+};
+
 /** Simula las respuestas de C#. Para probar estados vacíos o errores, cámbialo aquí. */
 export async function responderDemo(accion) {
   await new Promise((r) => setTimeout(r, 250));   // latencia de mentira para ver los estados de carga
   switch (accion) {
     case 'landing.obtener': return structuredClone(landing);
+    case 'mapa.obtener': return structuredClone(mapa);
     case 'sesion.obtener': return null;
     case 'favoritos.alternar': {
       const { ErrorPuente } = await import('../nucleo/puente.js');

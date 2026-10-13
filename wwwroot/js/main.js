@@ -4,7 +4,8 @@
  * 1. Registra los componentes (cada import define sus etiquetas <sc-...>).
  * 2. Pide los datos a C# (o a los datos demo en un navegador) y se los pasa a cada sección.
  * 3. Atiende las acciones de toda la página con delegación: cualquier elemento con
- *    `data-accion` (botones, enlaces del pie...) y los eventos `sc:*` de los componentes.
+ *    `data-accion` (botones, enlaces del pie...; ver nucleo/navegacion.js) y los eventos
+ *    `sc:*` de los componentes.
  */
 
 import './componentes/sc-imagen.js';
@@ -16,6 +17,7 @@ import './componentes/secciones/sc-secciones-fijas.js';
 import './componentes/secciones/sc-secciones-datos.js';
 
 import { invocar, enApp, ErrorPuente } from './nucleo/puente.js';
+import { atenderAcciones, cargarSesion } from './nucleo/navegacion.js';
 import { mostrarToast } from './componentes/sc-toast.js';
 import { observarRevelado } from './utilidades/animaciones.js';
 
@@ -45,52 +47,11 @@ async function cargarLanding() {
   }
 }
 
-/** Navbar Visitante o Logueado según la sesión de C#. */
-async function cargarSesion() {
-  try {
-    secciones.navbar.datos = { usuario: await invocar('sesion.obtener') };
-  } catch (error) {
-    console.error(error);   // sin sesión se queda como visitante
-  }
-}
-
 // ---------------------------------------------------------------------
-// Acciones (las pantallas de destino se construirán en las siguientes entregas)
+// Acciones (las comunes a todas las pantallas están en nucleo/navegacion.js)
 // ---------------------------------------------------------------------
 
-/** Qué hace cada `data-accion`. Las que aún no tienen pantalla muestran un aviso. */
-const acciones = {
-  'explorar-eventos': () => proximamente('Explorar eventos'),
-  'explorar-lugares': () => proximamente('Explorar lugares'),
-  'mapa': () => proximamente('El mapa'),
-  'iniciar-sesion': () => proximamente('Iniciar sesión'),
-  'crear-cuenta': () => proximamente('Crear cuenta'),
-  'mis-planes': () => proximamente('Mis planes'),
-  'favoritos': () => proximamente('Mis favoritos'),
-  'menu-cuenta': () => proximamente('El menú de tu cuenta'),
-  'publicar-evento': () => requiereSesion('publicar tu evento'),
-  'inscribirse': () => requiereSesion('inscribirte'),
-  'ver-evento': (id) => proximamente(`El detalle del evento #${id}`),
-  'ver-lugar': (id) => proximamente(`El detalle del lugar #${id}`),
-};
-
-function proximamente(que) {
-  mostrarToast(`${que} llega en la siguiente versión.`, { tipo: 'info' });
-}
-
-function requiereSesion(para) {
-  mostrarToast(`Inicia sesión para ${para}.`, { tipo: 'info' });
-}
-
-document.addEventListener('click', (e) => {
-  const origen = e.target.closest('[data-accion]');
-  const accion = origen?.dataset.accion;
-  if (!accion || !acciones[accion]) return;
-  e.preventDefault();
-  acciones[accion](origen.dataset.id ? Number(origen.dataset.id) : undefined);
-});
-
-document.addEventListener('sc:buscar', (e) => proximamente(`La búsqueda de “${e.detail.texto}”`));
+atenderAcciones();
 
 document.addEventListener('sc:favorito', async ({ detail }) => {
   try {
@@ -110,5 +71,5 @@ document.addEventListener('sc:favorito', async ({ detail }) => {
 
 document.documentElement.dataset.entorno = enApp ? 'app' : 'navegador';
 observarRevelado();
-cargarSesion();
+cargarSesion(secciones.navbar);
 cargarLanding();

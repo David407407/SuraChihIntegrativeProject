@@ -6,6 +6,7 @@
 import { html } from '../nucleo/componente.js';
 import { icono, chip, boton } from './atomos.js';
 import { diaYMes, rangoFechas, precio, horarioLugar, calificacion, fechaEvento, precioEvento } from '../utilidades/formato.js';
+import { subtituloLugar } from '../utilidades/lugares.js';
 
 /** Nombre del lugar o, si el evento es en la calle, su dirección. */
 const ubicacionEvento = (e) => e.lugarNombre ?? e.direccion ?? '';
@@ -139,6 +140,31 @@ export function tarjetaLugar(l, opciones = {}) {
         </p>
       </div>
     </article>`;
+}
+
+/**
+ * "Item" de la lista del mapa: foto de 72px, nombre, tipo + dirección, calificación y precio.
+ * Es un botón con `data-lugar="<id>"`; quien pinta la lista decide qué pasa al elegirlo.
+ * @param {object} l LugarTarjeta
+ * @param {{activo?:boolean}} [opciones] `activo`: es el lugar elegido en el mapa.
+ */
+export function itemLugar(l, { activo = false } = {}) {
+  return html`
+    <li>
+      <button type="button" class="item-lugar" data-lugar="${l.id}" aria-current="${String(activo)}">
+        <span class="item-lugar__imagen">
+          <sc-imagen src="${l.imagenUrl ?? ''}" alt="" ancho="72" alto="72"></sc-imagen>
+        </span>
+        <span class="item-lugar__textos">
+          <span class="t-body-fuerte item-lugar__linea">${l.nombre}</span>
+          <span class="t-small texto-2 item-lugar__linea">${subtituloLugar(l)}</span>
+          <span class="t-small item-lugar__meta">
+            ${l.calificacion != null && html`${icono('estrella-12', 12)}<span class="t-small-fuerte">${calificacion(l.calificacion)}</span>`}
+            ${precio(l.precioMin, l.precioMax) && html`<span class="texto-2${l.calificacion != null ? ' item-lugar__precio' : ''}">${precio(l.precioMin, l.precioMax)}</span>`}
+          </span>
+        </span>
+      </button>
+    </li>`;
 }
 
 /** Esqueleto con brillo mientras cargan los datos. */

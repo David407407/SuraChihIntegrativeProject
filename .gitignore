@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 # Configuración local de la base de datos (cada quien la suya)
 dbsettings.local.json
+# Llaves locales de servicios externos (mapa)
+wwwroot/js/contenido/claves.local.js
