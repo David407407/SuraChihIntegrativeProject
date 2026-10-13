@@ -138,6 +138,26 @@ export function chip(texto, variante = 'sol-suave', nombreIcono) {
 }
 
 /**
+ * "Pildora" de Figma (Normal / Activa): una opción de un grupo de segmentos, p. ej. los tipos de
+ * lugar del mapa (Todo · Cafés · Museos · Parques). Solo una del grupo va activa.
+ *
+ * @example
+ * html`<div role="group" aria-label="Tipo de lugar">
+ *   ${pildora({ texto: 'Todo', valor: '', activa: !tipo })}
+ *   ${pildora({ texto: 'Cafés', valor: 'coffee', activa: tipo === 'coffee' })}
+ * </div>`
+ * grupo.addEventListener('click', (e) => { const valor = e.target.closest('.pildora')?.dataset.valor; ... });
+ *
+ * @param {object} p
+ * @param {string} p.texto
+ * @param {string} [p.valor] Lo que representa la opción (data-valor).
+ * @param {boolean} [p.activa]
+ */
+export function pildora({ texto, valor = '', activa = false }) {
+  return html`<button type="button" class="pildora t-small-fuerte" data-valor="${valor}" aria-pressed="${String(activa)}">${texto}</button>`;
+}
+
+/**
  * Estilo de cada categoría, según el campo `icono` de la etiqueta en la BD (tag.icon).
  * Las etiquetas que no están aquí (las de lugares: coffee, museum...) se pintan con fondo neutro y sin icono.
  */

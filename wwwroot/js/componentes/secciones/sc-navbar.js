@@ -5,8 +5,9 @@
  * (lo que responde 'sesion.obtener') o null para el visitante.
  *
  * Acciones (data-accion, las atiende main.js):
- *   Visitante: 'mapa', 'iniciar-sesion', 'crear-cuenta'
- *   Logueado:  'mapa', 'mis-planes', 'favoritos', 'menu-cuenta'
+ *   Siempre:   'inicio' (logo), 'mapa'
+ *   Visitante: 'iniciar-sesion', 'crear-cuenta'
+ *   Logueado:  'mis-planes', 'favoritos', 'menu-cuenta'
  * Evento: `sc:buscar` → detail { texto } al enviar el buscador.
  */
 
@@ -20,7 +21,7 @@ class Navbar extends Componente {
     return html`
       <nav class="navbar${usuario ? ' navbar--logueado' : ''}" aria-label="Principal">
         <div class="navbar__contenido contenedor">
-          <a class="logo" href="#inicio" aria-label="SuraChih, inicio">
+          <a class="logo" href="#inicio" data-accion="inicio" aria-label="SuraChih, inicio">
             <img src="assets/iconos/logo-sol.svg" alt="" width="26" height="26">
             <span>SuraChih</span>
           </a>

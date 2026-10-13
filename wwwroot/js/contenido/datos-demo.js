@@ -60,15 +60,100 @@ const landing = {
   ],
 };
 
+/** Agrega a un lugar lo que usa el mapa: coordenadas y el icono de su etiqueta (tag.icon decide el pin). */
+const enMapa = (base, latitud, longitud, icono) => ({
+  ...base, latitud, longitud,
+  etiquetas: base.etiquetas.map((t) => ({ ...t, icono, alcance: 'lugar' })),
+});
+
+/** Respuesta de 'mapa.obtener': los 7 lugares del frame "Mapa" de Figma. */
+const mapa = {
+  lugares: [
+    enMapa(lugar(2, 'Café de la Tercera', 'C. Tercera 805, Zona Centro', 'Café', 4.5, 200, 300, '21:00:00', 'cafe-tercera.jpg'), 28.6355, -106.077, 'coffee'),
+    enMapa(lugar(10, 'Centro Cultural Quinta Gameros', 'Av. Paseo Bolívar 401', 'Museo', 4.8, 37, 37, '18:00:00', 'quinta-gameros.jpg'), 28.6361, -106.0722, 'museum'),
+    enMapa(lugar(11, 'Catedral Metropolitana de Chihuahua', 'Calle Guadalupe Victoria', 'Templo', 4.8, 0, 0, '20:00:00', 'catedral.jpg'), 28.6359, -106.0762, 'museum'),
+    enMapa(lugar(14, 'Museo de la Revolución', 'C. 10a 3010', 'Museo', 4.8, 10, 10, '17:00:00', 'museo-revolucion.jpg'), 28.6283, -106.0727, 'museum'),
+    enMapa(lugar(15, 'Unidad Deportiva Sur', 'Blvd. José Fuentes Mares', 'Parque', 4.4, 0, 0, '22:00:00', 'deportiva-sur.jpg'), 28.603, -106.035, 'tree'),
+    enMapa(lugar(16, 'Parque Metropolitano Presa El Rejón', 'JV7H+88, 31207', 'Parque', 4.9, 0, 0, '22:00:00', 'presa-rejon.jpg'), 28.6133, -106.1217, 'tree'),
+    enMapa(lugar(13, 'Dandelion Coffee', 'C. Monte Bello 4334', 'Café', 4.9, 100, 200, '21:00:00', 'dandelion.jpg'), 28.652, -106.119, 'coffee'),
+  ],
+};
+// ---------------------------------------------------------------------
+// Cuentas de prueba (mismos usuarios que surachih_v1.sql; contraseña de todos: Test1234!)
+// Viven mientras la pestaña está abierta.
+// ---------------------------------------------------------------------
+
+const CONTRASENA_DEMO = 'Test1234!';
+const cuentas = [
+  { id: 1, nombreUsuario: 'mod_ana', correo: 'ana.mod@example.com', esModerador: true, esOrganizador: false },
+  { id: 3, nombreUsuario: 'cafe_dande', correo: 'dandelion@example.com', esModerador: false, esOrganizador: true },
+  { id: 5, nombreUsuario: 'mariana_r', correo: 'mariana.r@example.com', esModerador: false, esOrganizador: false },
+].map((c) => ({ ...c, avatarUrl: null, contrasena: CONTRASENA_DEMO }));
+
+// token: enlace "enviado" sin abrir; abierto: enlace abierto sin usar; de: cuenta a la que pertenece.
+const demo = { sesion: null, token: null, abierto: null, de: null, favoritos: new Set() };
+
+const publico = ({ contrasena, ...usuario }) => structuredClone(usuario);   // nunca sale la contraseña
+
+async function errorDemo(codigo, mensaje) {
+  const { ErrorPuente } = await import('../nucleo/puente.js');
+  return new ErrorPuente(codigo, mensaje);
+}
+
 /** Simula las respuestas de C#. Para probar estados vacíos o errores, cámbialo aquí. */
-export async function responderDemo(accion) {
+export async function responderDemo(accion, datos) {
   await new Promise((r) => setTimeout(r, 250));   // latencia de mentira para ver los estados de carga
   switch (accion) {
     case 'landing.obtener': return structuredClone(landing);
-    case 'sesion.obtener': return null;
+    case 'mapa.obtener': return structuredClone(mapa);
+    case 'sesion.obtener': return demo.sesion && publico(demo.sesion);
+    case 'sesion.cerrar': demo.sesion = null; return null;
+
+    case 'cuenta.iniciarSesion': {
+      const id = datos.identificador.trim().toLowerCase();
+      const cuenta = cuentas.find((c) => c.correo === id || c.nombreUsuario.toLowerCase() === id);
+      if (!cuenta || cuenta.contrasena !== datos.contrasena) throw await errorDemo('datos-invalidos', 'Correo o contraseña incorrectos.');
+      demo.sesion = cuenta;
+      return publico(cuenta);
+    }
+    case 'cuenta.registrar': {
+      const correo = datos.correo.trim().toLowerCase();
+      if (cuentas.some((c) => c.correo === correo)) throw await errorDemo('duplicado', 'Ese correo ya está registrado.');
+      if (cuentas.some((c) => c.nombreUsuario.toLowerCase() === datos.nombreUsuario.toLowerCase())) {
+        throw await errorDemo('duplicado', 'Ese nombre de usuario ya está ocupado.');
+      }
+      const cuenta = { id: 100 + cuentas.length, nombreUsuario: datos.nombreUsuario, correo, avatarUrl: null,
+        esModerador: false, esOrganizador: false, contrasena: datos.contrasena };
+      cuentas.push(cuenta);
+      demo.sesion = cuenta;
+      return publico(cuenta);
+    }
+    case 'cuenta.recuperar': {
+      const cuenta = cuentas.find((c) => c.correo === datos.correo.trim().toLowerCase());
+      demo.token = cuenta ? crypto.randomUUID() : null;
+      demo.abierto = null;
+      demo.de = cuenta ?? null;
+      return null;
+    }
+    case 'cuenta.abrirEnlace': {
+      if (!demo.token) throw await errorDemo('datos-invalidos', 'No encontramos un enlace reciente. Revisa el correo que escribiste y pide uno nuevo.');
+      demo.abierto = demo.token;
+      demo.token = null;
+      return { token: demo.abierto };
+    }
+    case 'cuenta.restablecer': {
+      if (!demo.abierto || datos.token !== demo.abierto) throw await errorDemo('regla-negocio', 'El enlace ya expiró o ya se usó. Pide uno nuevo.');
+      demo.de.contrasena = datos.contrasena;
+      demo.abierto = null;
+      return null;
+    }
+
     case 'favoritos.alternar': {
-      const { ErrorPuente } = await import('../nucleo/puente.js');
-      throw new ErrorPuente('requiere-sesion', 'Inicia sesión para guardar tus favoritos.');
+      if (!demo.sesion) throw await errorDemo('requiere-sesion', 'Inicia sesión para guardar tus favoritos.');
+      const llave = `${datos.tipo}:${datos.id}`;
+      if (demo.favoritos.has(llave)) demo.favoritos.delete(llave);
+      else demo.favoritos.add(llave);
+      return demo.favoritos.has(llave);
     }
     default: throw new Error(`Acción demo no implementada: ${accion}`);
   }

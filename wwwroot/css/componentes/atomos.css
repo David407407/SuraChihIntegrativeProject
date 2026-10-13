@@ -81,6 +81,27 @@
 .chip--superficie { background: var(--color-superficie); }
 .chip--sol { background: var(--color-sol); padding: 5px 12px 5px 10px; }
 
+/* ---- Píldora ("Pildora" de Figma): opción de un grupo de segmentos, Normal / Activa ---- */
+.pildora {
+  flex: none;
+  padding: 8px 16px;
+  border-radius: var(--radio-pildora);
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+  /* Borde por dentro, como en Figma: la píldora mide lo mismo activa o no. */
+  box-shadow: inset 0 0 0 1.5px var(--color-linea);
+  white-space: nowrap;
+  transition: background-color var(--duracion-rapida), color var(--duracion-rapida),
+              box-shadow var(--duracion-rapida), transform var(--duracion-rapida);
+}
+.pildora:hover { box-shadow: inset 0 0 0 1.5px var(--color-tinta); }
+.pildora:active { transform: scale(0.96); }
+.pildora[aria-pressed="true"] {
+  background: var(--color-tinta);
+  color: var(--color-superficie);
+  box-shadow: none;
+}
+
 /* ---- Campo ("Campo" de Figma): 48px, borde línea, icono + texto ---- */
 .campo { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 .campo__etiqueta { color: var(--color-tinta); }
