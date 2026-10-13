@@ -93,11 +93,12 @@ agregar ningún `<script>`. Solo las teselas (las imágenes del mapa) se piden a
 eso el componente siempre muestra «© OpenStreetMap contributors» (es obligatorio; no lo ocultes).
 El alto se lo da el contenedor: ponle `height` con CSS.
 
-**Estilo del mapa.** Sin configurar nada se usan las teselas estándar de OpenStreetMap. Para el
-estilo Voyager de CARTO (más limpio y nítido en pantallas con escala), pide una llave gratuita en
-<https://carto.com/basemaps/apikey/>, copia `js/contenido/claves.example.js` como
-`claves.local.js` (git lo ignora) y ponla en `CARTO_KEY`. La atribución cambia sola a
-«© OpenStreetMap contributors © CARTO».
+**Estilo del mapa.** Se usa el estilo Voyager de CARTO (hecho con datos de OpenStreetMap, nítido en
+pantallas con escala) con la llave gratuita del equipo, que está en `js/contenido/claves.js`: todos
+ven el mismo mapa sin configurar nada y la atribución es «© OpenStreetMap contributors © CARTO».
+Si la llave deja de funcionar (cuota agotada o borrada), se pide otra en
+<https://carto.com/basemaps/apikey/> y se cambia ahí. Con `CARTO_KEY` vacía el componente usa las
+teselas estándar de OpenStreetMap.
 
 **Detalle de evento o de lugar** (un pin fijo). Bastan los atributos:
 

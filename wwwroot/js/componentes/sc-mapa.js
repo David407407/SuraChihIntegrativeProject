@@ -44,6 +44,7 @@
 
 import * as L from '../../vendor/leaflet/leaflet-src.esm.js';
 import { definir, escapar, html } from '../nucleo/componente.js';
+import { CARTO_KEY } from '../contenido/claves.js';
 
 /** Caja del estado de Chihuahua: los mismos límites que los CHECK de place y event en la BD. */
 export const LIMITES_CHIHUAHUA = Object.freeze({ sur: 25.5, norte: 31.8, oeste: -109.2, este: -103.3 });
@@ -52,10 +53,9 @@ const CENTRO_CHIHUAHUA = [28.6353, -106.0889];   // ciudad de Chihuahua
 const ZOOM = { inicial: 13, unPin: 16, alVolar: 15, minimo: 6, maximo: 19 };
 const OSM = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
 
-// Con llave de CARTO (contenido/claves.local.js, ver claves.example.js) se usa su estilo Voyager,
+// Con llave de CARTO (contenido/claves.js, compartida por el equipo) se usa su estilo Voyager,
 // hecho con datos de OpenStreetMap y con teselas @2x para pantallas con escala (se ve nítido).
 // Sin llave se usan las teselas estándar de OpenStreetMap.
-const { CARTO_KEY = '' } = await import('../contenido/claves.local.js').catch(() => ({}));
 const NITIDAS = window.devicePixelRatio > 1 ? '@2x' : '';   // p. ej. Windows con escala al 125 % o 150 %
 const TESELAS = CARTO_KEY
   ? `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}${NITIDAS}.png?key=${encodeURIComponent(CARTO_KEY)}`
