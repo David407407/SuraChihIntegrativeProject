@@ -205,6 +205,9 @@ definir('sc-mi-seccion', MiSeccion);
 - Para navegar, pon `data-accion="nombre"` en el botón y agrega el nombre en `acciones` de `nucleo/navegacion.js`.
 - Para animar la aparición al hacer scroll, agrega `data-revelar` (y `style="--orden:N"` para escalonar).
 - Usa siempre las variables de `tokens.css`, no colores sueltos.
+- Forma: todo lo que se toca o se escribe (botones, campos, píldoras, chips) usa
+  `border-radius: var(--radio-control)`; las cajas que contienen cosas (tarjetas, modales, menús) usan
+  `--radio-s` a `--radio-3xl`. Así toda la app se ve igual y la forma se cambia en un solo lugar.
 
 ## Animaciones del diseño
 

@@ -50,6 +50,10 @@
   --radio-xl: 24px;
   --radio-2xl: 28px;
   --radio-3xl: 32px;
+  /* Forma de TODO lo que se toca o se escribe: botones, campos, píldoras, chips, zoom del mapa.
+     Las cajas que contienen cosas (tarjetas, modales, menús) usan los radios de arriba.
+     Cambiarla aquí cambia toda la app (p. ej. var(--radio-s) para controles cuadrados). */
+  --radio-control: var(--radio-pildora);
 
   /* ---- Sombras ---- */
   --sombra-chip: 0 8px 24px rgba(0, 0, 0, 0.25);

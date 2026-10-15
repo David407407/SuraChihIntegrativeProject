@@ -68,7 +68,7 @@ sc-mapa {
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--color-linea);
-  border-radius: var(--radio-s);
+  border-radius: var(--radio-control);
   background: var(--color-superficie);
 }
 .mapa__zoom-boton {

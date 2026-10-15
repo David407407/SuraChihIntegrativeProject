@@ -114,7 +114,7 @@
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  border-radius: var(--radio-pildora);
+  border-radius: var(--radio-control);
   background: var(--color-superficie);
   opacity: 0;
   transform: translateY(12px);
