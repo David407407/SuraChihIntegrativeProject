@@ -132,6 +132,11 @@
 }
 .campo__entrada::placeholder { color: var(--color-texto-2); }
 
+/* Edge/WebView2 agrega su propio ojito a las contraseñas. Choca con el botón "Mostrar" del diseño:
+   al cambiar el campo a texto, el ojito desaparece. Va en su propia regla porque los navegadores
+   que no la entienden descartan la regla completa. */
+.campo__entrada::-ms-reveal { display: none; }
+
 /* Botón de mostrar / ocultar contraseña */
 .campo__ver { flex: none; color: var(--color-texto-2); font: 600 13px/20px var(--fuente-cuerpo); }
 .campo__ver:hover { color: var(--color-tinta); }
