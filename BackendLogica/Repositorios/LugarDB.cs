@@ -57,6 +57,15 @@ namespace BackendLogica.Repositorios
                 LIMIT @limite
                 """, new { texto = texto.Trim(), limite }, ct);
 
+        /// <summary>Lugares aprobados que el usuario guardó, los más recientes primero (lo usa <see cref="FavoritoDB"/>).</summary>
+        internal Task<List<LugarTarjeta>> ListarFavoritosAsync(int usuarioId, CancellationToken ct = default) =>
+            ConsultarTarjetasAsync($"""
+                {SelectTarjeta}
+                JOIN place_favorite fav ON fav.place_id = p.id AND fav.user_id = @usuarioId
+                WHERE p.status = 'approved'
+                ORDER BY fav.created_at DESC
+                """, new { usuarioId }, ct);
+
         public async Task<int> ContarAprobadosAsync(CancellationToken ct = default) =>
             await EscalarAsync<int>("SELECT COUNT(*) FROM place WHERE status = 'approved'", ct: ct);
 

@@ -264,6 +264,7 @@ namespace BackendLogica.Falso
             Decision(1, TipoObjetivoModeracion.Evento, 3, null);
 
             Favoritos.AddRange([new(5, 1, ahora), new(6, 1, ahora), new(5, 2, ahora)]);
+            FavoritosLugares.Add(new(5, 1, ahora));
             foreach (var (usuario, evento) in new[] { (5, 1), (6, 2), (7, 2) })
                 Inscripciones.Add(new FilaInscripcion { UsuarioId = usuario, EventoId = evento, Estado = EstadoInscripcion.Activa, CreadaEn = ahora });
             foreach (var (evento, usuario) in new (int, int?)[] { (1, 5), (1, 6), (1, 7), (1, null), (2, 5), (2, 6) })

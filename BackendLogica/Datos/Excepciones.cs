@@ -33,8 +33,8 @@ namespace BackendLogica.Datos
     }
 
     /// <summary>
-    /// El diseño lo pide pero la BD v1 todavía no lo puede guardar (favoritos de lugares, fecha o precio
-    /// por confirmar, borradores sin ubicación). Solo lo lanza el repositorio real; el falso sí lo soporta.
+    /// El diseño lo pide pero la BD v1 todavía no lo puede guardar (fecha o precio por confirmar,
+    /// borradores sin ubicación). Solo lo lanza el repositorio real; el falso sí lo soporta.
     /// </summary>
     public sealed class PendienteBDException : SuraChihException
     {
