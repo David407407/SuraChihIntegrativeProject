@@ -194,8 +194,9 @@
   pointer-events: none;
 }
 
-.tarjeta-rec__imagen { flex: none; width: min(236px, 40%); background: var(--color-fondo); }
-.tarjeta-rec__imagen sc-imagen { transition: transform 700ms var(--curva-salida); }
+.tarjeta-rec__imagen { position: relative; flex: none; width: min(236px, 40%); background: var(--color-fondo); }
+/* La foto rellena su columna sin decidir el alto de la tarjeta (una foto alta la estiraba). */
+.tarjeta-rec__imagen sc-imagen { position: absolute; inset: 0; transition: transform 700ms var(--curva-salida); }
 
 .tarjeta-rec__info { display: flex; flex: 1; flex-direction: column; gap: 8px; min-width: 0; padding: 22px 24px; }
 .tarjeta-rec__tipo { display: flex; }

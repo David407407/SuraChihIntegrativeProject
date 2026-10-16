@@ -53,6 +53,10 @@
 .boton--fantasma { color: var(--color-tinta); }
 .boton--fantasma:hover { background: var(--color-fondo); }
 
+/* Sobre fondos de color (carrusel del Home, "Btn Ver detalles") */
+.boton--blanco { background: var(--color-superficie); color: var(--color-tinta); }
+.boton--blanco:hover { background: var(--color-sol-suave); }
+
 .boton:disabled,
 .boton[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
 

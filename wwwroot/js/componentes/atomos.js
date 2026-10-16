@@ -27,8 +27,9 @@ export function icono(nombre, caja = 16) {
  *
  * @param {object} p
  * @param {string} p.texto
- * @param {'primario'|'oscuro'|'secundario'|'peligro'|'fantasma'|'contorno-claro'} [p.variante]
- *   Los cinco primeros son los de Figma; 'contorno-claro' es el del hero azul.
+ * @param {'primario'|'oscuro'|'secundario'|'peligro'|'fantasma'|'contorno-claro'|'blanco'} [p.variante]
+ *   Los cinco primeros son los de Figma; 'contorno-claro' es el del hero azul y 'blanco' el del
+ *   carrusel del Home (fondo blanco sobre color).
  * @param {'m'|'s'} [p.tamano] m = 48px de alto, s = 36px.
  * @param {string} [p.icono] Nombre del icono (ver `icono`). En oscuro y peligro se pinta blanco.
  * @param {string} [p.accion] Valor de data-accion (navegación que resuelve main.js).

@@ -28,6 +28,9 @@
   --categoria-deportes: #d1fae5;
   --categoria-tecnologia: #e0f2fe;
   --categoria-gastronomia: #fef3c7;
+  /* Solo en los tiles de "Explora por categoría" del Home (lugares) */
+  --categoria-cafes: #f3e8ff;
+  --categoria-museos: #e0e7ff;
 
   /* Derivados para estados (hover/active) */
   --color-sol-hover: #f5c518;
