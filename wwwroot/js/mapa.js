@@ -6,8 +6,8 @@
  * 2. El buscador y las píldoras de tipo deciden qué lugares van al mapa.
  * 3. La lista muestra solo los que se ven en el mapa ("N lugares en esta zona"): al moverlo o
  *    acercarlo, <sc-mapa> avisa con `sc:mapa-zona` y la lista se vuelve a pintar.
- * 4. Elegir una fila resalta su pin; elegir un pin resalta su fila y abre el detalle del lugar
- *    (hoja "Lugar / ..." de Figma, componentes/sc-detalle-lugar.js). Un clic en el mapa fuera de
+ * 4. Elegir una fila resalta su pin y elegir un pin resalta su fila; los dos abren el detalle del
+ *    lugar (hoja "Lugar / ..." de Figma, componentes/sc-detalle-lugar.js). Un clic en el mapa fuera de
  *    los pines quita la selección.
  */
 
@@ -136,7 +136,10 @@ function seleccionar(id, { mover = false, mostrarFila = false } = {}) {
 
 lista.addEventListener('click', (e) => {
   const fila = e.target.closest('.item-lugar');
-  if (fila) seleccionar(Number(fila.dataset.lugar), { mover: true });
+  if (!fila) return;
+  const id = Number(fila.dataset.lugar);
+  seleccionar(id, { mover: true });
+  abrirDetalleLugar(id);
 });
 
 mapa.addEventListener('sc:mapa-pin', ({ detail }) => {
