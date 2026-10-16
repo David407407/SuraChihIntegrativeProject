@@ -37,6 +37,8 @@
  *
  * Eventos:
  *   sc:mapa-pin        detail { punto }       clic (o Enter) en un pin.
+ *   sc:mapa-deseleccion                      clic en el mapa fuera de los pines con un pin activo
+ *                                            (el pin ya se desmarcó solo).
  *   sc:mapa-zona       detail { visibles }    cambió lo que se ve (al mover, acercar o cambiar los puntos).
  *   sc:mapa-ubicacion  detail { lat, lng }    se movió el pin arrastrable. Ya viene con 6 decimales y
  *                                             dentro del estado de Chihuahua, como lo pide la BD.
@@ -197,7 +199,16 @@ class Mapa extends HTMLElement {
 
     this.#mapa.on('moveend', () => this.#avisarZona());
     this.#mapa.on('zoomend', () => this.#actualizarZoom());
-    this.#mapa.on('click', (e) => { if (this.arrastrable) this.#fijarUbicacion(e.latlng); });
+    // Clic en el mapa (fuera de los pines; arrastrar el mapa no cuenta como clic): con pin
+    // arrastrable lo coloca ahí; si no, quita la selección.
+    this.#mapa.on('click', (e) => {
+      if (this.arrastrable) {
+        this.#fijarUbicacion(e.latlng);
+      } else if (this.#activo) {
+        this.seleccionar(null);
+        this.#emitir('sc:mapa-deseleccion', {});
+      }
+    });
     this.querySelector('.mapa__zoom').addEventListener('click', (e) => {
       const paso = Number(e.target.closest('[data-zoom]')?.dataset.zoom);
       if (paso) this.#mapa.setZoom(this.#mapa.getZoom() + paso);
