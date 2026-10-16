@@ -10,7 +10,7 @@ con **WebView2**. Los datos vienen de MySQL a través de la librería **BackendL
 │  VentanaPrincipal ── WebView2 ── wwwroot/ (landing en componentes HTML/CSS/JS)       │
 │         │                              ▲  postMessage { id, accion, datos }          │
 │         ▼                              │                                             │
-│  Puente/PuenteWeb ── Controladores/ (ControladorLanding, ControladorMapa)            │
+│  Puente/PuenteWeb ── Controladores/ (Landing, Mapa, Cuenta, Evento, Lugar)           │
 └───────────────────────────────┬──────────────────────────────────────────────────────┘
                                 ▼
                BackendLogica (librería aparte, sin nada de interfaz)

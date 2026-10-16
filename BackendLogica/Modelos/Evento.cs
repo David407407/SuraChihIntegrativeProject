@@ -31,6 +31,11 @@ namespace BackendLogica.Modelos
         public string? ImagenUrl { get; init; }
 
         public EstadoEvento Estado { get; init; }
+        /// <summary>
+        /// Motivo que escribió el organizador al cancelar (modal "Cancelar evento"). Solo viene si
+        /// <see cref="Estado"/> es <see cref="EstadoEvento.Cancelado"/>; el detalle lo muestra como "Motivo".
+        /// </summary>
+        public string? MotivoCancelacion { get; init; }
         /// <summary>Aprobado y ya terminó.</summary>
         public bool Terminado { get; init; }
         /// <summary>Aparece en el carrusel del inicio (lo deciden los moderadores).</summary>

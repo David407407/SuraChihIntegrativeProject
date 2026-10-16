@@ -507,7 +507,7 @@ DELIMITER ;
 CREATE VIEW v_event_card AS
 SELECT e.id, e.title, e.description, e.start_at, e.end_at,
        e.price_min, e.price_max, e.is_free, e.ticket_url, e.main_image_url,
-       e.status,
+       e.status, e.cancel_reason,
        (e.status = 'approved' AND e.end_at < NOW())   AS is_finished,
        e.is_featured, e.featured_order,
        e.place_id, p.name                             AS place_name,
@@ -607,15 +607,23 @@ INSERT INTO event (id, organizer_id, place_id, title, description, start_at, end
   'https://res.cloudinary.com/demo/image/upload/sample.jpg', 'pending'),
  (4, 4, NULL, 'Taller de fotografía urbana',
   'Salida fotográfica por el centro histórico 📷', '2026-11-08 09:00', '2026-11-08 13:00',
-  'Catedral de Chihuahua', 28.635900, -106.076200, 450, 600, NULL, NULL, 'pending');
-INSERT INTO event_tag VALUES (1,1),(2,5),(3,1),(3,3);
+  'Catedral de Chihuahua', 28.635900, -106.076200, 450, 600, NULL, NULL, 'pending'),
+ (5, 4, NULL, 'Campamento del Terror',
+  'Adéntrate con tu equipo en el bosque y supera desafíos de supervivencia 🏕️', '2026-11-07 20:00', '2026-11-07 23:00',
+  'Presa El Rejón, Chihuahua', 28.613300, -106.121700, 799, 1100, NULL, NULL, 'pending');
+INSERT INTO event_tag VALUES (1,1),(2,5),(3,1),(3,3),(5,3),(5,1);
 INSERT INTO event_image (event_id, url, sort_order) VALUES
  (2, 'https://res.cloudinary.com/demo/image/upload/sample.jpg', 1);
 INSERT INTO moderation (mod_id, event_id, decision, comment) VALUES
  (1, 1, 'approved', NULL),
  (2, 2, 'approved', NULL),
- (1, 3, 'approved', NULL);
+ (1, 3, 'approved', NULL),
+ (1, 5, 'approved', NULL);
 -- El evento 4 queda pendiente para probar el dashboard de moderacion.
+-- El evento 5 se cancela para probar el estado "cancelado" del detalle (con su motivo).
+UPDATE event SET status = 'cancelled',
+       cancel_reason = 'El organizador canceló el evento por causas de fuerza mayor. Te avisaremos si se reprograma.'
+WHERE id = 5;
 UPDATE event SET is_featured = TRUE, featured_order = 1 WHERE id = 1;
 
 INSERT INTO favorite (user_id, event_id) VALUES (5,1),(6,1),(5,2);

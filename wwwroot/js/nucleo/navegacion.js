@@ -1,14 +1,17 @@
 /**
  * @file Lo que comparten todas las pantallas: cambiar de página, las acciones `data-accion`
- * (botones del navbar, tarjetas, pie...) y la sesión (navbar Visitante / Logueado, modales de
- * cuenta y menú de cuenta).
+ * (botones del navbar, tarjetas, pie...), la sesión (navbar Visitante / Logueado, modales de
+ * cuenta y menú de cuenta), el corazón de favoritos y los detalles de evento y de lugar (que se
+ * abren encima de cualquier pantalla).
  *
  * Cada pantalla es un .html de wwwroot con su script de entrada (main.js, mapa.js...) que llama
  * a `atenderAcciones()` y `cargarSesion(navbar)`.
  */
 
-import { invocar } from './puente.js';
+import { invocar, ErrorPuente } from './puente.js';
 import { mostrarToast } from '../componentes/sc-toast.js';
+import { abrirDetalleEvento, abrirEventoDesdeDireccion } from '../componentes/sc-detalle-evento.js';
+import { abrirDetalleLugar, abrirLugarDesdeDireccion } from '../componentes/sc-detalle-lugar.js';
 import { abrirIniciarSesion, abrirCrearCuenta, abrirRequiereSesion } from '../componentes/modales/cuenta.js';
 import { alternarMenuCuenta, cerrarMenuCuenta } from '../componentes/menu-cuenta.js';
 
@@ -68,6 +71,11 @@ async function cerrarSesion() {
   }
 }
 
+/** true si hay un usuario con sesión iniciada en la app. */
+export function haySesion() {
+  return Boolean(usuarioActual);
+}
+
 /** Sin sesión: modal "Inicia sesión para continuar". Con sesión, la pantalla aún no existe. */
 export function requiereSesion(que) {
   if (usuarioActual) proximamente(que);
@@ -95,9 +103,10 @@ const acciones = {
   'moderacion': () => proximamente('Moderación'),
   'cerrar-sesion': () => cerrarSesion(),
   'publicar-evento': () => requiereSesion('Publicar eventos'),
-  'inscribirse': () => requiereSesion('La inscripción a eventos'),
-  'ver-evento': (id) => proximamente(`El detalle del evento #${id}`),
-  'ver-lugar': (id) => proximamente(`El detalle del lugar #${id}`),
+  // "Voy a ir" de las tarjetas: abre el detalle con "¿Vas a ir?" encima (o pide iniciar sesión).
+  'inscribirse': (id) => (usuarioActual ? abrirDetalleEvento(id, { inscribir: true }) : abrirRequiereSesion()),
+  'ver-evento': (id) => abrirDetalleEvento(id),
+  'ver-lugar': (id) => abrirDetalleLugar(id),
 };
 
 /**
@@ -119,10 +128,27 @@ export function atenderAcciones(propias = {}) {
 
   document.addEventListener('sc:buscar', (e) => proximamente(`La búsqueda de “${e.detail.texto}”`));
 
+  // Corazón de las tarjetas y del detalle (<sc-boton-favorito>): cambia al instante y se guarda en C#.
+  document.addEventListener('sc:favorito', async ({ detail }) => {
+    try {
+      const activo = await invocar('favoritos.alternar', { tipo: detail.tipo, id: detail.id });
+      detail.boton.activo = activo;
+      mostrarToast(activo ? 'Guardado en favoritos' : 'Quitado de favoritos');
+    } catch (error) {
+      detail.boton.revertir();
+      if (error instanceof ErrorPuente && error.codigo === 'requiere-sesion') abrirRequiereSesion();
+      else mostrarToast(error.message, { tipo: 'error' });
+    }
+  });
+
   // Lo lanzan los modales de cuenta al iniciar sesión o crear la cuenta.
   document.addEventListener('sc:sesion', ({ detail }) => {
     ponerUsuario(detail.usuario);
     const nombre = detail.usuario.nombreUsuario;
     mostrarToast(detail.nuevo ? `¡Bienvenido a SuraChih, ${nombre}!` : `¡Hola de nuevo, ${nombre}!`);
   });
+
+  // Una pantalla abierta con #evento-N o #lugar-N muestra ese detalle.
+  abrirEventoDesdeDireccion();
+  abrirLugarDesdeDireccion();
 }

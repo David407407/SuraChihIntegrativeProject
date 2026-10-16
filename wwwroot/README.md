@@ -34,6 +34,9 @@ js/
     atomos.js              icono(), boton(), campo(), marcarError(), chip(), chipCategoria(), pildora(), encabezadoSeccion()
     tarjetas.js            tarjetaEvento(), tarjetaLugar(), tarjetaEventoPrincipal(), tarjetaEventoFila(), itemLugar()
     sc-imagen.js           <sc-imagen> foto de Cloudinary con carga y relleno
+    hoja.js                ventana de detalle que comparten evento y lugar (historial, carga, cerrar)
+    sc-detalle-evento.js   abrirDetalleEvento(id): hoja "Evento / ..." encima de cualquier pantalla
+    sc-detalle-lugar.js    abrirDetalleLugar(id): hoja "Lugar / ..." (pines del mapa y Card lugar)
     sc-mapa.js             <sc-mapa> mapa con pines (explorar, detalle y pin arrastrable)
     sc-boton-favorito.js   <sc-boton-favorito> corazón (Vacío / Hover / Lleno)
     sc-chip-categoria.js   <sc-chip-categoria> filtro por categoría (Normal / Activo)
@@ -41,6 +44,7 @@ js/
     sc-modal.js            mostrarModal() / cerrarModal(): ventana modal base (<dialog>)
     menu-cuenta.js         alternarMenuCuenta(): menú bajo el avatar del navbar
     modales/cuenta.js      modales de cuenta: iniciar sesión, crear cuenta, recuperar contraseña...
+    modales/inscripcion.js "¿Vas a ir?" y "¿Cancelar tu inscripción?"
     secciones/             <sc-navbar>, <sc-hero>, <sc-collage-hero>, secciones fijas y con datos
 assets/iconos              SVG exportados de Figma (conservan tamaño y color)
 assets/demo                fotos solo para los datos demo
@@ -60,6 +64,7 @@ cada variante con el código para crearla (ábrela con el servidor de "Probar si
 | Navbar | `<sc-navbar>` con `navbar.datos = { usuario }` | Visitante (`usuario: null`) / Logueado |
 | Card evento | `tarjetaEvento(evento, { orden, favorito })` | Normal / Hover. "Fecha por confirmar" y "Precio por confirmar" incluidos |
 | Card lugar | `tarjetaLugar(lugar, { orden, favorito })` | Normal / Hover |
+| Card recomendada | `tarjetaRecomendada(item, { tipo, orden })` dentro de `.rejilla-recomendadas` | Normal / Hover. `tipo: 'evento'` (por defecto) o `'lugar'` |
 | Botón favorito | `<sc-boton-favorito tipo objetivo tamano activo>` | Vacío / Hover / Lleno × `s` (36px) · `m` (40px). Emite `sc:favorito` |
 | Pildora | `pildora({ texto, valor, activa })` | Normal / Activa. Una activa por grupo; se lee con `data-valor` |
 | Item (lista del mapa) | `itemLugar(lugar, { activo })` | Normal / Activo. Botón con `data-lugar="id"` |
@@ -174,6 +179,55 @@ Cada pantalla es un `.html` con su script de entrada. Para ir de una a otra se u
 - En el navegador (sin la app) funcionan con cuentas demo: `mariana_r`, `mod_ana`, `cafe_dande`, contraseña `Test1234!`.
 - Mi perfil, Mis planes, Mis favoritos, Panel de organizador y Moderación del menú aún muestran "llega en la siguiente versión".
   "Panel de organizador" solo aparece a organizadores aprobados y "Moderación" a moderadores.
+
+## Detalle de evento
+
+Los 24 frames "Evento / ..." de Figma son **una sola plantilla** (`js/componentes/sc-detalle-evento.js`,
+estilos en `css/componentes/detalle-evento.css`). Es una hoja que se abre encima de la pantalla en la que
+estés, igual que el overlay del prototipo, así que funciona desde la landing, el mapa o cualquier pantalla nueva:
+
+- `data-accion="ver-evento" data-id="3"` (tarjetas, "Ver detalles") → `abrirDetalleEvento(3)`.
+- `data-accion="inscribirse" data-id="3"` ("Voy a ir" de las tarjetas) → abre el detalle con "¿Vas a ir?" encima
+  (o "Inicia sesión para continuar" si no hay sesión).
+- Mientras está abierta la dirección termina en `#evento-3`: Atrás la cierra y abrir `index.html#evento-3` la muestra.
+
+| Parte de Figma | Implementación |
+|---|---|
+| Portada + Compartir / favorito / Cerrar | `<sc-imagen>` 1040 × 440, `<sc-boton-favorito tamano="m">` |
+| Categorías, título, Acerca del evento | `chipCategoria(etiqueta, { interactivo: false })` |
+| Ubicación (mini mapa) | `<sc-mapa lat lng titulo>` de Carlos (un pin fijo). Sin coordenadas no se pinta el mapa |
+| Boleto: Fecha, Horario, Lugar, Precio | "Fecha por confirmar" / "Precio por confirmar" con `fechaEvento` / `precioEvento` |
+| Te podría interesar | hasta 3 `tarjetaEvento()` que elige C# (misma categoría y, si faltan, los más guardados) |
+
+Estados (columnas `status`, `is_finished` y `cancel_reason` de `v_event_card`, más la inscripción del usuario):
+
+| Estado | Cuándo | Qué muestra el boleto |
+|---|---|---|
+| Normal | aprobado y sin terminar | "Voy a ir" + "Comprar boletos" (solo si hay `boletosUrl`; se abre en el navegador) |
+| Ya vas a ir | además el usuario está inscrito | botón verde "Ya vas a ir" + "Cancelar inscripción" (abren "¿Cancelar tu inscripción?") |
+| Finalizado | `terminado` | aviso "Este evento ya terminó" + "Escribir reseña" + "Ver reseñas (N)" |
+| Cancelado | `estado: 'cancelado'` | aviso "Este evento fue cancelado" + "Motivo" (`motivoCancelacion`) |
+
+Datos: `invocar('evento.obtener', { id })` → `{ evento, galeria, inscrito, favorito, numResenas, recomendados, favoritos }`
+y `inscripcion.inscribir` / `inscripcion.cancelar` (`Controladores/ControladorEvento.cs`). En el navegador los datos
+demo traen un evento terminado (`#evento-8`) y uno cancelado (`#evento-9`); también hay botones en `componentes.html`.
+
+Todavía muestran "llega en la siguiente versión": Compartir, Reportar evento, Escribir reseña y Ver reseñas
+(sus modales están en Figma: "Modal / Compartir", "Modal / Reportar", "Modal / Escribir reseña").
+
+## Detalle de lugar
+
+Los frames "Lugar / ..." son la misma hoja con otro contenido (`js/componentes/sc-detalle-lugar.js`; la
+ventana la comparten con el de evento en `js/componentes/hoja.js`). Se abre:
+
+- al elegir un **pin del mapa** (`mapa.js`, evento `sc:mapa-pin`; también resalta su fila de la lista),
+- con `data-accion="ver-lugar" data-id="2"` (Card lugar) o con `#lugar-2` en la dirección.
+
+Info: chip de tipo, "Acerca del lugar", mini mapa y "Opiniones" (hasta 2 reseñas). Boleto: Horario (abierto
+ahora), Precio promedio, Calificación, Dirección, "Cómo llegar" (Google Maps en el navegador), "Escribir reseña"
+y "Reportar lugar". Abajo, "También te puede gustar" con hasta 3 `tarjetaLugar()`.
+Datos: `invocar('lugar.obtener', { id })` → `{ lugar, galeria, favorito, opiniones, recomendados }`
+(`Controladores/ControladorLugar.cs`). El corazón de lugares sigue sin guardarse en la BD v1.
 
 ## Fotos de eventos y lugares (Cloudinary)
 

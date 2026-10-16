@@ -95,6 +95,7 @@ namespace BackendLogica.Falso
                 BoletosUrl = e.BoletosUrl,
                 ImagenUrl = e.ImagenUrl,
                 Estado = e.Estado,
+                MotivoCancelacion = e.Estado == EstadoEvento.Cancelado ? e.MotivoCancelacion : null,
                 Terminado = e.Estado == EstadoEvento.Aprobado && !e.FechaPorConfirmar && e.Fin < ahora,
                 Destacado = e.Destacado,
                 OrdenDestacado = e.OrdenDestacado,
@@ -252,6 +253,16 @@ namespace BackendLogica.Falso
                 Direccion = "Catedral de Chihuahua", Latitud = 28.635900m, Longitud = -106.076200m,
                 PrecioMin = 450, PrecioMax = 600, Estado = EstadoEvento.Pendiente, CreadoEn = ahora
             });
+            // El evento 5 está cancelado para probar ese estado del detalle (con su motivo).
+            Eventos.Add(new FilaEvento
+            {
+                Id = 5, OrganizadorId = 4, Titulo = "Campamento del Terror",
+                Descripcion = "Adéntrate con tu equipo en el bosque y supera desafíos de supervivencia 🏕️",
+                Inicio = new DateTime(2026, 11, 7, 20, 0, 0), Fin = new DateTime(2026, 11, 7, 23, 0, 0),
+                Direccion = "Presa El Rejón, Chihuahua", Latitud = 28.613300m, Longitud = -106.121700m,
+                PrecioMin = 799, PrecioMax = 1100, Estado = EstadoEvento.Cancelado, CreadoEn = ahora, EtiquetaIds = [3, 1],
+                MotivoCancelacion = "El organizador canceló el evento por causas de fuerza mayor. Te avisaremos si se reprograma."
+            });
 
             void Decision(int modId, TipoObjetivoModeracion tipo, int objetivo, string? comentario) =>
                 Moderaciones.Add(new FilaModeracion(Moderaciones.Count + 1, modId, tipo, objetivo, DecisionModeracion.Aprobado, comentario, ahora));
@@ -262,6 +273,7 @@ namespace BackendLogica.Falso
             Decision(1, TipoObjetivoModeracion.Evento, 1, null);
             Decision(2, TipoObjetivoModeracion.Evento, 2, null);
             Decision(1, TipoObjetivoModeracion.Evento, 3, null);
+            Decision(1, TipoObjetivoModeracion.Evento, 5, null);
 
             Favoritos.AddRange([new(5, 1, ahora), new(6, 1, ahora), new(5, 2, ahora)]);
             foreach (var (usuario, evento) in new[] { (5, 1), (6, 2), (7, 2) })
