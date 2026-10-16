@@ -91,7 +91,8 @@ export function requiereSesion(que) {
 
 /** Qué hace cada `data-accion`. Las que aún no tienen pantalla muestran un aviso. */
 const acciones = {
-  'inicio': () => irA('inicio'),
+  // Logo y enlace "Inicio" del navbar: al Home (la landing solo es la primera pantalla de la app).
+  'inicio': () => irA('home'),
   'mapa': () => irA('mapa'),
   // Botones "Explorar" de la landing: llevan al Home.
   'explorar-eventos': () => irA('home'),
