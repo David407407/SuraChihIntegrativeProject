@@ -50,7 +50,7 @@ html.con-modal { overflow: hidden; }
   place-items: center;
   width: 36px;
   height: 36px;
-  border-radius: var(--radio-pildora);
+  border-radius: var(--radio-control);
   background: var(--color-fondo);
   transition: background-color var(--duracion-rapida), transform var(--duracion-rapida);
 }

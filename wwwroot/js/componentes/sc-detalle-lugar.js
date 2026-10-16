@@ -73,6 +73,7 @@ function plantilla(datos) {
   const tipo = l.etiquetas?.[0]?.nombre;
   const hayMapa = l.latitud != null && l.longitud != null;
   const opiniones = datos.opiniones ?? [];
+  const favoritos = new Set(datos.favoritos ?? []);
 
   return html`
     ${portadaHoja({ tipo: 'lugar', id: l.id, titulo: l.nombre, imagenUrl: l.imagenUrl, favorito: datos.favorito })}
@@ -110,6 +111,6 @@ function plantilla(datos) {
     ${datos.recomendados?.length > 0 && html`
       <section class="hoja__recomendados">
         <h2 class="t-h2">También te puede gustar</h2>
-        <div class="hoja__fila">${datos.recomendados.map((r, i) => tarjetaLugar(r, { orden: i }))}</div>
+        <div class="hoja__fila">${datos.recomendados.map((r, i) => tarjetaLugar(r, { orden: i, favorito: favoritos.has(r.id) }))}</div>
       </section>`}`;
 }

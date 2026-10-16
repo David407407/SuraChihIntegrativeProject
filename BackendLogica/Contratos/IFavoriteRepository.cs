@@ -7,8 +7,7 @@ namespace BackendLogica.Contratos
     /// Implementaciones: <c>FavoritoDB</c> y <c>FalsoFavoriteRepository</c>.
     /// </summary>
     /// <remarks>
-    /// Los favoritos de LUGARES salen en el diseño pero la BD v1 solo tiene <c>favorite</c> para eventos:
-    /// en <c>FavoritoDB</c> esos métodos lanzan <see cref="Datos.PendienteBDException"/>; el falso sí funcionan.
+    /// Eventos en la tabla <c>favorite</c> y lugares en <c>place_favorite</c>.
     /// </remarks>
     public interface IFavoriteRepository
     {
@@ -28,7 +27,7 @@ namespace BackendLogica.Contratos
         /// <summary>"Mis favoritos" (eventos): los más recientes primero, incluye los que ya terminaron.</summary>
         Task<List<EventoTarjeta>> ListarAsync(int usuarioId, CancellationToken ct = default);
 
-        // --- Lugares (NUEVO para el rediseño; pendiente en la BD v1) ---------------
+        // --- Lugares (NUEVO para el rediseño) --------------------------------------
 
         Task<bool> AlternarLugarAsync(int usuarioId, int lugarId, CancellationToken ct = default);
         Task<HashSet<int>> ListarIdsLugaresAsync(int usuarioId, CancellationToken ct = default);

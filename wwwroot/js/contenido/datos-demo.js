@@ -181,6 +181,7 @@ function detalleLugar(id) {
     favorito: demo.favoritos.has(`lugar:${id}`),
     opiniones: lugar.calificacion != null ? OPINIONES : [],
     recomendados,
+    favoritos: [...demo.favoritos].filter((f) => f.startsWith('lugar:')).map((f) => Number(f.split(':')[1])),
   });
 }
 

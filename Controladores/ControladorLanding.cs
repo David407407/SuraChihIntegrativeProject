@@ -61,9 +61,12 @@ namespace SuraChihIntegrativeProject.Controladores
         private async Task<bool> AlternarFavoritoAsync(SolicitudFavorito solicitud)
         {
             Usuario usuario = _sesion.Requerir("guardar tus favoritos");
-            if (solicitud.Tipo != "evento")
-                throw new SolicitudInvalidaException("Por ahora solo se pueden guardar eventos en favoritos.");
-            return await _bd.Favoritos.AlternarAsync(usuario.Id, solicitud.Id);
+            return solicitud.Tipo switch
+            {
+                "evento" => await _bd.Favoritos.AlternarAsync(usuario.Id, solicitud.Id),
+                "lugar" => await _bd.Favoritos.AlternarLugarAsync(usuario.Id, solicitud.Id),
+                _ => throw new SolicitudInvalidaException($"No se puede guardar en favoritos: {solicitud.Tipo}.")
+            };
         }
 
         private sealed record SolicitudFavorito(string Tipo, int Id);

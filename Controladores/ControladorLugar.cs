@@ -45,7 +45,8 @@ namespace SuraChihIntegrativeProject.Controladores
 
             var resenas = _bd.Resenas.ListarAsync(TipoResena.Lugar, lugarId);
             var recomendados = ListarRecomendadosAsync(lugar);
-            await Task.WhenAll(resenas, recomendados);
+            var favoritos = usuario != null ? _bd.Favoritos.ListarIdsLugaresAsync(usuario.Id) : Task.FromResult(new HashSet<int>());
+            await Task.WhenAll(resenas, recomendados, favoritos);
 
             // Primero las que tienen comentario: en la hoja solo caben dos.
             var opiniones = resenas.Result
@@ -53,7 +54,13 @@ namespace SuraChihIntegrativeProject.Controladores
                 .Take(Opiniones)
                 .ToList();
 
-            return new DatosDetalleLugar(lugar, detalle.Galeria, Favorito: false, opiniones, recomendados.Result);
+            return new DatosDetalleLugar(
+                lugar,
+                detalle.Galeria,
+                favoritos.Result.Contains(lugarId),
+                opiniones,
+                recomendados.Result,
+                favoritos.Result);
         }
 
         /// <summary>"También te puede gustar": aprobados del mismo tipo y, si no alcanzan, los mejor calificados.</summary>
@@ -75,16 +82,15 @@ namespace SuraChihIntegrativeProject.Controladores
     }
 
     /// <summary>Respuesta de "lugar.obtener". La forma está documentada en wwwroot/js/contenido/datos-demo.js.</summary>
-    /// <param name="Favorito">
-    /// Corazón lleno en la portada. Siempre false por ahora: la BD v1 no guarda favoritos de lugares
-    /// (ver "Lo que el rediseño pide y la BD v1 todavía no guarda" en BackendLogica/README.md).
-    /// </param>
+    /// <param name="Favorito">Corazón lleno en la portada (tabla place_favorite).</param>
     /// <param name="Opiniones">Las reseñas visibles más recientes (hasta 2), primero las que traen comentario.</param>
     /// <param name="Recomendados">"También te puede gustar" (hasta 3).</param>
+    /// <param name="Favoritos">Ids de lugares favoritos del usuario, para los corazones de las recomendaciones.</param>
     public sealed record DatosDetalleLugar(
         LugarTarjeta Lugar,
         IReadOnlyList<string> Galeria,
         bool Favorito,
         IReadOnlyList<Resena> Opiniones,
-        IReadOnlyList<LugarTarjeta> Recomendados);
+        IReadOnlyList<LugarTarjeta> Recomendados,
+        IReadOnlyCollection<int> Favoritos);
 }
