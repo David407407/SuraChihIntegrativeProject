@@ -48,18 +48,29 @@ namespace BackendLogica.Repositorios
                 """, new { usuarioId }, ct);
 
         // ------------------------------------------------------------------
-        // Lugares: el diseño los pide, pero la BD v1 no tiene tabla de favoritos de lugares.
+        // Lugares (tabla place_favorite)
         // ------------------------------------------------------------------
 
-        private const string FavoritosLugares = "Guardar lugares en favoritos";
-
+        /// <summary>Corazón de una tarjeta de lugar: si ya era favorito lo quita, si no lo agrega.</summary>
+        /// <returns>true si quedó como favorito.</returns>
         public Task<bool> AlternarLugarAsync(int usuarioId, int lugarId, CancellationToken ct = default) =>
-            throw new PendienteBDException(FavoritosLugares);
+            EnTransaccionAsync(async tx =>
+            {
+                int borradas = await tx.EjecutarAsync(
+                    "DELETE FROM place_favorite WHERE user_id = @usuarioId AND place_id = @lugarId", new { usuarioId, lugarId });
+                if (borradas > 0) return false;
 
-        public Task<HashSet<int>> ListarIdsLugaresAsync(int usuarioId, CancellationToken ct = default) =>
-            throw new PendienteBDException(FavoritosLugares);
+                await tx.EjecutarAsync("INSERT INTO place_favorite (user_id, place_id) VALUES (@usuarioId, @lugarId)", new { usuarioId, lugarId });
+                return true;
+            }, ct);
 
+        /// <summary>Ids de los lugares favoritos, para pintar los corazones llenos.</summary>
+        public async Task<HashSet<int>> ListarIdsLugaresAsync(int usuarioId, CancellationToken ct = default) =>
+            (await ConsultarAsync("SELECT place_id FROM place_favorite WHERE user_id = @usuarioId",
+                r => r.Entero("place_id"), new { usuarioId }, ct)).ToHashSet();
+
+        /// <summary>"Mis favoritos" (lugares aprobados): los más recientes primero.</summary>
         public Task<List<LugarTarjeta>> ListarLugaresAsync(int usuarioId, CancellationToken ct = default) =>
-            throw new PendienteBDException(FavoritosLugares);
+            new LugarDB(Configuracion).ListarFavoritosAsync(usuarioId, ct);
     }
 }

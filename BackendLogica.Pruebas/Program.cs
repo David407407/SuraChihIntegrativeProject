@@ -229,6 +229,17 @@ await Prueba("Favorito: alternar dos veces deja todo igual", async () =>
     Afirmar(primero != segundo && antes == despues, "el estado no regresó");
     return $"{antes} → {primero} → {segundo}";
 });
+await Prueba("Favorito de lugar: alternar dos veces deja todo igual", async () =>
+{
+    bool antes = (await bd.Favoritos.ListarIdsLugaresAsync(7)).Contains(1);
+    bool primero = await bd.Favoritos.AlternarLugarAsync(7, 1);
+    var lista = await bd.Favoritos.ListarLugaresAsync(7);
+    bool segundo = await bd.Favoritos.AlternarLugarAsync(7, 1);
+    bool despues = (await bd.Favoritos.ListarIdsLugaresAsync(7)).Contains(1);
+    Afirmar(primero != segundo && antes == despues, "el estado no regresó");
+    Afirmar(primero == lista.Any(l => l.Id == 1), "Mis favoritos no coincide");
+    return $"{antes} → {primero} → {segundo}";
+});
 
 Console.WriteLine(fallas == 0 ? "\nTodo bien ✓" : $"\n{fallas} prueba(s) fallaron ✗");
 return fallas == 0 ? 0 : 1;
@@ -427,7 +438,7 @@ async Task PruebasFalso()
             "solo el dueño ve los inscritos");
         return string.Join(", ", inscritos.Select(i => "@" + i.NombreUsuario));
     });
-    await Prueba("Favoritos de eventos y de lugares (solo en el falso)", async () =>
+    await Prueba("Favoritos de eventos y de lugares", async () =>
     {
         bool evento = await f.Favoritos.AlternarAsync(7, 1);
         bool lugar = await f.Favoritos.AlternarLugarAsync(7, 2);
@@ -442,8 +453,6 @@ async Task PruebasFalso()
         Afirmar((await f.Reportes.ListarAsync()).Count == 0, "ya no está abierto");
         return "";
     });
-    await Prueba("Repositorio real: favoritos de lugares → PendienteBDException (sin tocar MySQL)", () =>
-        EsperarError<PendienteBDException>(() => new FavoritoDB().AlternarLugarAsync(5, 1)));
 }
 
 static string BuscarHaciaArriba(string rutaRelativa)

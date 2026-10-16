@@ -40,7 +40,7 @@ sc-navbar {
   width: min(440px, 36vw);
   height: 44px;
   padding: 0 16px;
-  border-radius: var(--radio-pildora);
+  border-radius: var(--radio-control);
   background: var(--color-fondo);
   border: 1.5px solid transparent;
   transition: border-color var(--duracion-rapida), background-color var(--duracion-rapida);
@@ -84,7 +84,7 @@ sc-navbar {
   width: 40px;
   height: 40px;
   overflow: hidden;
-  border-radius: var(--radio-pildora);
+  border-radius: var(--radio-control);
   transition: border-color var(--duracion-rapida), background-color var(--duracion-rapida), transform var(--duracion-rapida);
 }
 .navbar__circulo:active { transform: scale(0.94); }
