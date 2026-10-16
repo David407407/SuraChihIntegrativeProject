@@ -207,6 +207,46 @@ function detalleEvento(id) {
 }
 
 // ---------------------------------------------------------------------
+// Home ('home.obtener'): los mismos eventos y lugares, repartidos en sus secciones.
+// ---------------------------------------------------------------------
+
+/** Respuesta de 'home.obtener' (DatosHome de Controladores/ControladorHome.cs). */
+function homeDemo() {
+  const ids = (prefijo) => new Set([...demo.favoritos].filter((f) => f.startsWith(prefijo)).map((f) => Number(f.split(':')[1])));
+  const favoritosEventos = ids('evento:');
+  const favoritosLugares = ids('lugar:');
+  const eventoPorId = (id) => eventosDetalle.find((e) => e.id === id);
+  const lugarPorId = (id) => lugaresDetalle.find((l) => l.id === id);
+  const vigentes = eventosDetalle.filter(vigente);
+  const eventosCon = (iconos) => vigentes.filter((e) => e.etiquetas.some((t) => iconos.includes(t.icono)));
+  const lugaresCon = (iconos) => lugaresDetalle
+    .filter((l) => l.etiquetas.some((t) => iconos.includes(t.icono)))
+    .sort((a, b) => (b.calificacion ?? 0) - (a.calificacion ?? 0));
+  const deEvento = (id) => ({ tipo: 'evento', evento: eventoPorId(id) });
+  const deLugar = (id) => ({ tipo: 'lugar', lugar: lugarPorId(id) });
+
+  return structuredClone({
+    usuarioId: demo.sesion?.id ?? null,
+    carrusel: [deEvento(2), deEvento(3), deEvento(5), deEvento(6), deLugar(2)],
+    recomendados: [deEvento(3), deEvento(5), deLugar(10), deLugar(2)],
+    categorias: [
+      categoria.musica, categoria.familiar, categoria.deportes, categoria.tecnologia, categoria.gastronomia,
+      { ...etiqueta(6, 'Cafetería'), icono: 'coffee', alcance: 'lugar' },
+      { ...etiqueta(10, 'Museo y galería'), icono: 'museum', alcance: 'lugar' },
+    ],
+    // «Inicio del usuario»: con sesión, primero sus favoritos; después por fecha.
+    tePodrianInteresar: [...vigentes].sort((a, b) =>
+      (favoritosEventos.has(b.id) - favoritosEventos.has(a.id)) || a.inicio.localeCompare(b.inicio)),
+    musica: eventosCon(['music']),
+    actividades: eventosCon(['family', 'run', 'robot', 'food']),
+    cafes: lugaresCon(['coffee']),
+    paraLaTarde: lugaresCon(['museum', 'tree', 'stage']),
+    favoritosEventos: [...favoritosEventos],
+    favoritosLugares: [...favoritosLugares],
+  });
+}
+
+// ---------------------------------------------------------------------
 // Cuentas de prueba (mismos usuarios que surachih_v1.sql; contraseña de todos: Test1234!)
 // Viven mientras la pestaña está abierta.
 // ---------------------------------------------------------------------
@@ -234,6 +274,7 @@ export async function responderDemo(accion, datos) {
   switch (accion) {
     case 'landing.obtener': return structuredClone(landing);
     case 'mapa.obtener': return structuredClone(mapa);
+    case 'home.obtener': return homeDemo();
     case 'sesion.obtener': return demo.sesion && publico(demo.sesion);
     case 'sesion.cerrar': demo.sesion = null; return null;
 

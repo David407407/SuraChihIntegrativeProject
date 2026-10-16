@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SuraChih · Inicio</title>
+  <meta name="description" content="Eventos, cafés, museos y parques de Chihuahua: lo más destacado de la semana.">
+  <link rel="icon" href="assets/iconos/logo-sol.svg" type="image/svg+xml">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+
+  <link rel="stylesheet" href="css/estilos.css">
+  <script type="module" src="js/home.js"></script>
+</head>
+<body>
+  <!--
+    Frames "Home (visitante)" y "Home (logueado)" de Figma: es la misma pantalla; cambian el navbar,
+    el saludo y el orden de "Te podrían interesar" (favoritos primero). Los datos llegan de C#
+    ('home.obtener') y los reparte js/home.js.
+  -->
+  <sc-navbar></sc-navbar>
+
+  <main class="home">
+    <sc-saludo></sc-saludo>
+    <sc-carrusel></sc-carrusel>
+    <sc-filtros-rapidos></sc-filtros-rapidos>
+    <sc-recomendados></sc-recomendados>
+    <sc-categorias></sc-categorias>
+    <sc-fila-tarjetas id="fila-te-podrian" titulo="Te podrían interesar" tipo="evento" ver-todo="ver-todos-eventos"></sc-fila-tarjetas>
+    <sc-fila-tarjetas id="fila-musica" titulo="Música en vivo" tipo="evento" ver-todo="ver-todos-eventos"></sc-fila-tarjetas>
+    <sc-fila-tarjetas id="fila-actividades" titulo="Actividades y talleres" tipo="evento" ver-todo="ver-todos-eventos"></sc-fila-tarjetas>
+    <sc-fila-tarjetas id="fila-cafes" titulo="Cafés para trabajar o platicar" tipo="lugar" ver-todo="mapa"></sc-fila-tarjetas>
+    <sc-fila-tarjetas id="fila-tarde" titulo="Para pasar la tarde" tipo="lugar" ver-todo="mapa"></sc-fila-tarjetas>
+  </main>
+
+  <sc-pie></sc-pie>
+</body>
+</html>

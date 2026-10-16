@@ -15,6 +15,7 @@ Abre `http://localhost:4321`. Fuera de WebView2, `js/nucleo/puente.js` responde 
 
 ```
 index.html                 la landing: una etiqueta <sc-...> por sección, en el orden de Figma
+home.html                  Home (visitante y logueado): carrusel, filtros rápidos, recomendados, categorías y filas
 mapa.html                  pantalla Mapa (visitante y logueado): panel de lugares + <sc-mapa>
 css/
   tokens.css               colores, tipografías, radios y sombras (variables de Figma)
@@ -23,6 +24,7 @@ css/
   componentes/*.css        un archivo por grupo de componentes
 js/
   main.js                  entrada de index.html: carga datos y conecta las secciones
+  home.js                  entrada de home.html: reparte 'home.obtener' a las secciones y aplica los filtros rápidos
   mapa.js                  entrada de mapa.html: buscador, píldoras y lista sincronizados con el mapa
   nucleo/componente.js     clase base Componente + plantillas html`` con escape automático
   nucleo/puente.js         invocar('accion', datos) → C#
@@ -143,6 +145,29 @@ agregar un tipo (y su píldora en la pantalla Mapa), exporta su icono de Figma y
 
 Los datos llegan de C# como JSON por el puente: `invocar('mapa.obtener')` → `{ lugares }`
 (`Controladores/ControladorMapa.cs`).
+
+## Home (WBS 4.1)
+
+Frames "Home (visitante)" y "Home (logueado)" de Figma. Es la misma pantalla: cambian el navbar,
+el saludo ("Inicia sesión" / "Hola, Andy") y el orden de "Te podrían interesar" (favoritos primero).
+Se llega con los botones "Explorar" de la landing (`data-accion="explorar-eventos"`).
+
+| Sección (Figma) | Componente | Datos (`home.obtener`, `Controladores/ControladorHome.cs`) |
+|---|---|---|
+| Saludo | `<sc-saludo>` | Sesión del navbar (evento `sc:usuario`) |
+| Carrusel destacado | `<sc-carrusel>` (`secciones/sc-carrusel.js`) | Eventos destacados por moderadores + más guardados, y un lugar al final |
+| Hero (filtros rápidos) | `<sc-filtros-rapidos>` → evento `sc:filtros` | Filtra en el navegador lo que ya llegó; "Fecha" y "Filtros" aún muestran un aviso |
+| Recomendados para ti | `<sc-recomendados>` + `tarjetaRecomendada()` | 2 eventos más guardados + 2 lugares mejor calificados |
+| Explora por categoría | `<sc-categorias>` (Tile categoría) | Etiquetas por `tag.icon`; cada tile baja a su fila |
+| Te podrían interesar | `<sc-fila-tarjetas>` | `ListarProximosAsync(usuario)`: la consulta «Inicio del usuario» del SQL |
+| Música en vivo | `<sc-fila-tarjetas>` | Eventos con la etiqueta `music` |
+| Actividades y talleres | `<sc-fila-tarjetas>` | Eventos con `family`, `run`, `robot` o `food` |
+| Cafés para trabajar o platicar | `<sc-fila-tarjetas tipo="lugar">` | Lugares con `coffee` |
+| Para pasar la tarde | `<sc-fila-tarjetas tipo="lugar">` | Lugares con `museum`, `tree` o `stage` |
+
+Las secciones se arman por `tag.icon` y no por id, así no dependen del orden en que se insertaron las
+etiquetas. Una fila sin datos en la BD se oculta; si son los filtros los que la vacían, lo dice.
+Para cambiar qué etiquetas van en cada fila, edita las listas al inicio de `ControladorHome.cs`.
 
 ## Pantallas y navegación
 

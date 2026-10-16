@@ -18,6 +18,7 @@ import { alternarMenuCuenta, cerrarMenuCuenta } from '../componentes/menu-cuenta
 /** Pantallas que ya existen. Al construir una nueva, agrégala aquí y en `acciones`. */
 const PAGINAS = {
   inicio: 'index.html',
+  home: 'home.html',
   mapa: 'mapa.html',
 };
 
@@ -46,6 +47,8 @@ function ponerUsuario(usuario) {
   usuarioActual = usuario ?? null;
   cerrarMenuCuenta();
   if (navbar) navbar.datos = { usuario: usuarioActual };
+  // Para las pantallas que cambian con la sesión (el saludo y los favoritos del Home).
+  document.dispatchEvent(new CustomEvent('sc:usuario', { detail: { usuario: usuarioActual } }));
 }
 
 /**
@@ -90,8 +93,11 @@ export function requiereSesion(que) {
 const acciones = {
   'inicio': () => irA('inicio'),
   'mapa': () => irA('mapa'),
-  'explorar-eventos': () => proximamente('Explorar eventos'),
-  'explorar-lugares': () => proximamente('Explorar lugares'),
+  // Botones "Explorar" de la landing: llevan al Home.
+  'explorar-eventos': () => irA('home'),
+  'explorar-lugares': () => irA('home'),
+  // "Ver todo" de las filas de eventos del Home: la pantalla de resultados aún no existe.
+  'ver-todos-eventos': () => proximamente('Explorar eventos'),
   'iniciar-sesion': () => abrirIniciarSesion(),
   'crear-cuenta': () => (usuarioActual ? mostrarToast('Ya tienes una sesión iniciada.', { tipo: 'info' }) : abrirCrearCuenta()),
   'mis-planes': () => (usuarioActual ? proximamente('Mis planes') : abrirRequiereSesion()),
