@@ -66,7 +66,6 @@ Está en las interfaces y **funciona en el repositorio falso**; el real lanza `P
 
 | Del diseño | En la librería | Qué le falta a la BD |
 |---|---|---|
-| Corazón en tarjetas de lugar, pestaña "Lugares" de Mis favoritos | `IFavoriteRepository.AlternarLugarAsync`, `ListarIdsLugaresAsync`, `ListarLugaresAsync` | Tabla de favoritos de lugares |
 | "Fecha por confirmar" / "Precio por confirmar" | `EventoTarjeta.FechaPorConfirmar` / `PrecioPorConfirmar` y lo mismo en `DatosEvento` | `start_at` / `end_at` son NOT NULL y el precio 0 significa "Gratis" |
 | Borrador "Sin fecha" / "Sin ubicación" en el panel | `CrearAsync(..., enviarARevision: false)` con datos incompletos | Los CHECK de fecha y ubicación aplican también a borradores |
 

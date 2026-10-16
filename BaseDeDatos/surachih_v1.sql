@@ -243,6 +243,17 @@ CREATE TABLE favorite (
     INDEX ix_fav_event (event_id)
 );
 
+-- Favoritos de lugares: el corazon de las tarjetas de lugar y la pestana "Lugares" de Mis favoritos.
+CREATE TABLE place_favorite (
+    user_id     INT UNSIGNED NOT NULL,
+    place_id    INT UNSIGNED NOT NULL,
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, place_id),
+    CONSTRAINT fk_plfav_user  FOREIGN KEY (user_id)  REFERENCES user(id)  ON DELETE CASCADE,
+    CONSTRAINT fk_plfav_place FOREIGN KEY (place_id) REFERENCES place(id) ON DELETE CASCADE,
+    INDEX ix_plfav_place (place_id)
+);
+
 -- Inscripcion = RSVP "voy a ir". No garantiza cupo; los boletos se compran en ticket_url.
 CREATE TABLE inscription (
     user_id       INT UNSIGNED NOT NULL,
@@ -619,6 +630,7 @@ INSERT INTO moderation (mod_id, event_id, decision, comment) VALUES
 UPDATE event SET is_featured = TRUE, featured_order = 1 WHERE id = 1;
 
 INSERT INTO favorite (user_id, event_id) VALUES (5,1),(6,1),(5,2);
+INSERT INTO place_favorite (user_id, place_id) VALUES (5,1);
 INSERT INTO inscription (user_id, event_id) VALUES (5,1),(6,2),(7,2);
 INSERT INTO event_view (event_id, user_id) VALUES (1,5),(1,6),(1,7),(1,NULL),(2,5),(2,6);
 INSERT INTO event_review (event_id, user_id, rating, comment) VALUES (3, 5, 5, 'Muy bien organizada.');
