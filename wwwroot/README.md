@@ -175,7 +175,10 @@ Cada pantalla es un `.html` con su script de entrada. Para ir de una a otra se u
 (`'inicio'`, `'mapa'`...), que resuelve `nucleo/navegacion.js`. Al crear una pantalla nueva:
 
 1. Crea `mi-pantalla.html` (copia el `<head>` de `mapa.html`) y `js/mi-pantalla.js`.
-2. En el script llama a `atenderAcciones()` y `cargarSesion(navbar)`.
+2. En el script llama a `atenderAcciones()` y `cargarSesion(navbar)`. En el HTML pon
+   `<sc-navbar pagina="...">` con el nombre de la pantalla para que su enlace salga marcado, y si la
+   pantalla es larga agrega `<sc-volver-arriba></sc-volver-arriba>` al final del `<body>`.
+   El logo y el enlace "Inicio" del navbar siempre llevan al Home (`data-accion="inicio"`).
 3. Agrega la página en `PAGINAS` y su acción en `acciones` de `nucleo/navegacion.js`.
 4. Si necesita datos, registra la acción en un controlador de C# y agrega su ejemplo en
    `contenido/datos-demo.js`.

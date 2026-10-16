@@ -11,6 +11,7 @@
 
 import './componentes/sc-imagen.js';
 import './componentes/sc-boton-favorito.js';
+import './componentes/sc-volver-arriba.js';
 import './componentes/secciones/sc-navbar.js';
 import './componentes/secciones/sc-carrusel.js';
 import './componentes/secciones/sc-secciones-home.js';
