@@ -53,7 +53,7 @@ todos: `Test1234!`):
 
 | Vista de surachih_v1.sql | Modelo |
 |---|---|
-| `v_event_card` | `EventoTarjeta` (+ `Interesados` y `Etiquetas`) |
+| `v_event_card` | `EventoTarjeta` (+ `Interesados` y `Etiquetas`). `cancel_reason` → `MotivoCancelacion` (detalle de un evento cancelado) |
 | `v_event_stats` | `EstadisticasEvento` |
 | `v_place_rating` | `CalificacionLugar`, y `Calificacion` / `NumResenas` dentro de `LugarTarjeta` |
 

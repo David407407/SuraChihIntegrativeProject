@@ -125,6 +125,12 @@ await Prueba("Detalle de evento con galería", async () =>
     Afirmar(detalle != null, "no existe el evento 2");
     return $"{detalle!.Evento.Titulo}, {detalle.Galeria.Count} foto(s)";
 });
+await Prueba("Detalle de evento cancelado con su motivo (cancel_reason de v_event_card)", async () =>
+{
+    var cancelado = (await bd.Eventos.ObtenerAsync(5))?.Evento;
+    Afirmar(cancelado is { Estado: EstadoEvento.Cancelado, MotivoCancelacion: not null }, "el evento 5 debe estar cancelado y traer su motivo");
+    return cancelado!.MotivoCancelacion!;
+});
 await Prueba("Lugares recomendados con horario", async () =>
 {
     var lugares = await bd.Lugares.ListarRecomendadosAsync();
@@ -314,6 +320,16 @@ async Task PruebasFalso()
             "la dirección debe venir del lugar (COALESCE de v_event_card)");
         return $"{detalle!.Evento.Titulo}, {detalle.Galeria.Count} foto(s)";
     });
+    await Prueba("IEventRepository: estados del detalle (cancelado con motivo, terminado)", async () =>
+    {
+        var cancelado = (await f.Eventos.ObtenerAsync(5))!.Evento;
+        var terminado = (await f.Eventos.ObtenerAsync(3))!.Evento;
+        var vigente = (await f.Eventos.ObtenerAsync(2))!.Evento;
+        Afirmar(cancelado is { Estado: EstadoEvento.Cancelado, Terminado: false, MotivoCancelacion: not null }, "cancelado con motivo");
+        Afirmar(terminado is { Terminado: true, MotivoCancelacion: null } && vigente.MotivoCancelacion == null, "solo los cancelados traen motivo");
+        Afirmar((await f.Eventos.ListarMasGuardadosAsync(10)).All(e => e.Id != 5), "un cancelado no sale en las listas");
+        return cancelado.MotivoCancelacion!;
+    });
     await Prueba("IEventRepository: estadísticas (v_event_stats) y últimos 7 días", async () =>
     {
         var stats = await f.Eventos.ListarEstadisticasAsync(4);
@@ -343,7 +359,7 @@ async Task PruebasFalso()
     await Prueba("IModerationRepository: historial de los datos de prueba", async () =>
     {
         var historial = await f.Moderacion.ListarHistorialAsync();
-        Afirmar(historial.Count == 7, $"{historial.Count} decisiones");
+        Afirmar(historial.Count == 8, $"{historial.Count} decisiones");
         return $"{historial.Count} decisiones";
     });
     await Prueba("IOrganizerRepository: solicitudes pendientes", async () =>

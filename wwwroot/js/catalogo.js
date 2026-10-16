@@ -11,7 +11,8 @@ import './componentes/secciones/sc-navbar.js';
 
 import { html } from './nucleo/componente.js';
 import { boton, campo, chipCategoria, marcarError, pildora } from './componentes/atomos.js';
-import { tarjetaEvento, tarjetaLugar, itemLugar } from './componentes/tarjetas.js';
+import { tarjetaEvento, tarjetaLugar, tarjetaRecomendada, itemLugar } from './componentes/tarjetas.js';
+import { abrirDetalleEvento } from './componentes/sc-detalle-evento.js';
 import { mostrarToast } from './componentes/sc-toast.js';
 import { puntoDeLugar } from './utilidades/lugares.js';
 import * as modalesCuenta from './componentes/modales/cuenta.js';
@@ -124,6 +125,21 @@ document.getElementById('catalogo').innerHTML = String(html`
     <div class="rejilla-tarjetas">${LUGARES.map((l, i) => tarjetaLugar(l, { orden: i, favorito: i === 0 }))}</div>
   `, 'muestra__panel--blanco')}
 
+  ${muestra('Card recomendada · Normal / Hover (pasa el mouse)', "tarjetaRecomendada(item, { tipo: 'evento' | 'lugar', orden })   dentro de .rejilla-recomendadas", html`
+    <div class="rejilla-recomendadas">
+      ${tarjetaRecomendada({ ...EVENTOS[0], descripcion: 'Embárcate en una misión inmersiva e interactiva de Minecraft junto a tus amigos y familia.', etiquetas: [ETIQUETAS[0]] })}
+      ${tarjetaRecomendada({ ...LUGARES[0], descripcion: 'Café de especialidad y terraza en el centro.' }, { tipo: 'lugar', orden: 1 })}
+    </div>
+  `)}
+
+  ${muestra('Detalle de evento (hoja "Evento / ...") · usa los datos demo', 'abrirDetalleEvento(id, { inscribir })   ·   data-accion="ver-evento" data-id="id"', html`
+    <div class="muestra__fila">
+      ${[[2, 'Normal'], [1, 'Fecha y precio por confirmar'], [8, 'Finalizado'], [9, 'Cancelado']]
+        .map(([id, texto]) => html`<button type="button" class="boton boton--secundario boton--s" data-detalle="${id}"><span>${texto}</span></button>`)}
+    </div>
+    <p class="t-small texto-2" style="margin-top:12px">«Ya vas a ir»: inicia sesión con mariana_r / Test1234! desde la landing y pulsa «Voy a ir».</p>
+  `)}
+
   ${muestra('Píldora · Normal / Activa', 'pildora({ texto, valor, activa })   (una activa por grupo; se lee con data-valor)', html`
     <div class="muestra__fila" role="group" aria-label="Tipo de lugar">
       ${pildora({ texto: 'Todo', activa: true })}${pildora({ texto: 'Cafés', valor: 'coffee' })}${pildora({ texto: 'Museos', valor: 'museum' })}${pildora({ texto: 'Parques', valor: 'tree' })}
@@ -168,6 +184,8 @@ document.getElementById('formulario-demo').addEventListener('submit', (e) => {
 });
 
 document.addEventListener('click', (e) => {
+  const detalle = e.target.closest('[data-detalle]')?.dataset.detalle;
+  if (detalle) abrirDetalleEvento(Number(detalle));
   const modal = e.target.closest('[data-modal]')?.dataset.modal;
   if (modal) modalesCuenta[modal](modal === 'abrirContrasenaNueva' ? 'token-de-ejemplo' : undefined);
   const menu = e.target.closest('[data-menu-cuenta]');

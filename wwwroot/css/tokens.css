@@ -20,6 +20,7 @@
   --color-favorito: #e11d48;     /* corazón */
   --color-favorito-suave: #ffe4e6;
   --color-error: #d93636;        /* botón "Peligro", campo con error */
+  --color-error-suave: #fdecec;  /* aviso "Este evento fue cancelado", insignia de "¿Cancelar tu inscripción?" */
 
   /* Fondos del "Chip categoría" (uno por categoría de evento) */
   --categoria-familiar: #ffe4e6;
@@ -32,6 +33,7 @@
   --color-sol-hover: #f5c518;
   --color-tinta-hover: #1a2d57;
   --color-error-hover: #c12b2b;
+  --color-exito-hover: #188553;   /* botón verde "Ya vas a ir" */
   --color-velo-tarjeta: rgba(23, 20, 59, 0.85);
   --color-velo-modal: rgba(0, 0, 0, 0.44);  /* fondo detrás de los modales */
 

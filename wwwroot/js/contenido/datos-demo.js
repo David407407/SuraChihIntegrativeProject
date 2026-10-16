@@ -79,6 +79,134 @@ const mapa = {
   ],
 };
 // ---------------------------------------------------------------------
+// Detalle de evento ('evento.obtener'): los eventos de la landing con todos sus datos, más uno
+// terminado y uno cancelado para ver esos estados (#evento-8 y #evento-9 en la dirección).
+// ---------------------------------------------------------------------
+
+/** Las 5 categorías de BaseDeDatos/surachih_v1.sql con su tag.icon (decide el color del chip). */
+const categoria = {
+  familiar: { ...etiqueta(1, 'Familiar'), icono: 'family', alcance: 'evento' },
+  musica: { ...etiqueta(2, 'Música'), icono: 'music', alcance: 'evento' },
+  deportes: { ...etiqueta(3, 'Deportes y aire libre'), icono: 'run', alcance: 'evento' },
+  tecnologia: { ...etiqueta(4, 'Tecnología y conferencias'), icono: 'robot', alcance: 'evento' },
+  gastronomia: { ...etiqueta(5, 'Gastronomía'), icono: 'food', alcance: 'evento' },
+};
+
+const conDetalle = (base, extra) => ({
+  ...base, latitud: null, longitud: null, boletosUrl: null, terminado: false, motivoCancelacion: null, ...extra,
+});
+
+const eventosDetalle = [
+  conDetalle(harryPotter, {
+    titulo: 'Harry Potter™: La Experiencia del Bosque Prohibido', fechaPorConfirmar: true, precioPorConfirmar: true,
+    lugarNombre: null, direccion: 'Chihuahua', etiquetas: [categoria.familiar],
+    descripcion: 'Recorrido nocturno con luces, sonido y criaturas inspiradas en el mundo mágico.',
+  }),
+  conDetalle(minecraft, {
+    inicio: '2026-10-23T14:00:00', fin: '2026-10-25T21:00:00', latitud: 28.6587, longitud: -106.0879,
+    etiquetas: [categoria.familiar, categoria.tecnologia], boletosUrl: 'https://boletos.example.com/minecraft',
+    descripcion: 'Embárcate en una misión inmersiva e interactiva de Minecraft junto a tus amigos y familia. '
+      + '¡Salva el día en Minecraft Experience: Villager Rescue!',
+  }),
+  conDetalle(landing.eventos[0], {
+    latitud: 28.6413, longitud: -106.0731, etiquetas: [categoria.musica], boletosUrl: 'https://boletos.example.com/mfd',
+  }),
+  conDetalle(landing.eventos[2], {
+    latitud: 28.6302, longitud: -106.0702, etiquetas: [categoria.musica], boletosUrl: 'https://boletos.example.com/mac',
+    descripcion: 'El cantautor canadiense regresa con su gira de guitarras relajadas y melodías pegajosas.',
+  }),
+  conDetalle(landing.eventos[3], {
+    latitud: 28.6449, longitud: -106.0888, etiquetas: [categoria.gastronomia],
+    descripcion: 'Vive una experiencia gastronómica japonesa íntima: aprende a preparar nigiri y makis con el chef.',
+  }),
+  conDetalle(landing.eventos[4], {
+    latitud: 28.6133, longitud: -106.1217, etiquetas: [categoria.deportes, categoria.familiar],
+    boletosUrl: 'https://boletos.example.com/campamento',
+    descripcion: 'Adéntrate con tu equipo en el bosque y enfrenta la Zona Infectada y el Bosque del Misterio. '
+      + 'Tendrás que completar misiones, superar desafíos de supervivencia, resolver búsquedas y enfrentarte a criaturas.',
+  }),
+  conDetalle(evento(8, 'Las Ligas Menores', '2025-11-27T21:00:00', '2025-11-27T23:30:00', 'Foro Indie Rocks!', 450, 700, null), {
+    terminado: true, latitud: 28.6365, longitud: -106.0791, etiquetas: [categoria.musica],
+    descripcion: 'La banda argentina de indie rock Las Ligas Menores en concierto.',
+  }),
+  conDetalle(evento(9, 'Saramalacara', '2026-11-14T21:00:00', '2026-11-14T23:30:00', 'ORBE', 550, 800, null), {
+    estado: 'cancelado', latitud: 28.6413, longitud: -106.0731, etiquetas: [categoria.musica],
+    descripcion: 'Rap y electrónica desde Argentina en su primera visita a Chihuahua.',
+    motivoCancelacion: 'El organizador canceló el evento por causas de fuerza mayor. Te avisaremos si se reprograma.',
+  }),
+];
+
+const vigente = (e) => e.estado === 'aprobado' && !e.terminado;
+
+// ---------------------------------------------------------------------
+// Detalle de lugar ('lugar.obtener'): los lugares del mapa con descripción y opiniones.
+// ---------------------------------------------------------------------
+
+const DESCRIPCIONES = {
+  2: 'Café de especialidad en el centro, con un espacio tranquilo para trabajar o pasar la tarde.',
+  10: 'Mansión art nouveau de principios del siglo XX con salas de arte e historia de Chihuahua.',
+  11: 'La catedral barroca más importante del norte de México, frente a la Plaza de Armas.',
+  12: 'Cavernas con formaciones de estalactitas y estalagmitas a unos minutos de la ciudad.',
+  13: 'Cafetería de barrio con postres caseros y métodos de filtrado.',
+  14: 'Antigua casa de Pancho Villa convertida en museo de la Revolución Mexicana.',
+  15: 'Pistas, canchas y áreas verdes para correr, andar en bici o pasar el día en familia.',
+  16: 'Presa con malecón, ciclovía y miradores; ideal para el atardecer.',
+};
+
+const opinionDemo = (id, nombreUsuario, calificacion, comentario) => ({
+  id, tipo: 'lugar', nombreUsuario, avatarUrl: null, calificacion, comentario, respuesta: null, oculta: false,
+  creadaEn: '2026-10-01T12:00:00',
+});
+const OPINIONES = [
+  opinionDemo(1, 'mariana_r', 5, 'Muy buen lugar, regresaría con amigos.'),
+  opinionDemo(2, 'diego_m', 4, 'Tranquilo y bonito; vale la pena la visita.'),
+];
+
+const lugaresDetalle = [
+  ...mapa.lugares,
+  enMapa(landing.lugares[2], 28.7983, -106.1048, 'tree'),   // Grutas Nombre de Dios
+].map((l) => ({ ...l, descripcion: DESCRIPCIONES[l.id] ?? null, estado: 'aprobado' }));
+
+/** Respuesta de 'lugar.obtener' (DatosDetalleLugar de Controladores/ControladorLugar.cs). */
+function detalleLugar(id) {
+  const lugar = lugaresDetalle.find((l) => l.id === id);
+  if (!lugar) return null;
+  const tipo = lugar.etiquetas[0]?.icono;
+  const recomendados = [...lugaresDetalle.filter((l) => l.etiquetas[0]?.icono === tipo), ...lugaresDetalle]
+    .filter((l, i, todos) => l.id !== id && todos.findIndex((o) => o.id === l.id) === i)
+    .slice(0, 3);
+  return structuredClone({
+    lugar,
+    galeria: [],
+    favorito: demo.favoritos.has(`lugar:${id}`),
+    opiniones: lugar.calificacion != null ? OPINIONES : [],
+    recomendados,
+    favoritos: [...demo.favoritos].filter((f) => f.startsWith('lugar:')).map((f) => Number(f.split(':')[1])),
+  });
+}
+
+/** Respuesta de 'evento.obtener' (DatosDetalleEvento de Controladores/ControladorEvento.cs). */
+function detalleEvento(id) {
+  const evento = eventosDetalle.find((e) => e.id === id);
+  if (!evento) return null;
+  const ids = new Set(evento.etiquetas.map((t) => t.id));
+  const parecidos = eventosDetalle.filter((e) => vigente(e) && e.etiquetas.some((t) => ids.has(t.id)));
+  const recomendados = [...parecidos, ...eventosDetalle.filter(vigente)]
+    .filter((e, i, todos) => e.id !== id && todos.findIndex((o) => o.id === e.id) === i)
+    .slice(0, 3);
+  const favoritos = [...demo.favoritos].filter((f) => f.startsWith('evento:')).map((f) => Number(f.split(':')[1]));
+  return structuredClone({
+    evento,
+    galeria: [],
+    inscrito: Boolean(demo.sesion) && demo.inscripciones.has(id),
+    favorito: favoritos.includes(id),
+    numResenas: evento.terminado ? 12 : null,
+    recomendados,
+    favoritos,
+  });
+}
+
+// ---------------------------------------------------------------------
 // Cuentas de prueba (mismos usuarios que surachih_v1.sql; contraseña de todos: Test1234!)
 // Viven mientras la pestaña está abierta.
 // ---------------------------------------------------------------------
@@ -91,7 +219,7 @@ const cuentas = [
 ].map((c) => ({ ...c, avatarUrl: null, contrasena: CONTRASENA_DEMO }));
 
 // token: enlace "enviado" sin abrir; abierto: enlace abierto sin usar; de: cuenta a la que pertenece.
-const demo = { sesion: null, token: null, abierto: null, de: null, favoritos: new Set() };
+const demo = { sesion: null, token: null, abierto: null, de: null, favoritos: new Set(), inscripciones: new Set() };
 
 const publico = ({ contrasena, ...usuario }) => structuredClone(usuario);   // nunca sale la contraseña
 
@@ -154,6 +282,29 @@ export async function responderDemo(accion, datos) {
       if (demo.favoritos.has(llave)) demo.favoritos.delete(llave);
       else demo.favoritos.add(llave);
       return demo.favoritos.has(llave);
+    }
+    case 'evento.obtener': {
+      const detalle = detalleEvento(datos.id);
+      if (!detalle) throw await errorDemo('regla-negocio', 'Este evento ya no existe.');
+      return detalle;
+    }
+    case 'lugar.obtener': {
+      const detalle = detalleLugar(datos.id);
+      if (!detalle) throw await errorDemo('regla-negocio', 'Este lugar ya no existe.');
+      return detalle;
+    }
+    case 'inscripcion.inscribir': {
+      if (!demo.sesion) throw await errorDemo('requiere-sesion', 'Inicia sesión para apartar tu lugar.');
+      const evento = eventosDetalle.find((e) => e.id === datos.id);
+      // Mismo texto que el trigger trg_inscription_bi.
+      if (!evento || !vigente(evento)) throw await errorDemo('regla-negocio', 'No puedes inscribirte a este evento.');
+      demo.inscripciones.add(datos.id);
+      return true;
+    }
+    case 'inscripcion.cancelar': {
+      if (!demo.sesion) throw await errorDemo('requiere-sesion', 'Inicia sesión para cancelar tu inscripción.');
+      demo.inscripciones.delete(datos.id);
+      return false;
     }
     default: throw new Error(`Acción demo no implementada: ${accion}`);
   }

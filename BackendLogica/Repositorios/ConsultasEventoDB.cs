@@ -44,6 +44,7 @@ namespace BackendLogica.Repositorios
             BoletosUrl = r.TextoONulo("ticket_url"),
             ImagenUrl = r.TextoONulo("main_image_url"),
             Estado = r.Enum<EstadoEvento>("status"),
+            MotivoCancelacion = r.TextoONulo("cancel_reason"),
             Terminado = r.Bool("is_finished"),
             Destacado = r.Bool("is_featured"),
             OrdenDestacado = r.EnteroONulo("featured_order"),

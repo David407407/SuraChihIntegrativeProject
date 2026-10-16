@@ -79,6 +79,7 @@
 }
 .chip--sol-suave { background: var(--color-sol-suave); }
 .chip--superficie { background: var(--color-superficie); }
+.chip--fondo { background: var(--color-fondo); }   /* "Chip tipo" del detalle de lugar */
 .chip--sol { background: var(--color-sol); padding: 5px 12px 5px 10px; }
 
 /* ---- Píldora ("Pildora" de Figma): opción de un grupo de segmentos, Normal / Activa ---- */

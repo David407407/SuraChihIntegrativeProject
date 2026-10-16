@@ -41,7 +41,7 @@ namespace SuraChihIntegrativeProject.Ventanas
             {
                 // Perfil del navegador en %LocalAppData%\SuraChih (no junto al .exe, que puede ser de solo lectura).
                 string datosUsuario = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SuraChih", "WebView2");
-                var entorno = await CoreWebView2Environment.CreateAsync(userDataFolder: datosUsuario);
+                var entorno = await CoreWebView2Environment.CreateAsync(userDataFolder: datosUsuario, options: OpcionesNavegador());
                 await _web.EnsureCoreWebView2Async(entorno);
             }
             catch (WebView2RuntimeNotFoundException)
@@ -59,10 +59,23 @@ namespace SuraChihIntegrativeProject.Ventanas
             var puente = new PuenteWeb(core);
             new ControladorLanding(_bd, _sesion).Registrar(puente);
             new ControladorMapa(_bd).Registrar(puente);
+            new ControladorEvento(_bd, _sesion).Registrar(puente);
+            new ControladorLugar(_bd, _sesion).Registrar(puente);
             new ControladorCuenta(_bd, _sesion, _correo).Registrar(puente);
 
             core.Navigate(UrlInicio);
         }
+
+        /// <summary>
+        /// Colores sobresaturados: en pantallas de gama amplia (muchas laptops con Windows) WebView2 pinta la
+        /// página sin convertir sus colores sRGB al perfil del monitor, y todo se ve más intenso que en Figma.
+        /// Al abrir una modal Chromium cambia de camino de composición y se ve bien, por eso parecía que solo
+        /// "con la modal" estaba correcto. Forzar el perfil sRGB hace que se vea igual en cualquier pantalla.
+        /// </summary>
+        private static CoreWebView2EnvironmentOptions OpcionesNavegador() => new()
+        {
+            AdditionalBrowserArguments = "--force-color-profile=srgb"
+        };
 
         private static void ConfigurarNavegador(CoreWebView2 core)
         {

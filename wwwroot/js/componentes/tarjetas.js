@@ -167,6 +167,45 @@ export function itemLugar(l, { activo = false } = {}) {
     </li>`;
 }
 
+/**
+ * "Card recomendada" de Figma (Normal / Hover): tarjeta horizontal de 588 × 236 con foto cuadrada a la
+ * izquierda, tipo, nombre, descripción en dos líneas, meta con pin, precio y "Ver detalles".
+ * Sirve para eventos y para lugares (la cuadrícula "Recomendados para ti" del inicio).
+ *
+ * @example
+ * html`<div class="rejilla-recomendadas">${eventos.map((e, i) => tarjetaRecomendada(e, { orden: i }))}</div>`
+ * tarjetaRecomendada(lugar, { tipo: 'lugar' })
+ *
+ * @param {object} item EventoTarjeta o LugarTarjeta
+ * @param {{tipo?:'evento'|'lugar', orden?:number}} [opciones]
+ */
+export function tarjetaRecomendada(item, { tipo = 'evento', orden = 0 } = {}) {
+  const esEvento = tipo === 'evento';
+  const nombre = esEvento ? item.titulo : item.nombre;
+  const meta = esEvento
+    ? [fechaEvento(item), ubicacionEvento(item)].filter(Boolean).join(' · ')
+    : item.direccion;
+  const costo = esEvento ? precioEvento(item, 'desde') : precio(item.precioMin, item.precioMax, 'desde');
+  return html`
+    <article class="tarjeta-rec" data-revelar style="--orden:${orden}">
+      <div class="tarjeta-rec__imagen">
+        <sc-imagen src="${item.imagenUrl ?? ''}" alt="" ancho="236" alto="236"></sc-imagen>
+      </div>
+      <div class="tarjeta-rec__info">
+        ${categoria(item) && html`<span class="tarjeta-rec__tipo">${chip(categoria(item))}</span>`}
+        <h3 class="t-h3 tarjeta-rec__titulo">
+          <button type="button" class="tarjeta-rec__enlace" data-accion="${esEvento ? 'ver-evento' : 'ver-lugar'}" data-id="${item.id}">${nombre}</button>
+        </h3>
+        ${item.descripcion && html`<p class="t-small texto-2 tarjeta-rec__descripcion">${item.descripcion}</p>`}
+        ${meta && html`<p class="t-small texto-2 tarjeta-rec__meta">${icono('ubicacion-12', 12)}<span>${meta}</span></p>`}
+        <div class="tarjeta-rec__abajo">
+          <span class="t-body-fuerte">${costo}</span>
+          <span class="boton boton--secundario boton--s tarjeta-rec__ver" aria-hidden="true"><span>Ver detalles</span></span>
+        </div>
+      </div>
+    </article>`;
+}
+
 /** Esqueleto con brillo mientras cargan los datos. */
 export function esqueleto(clase) {
   return html`<div class="esqueleto ${clase}" aria-hidden="true"></div>`;

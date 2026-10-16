@@ -34,18 +34,20 @@ export function icono(nombre, caja = 16) {
  * @param {string} [p.accion] Valor de data-accion (navegación que resuelve main.js).
  * @param {number} [p.objetivo] Id del evento/lugar al que se refiere la acción (data-id).
  * @param {string} [p.href]
+ * @param {boolean} [p.externo] Con `href`: abre la página fuera de la app (en WebView2, en el navegador del
+ *   sistema; ver VentanaPrincipal.cs). Para "Comprar boletos" y otras páginas oficiales.
  * @param {'button'|'submit'} [p.tipo] Tipo del <button> (submit para enviar formularios).
  * @param {boolean} [p.deshabilitado]
  * @param {string} [p.clase] Clases extra.
  */
 export function boton({
-  texto, variante = 'primario', tamano = 'm', icono: nombreIcono, accion, objetivo, href,
+  texto, variante = 'primario', tamano = 'm', icono: nombreIcono, accion, objetivo, href, externo = false,
   tipo = 'button', deshabilitado = false, clase = '',
 }) {
   const clases = `boton boton--${variante} boton--${tamano} ${clase}`.trim();
   const contenido = html`${nombreIcono && icono(nombreIcono, tamano === 'm' ? 18 : 16)}<span>${texto}</span>`;
   return href
-    ? html`<a class="${clases}" href="${href}" data-accion="${accion ?? ''}" data-id="${objetivo ?? ''}"${deshabilitado && html` aria-disabled="true"`}>${contenido}</a>`
+    ? html`<a class="${clases}" href="${href}" data-accion="${accion ?? ''}" data-id="${objetivo ?? ''}"${externo && html` target="_blank" rel="noopener noreferrer"`}${deshabilitado && html` aria-disabled="true"`}>${contenido}</a>`
     : html`<button type="${tipo}" class="${clases}" data-accion="${accion ?? ''}" data-id="${objetivo ?? ''}"${deshabilitado && html` disabled`}>${contenido}</button>`;
 }
 
