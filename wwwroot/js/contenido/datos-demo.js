@@ -256,21 +256,71 @@ const cuentas = [
   { id: 1, nombreUsuario: 'mod_ana', correo: 'ana.mod@example.com', esModerador: true, esOrganizador: false },
   { id: 3, nombreUsuario: 'cafe_dande', correo: 'dandelion@example.com', esModerador: false, esOrganizador: true },
   { id: 5, nombreUsuario: 'mariana_r', correo: 'mariana.r@example.com', esModerador: false, esOrganizador: false },
-].map((c) => ({ ...c, avatarUrl: null, contrasena: CONTRASENA_DEMO }));
+].map((c) => ({ ...c, avatarUrl: null, contrasena: CONTRASENA_DEMO, activo: true }));
 
 // token: enlace "enviado" sin abrir; abierto: enlace abierto sin usar; de: cuenta a la que pertenece.
 const demo = { sesion: null, token: null, abierto: null, de: null, favoritos: new Set(), inscripciones: new Set() };
 
-const publico = ({ contrasena, ...usuario }) => structuredClone(usuario);   // nunca sale la contraseña
+// En la app la sesión vive en C#. Aquí se guarda en sessionStorage para que siga al cambiar de
+// pantalla (p. ej. del Home a Mi perfil) mientras la pestaña esté abierta.
+const LLAVE_DEMO = 'surachih-demo';
+
+function guardarDemo() {
+  try {
+    sessionStorage.setItem(LLAVE_DEMO, JSON.stringify({
+      sesionId: demo.sesion?.id ?? null, cuentas, favoritos: [...demo.favoritos], inscripciones: [...demo.inscripciones],
+    }));
+  } catch { /* sin almacenamiento (modo privado): la sesión demo dura lo que la página */ }
+}
+
+(function cargarDemo() {
+  try {
+    const guardado = JSON.parse(sessionStorage.getItem(LLAVE_DEMO) ?? 'null');
+    if (!guardado) return;
+    cuentas.splice(0, cuentas.length, ...guardado.cuentas);
+    demo.sesion = cuentas.find((c) => c.id === guardado.sesionId) ?? null;
+    demo.favoritos = new Set(guardado.favoritos);
+    demo.inscripciones = new Set(guardado.inscripciones);
+  } catch { /* datos dañados o sin almacenamiento: se empieza de cero */ }
+}());
+
+const publico = ({ contrasena, activo, ...usuario }) => structuredClone(usuario);   // nunca sale la contraseña
+
+/** Lo que haría la llave UNIQUE de user (mismos mensajes que BackendLogica). */
+async function revisarDuplicados(nombreUsuario, correo, excepto = null) {
+  const otras = cuentas.filter((c) => c !== excepto);
+  if (otras.some((c) => c.correo === correo)) throw await errorDemo('duplicado', 'Ese correo ya está registrado.');
+  if (otras.some((c) => c.nombreUsuario.toLowerCase() === nombreUsuario.toLowerCase())) {
+    throw await errorDemo('duplicado', 'Ese nombre de usuario ya está ocupado.');
+  }
+}
+
+/** Respuesta de 'favoritos.listar' (DatosFavoritos de Controladores/ControladorPerfil.cs), lo más reciente primero. */
+function favoritosDemo() {
+  const guardados = [...demo.favoritos].reverse().map((f) => f.split(':'));
+  const de = (tipo, lista) => guardados
+    .filter(([t]) => t === tipo)
+    .map(([, id]) => lista.find((item) => item.id === Number(id)))
+    .filter(Boolean);
+  return structuredClone({ eventos: de('evento', eventosDetalle), lugares: de('lugar', lugaresDetalle) });
+}
 
 async function errorDemo(codigo, mensaje) {
   const { ErrorPuente } = await import('../nucleo/puente.js');
   return new ErrorPuente(codigo, mensaje);
 }
 
-/** Simula las respuestas de C#. Para probar estados vacíos o errores, cámbialo aquí. */
+/** Simula las respuestas de C#. Para probar estados vacíos o errores, cámbialo en `responder`. */
 export async function responderDemo(accion, datos) {
   await new Promise((r) => setTimeout(r, 250));   // latencia de mentira para ver los estados de carga
+  try {
+    return await responder(accion, datos);
+  } finally {
+    guardarDemo();
+  }
+}
+
+async function responder(accion, datos) {
   switch (accion) {
     case 'landing.obtener': return structuredClone(landing);
     case 'mapa.obtener': return structuredClone(mapa);
@@ -281,18 +331,15 @@ export async function responderDemo(accion, datos) {
     case 'cuenta.iniciarSesion': {
       const id = datos.identificador.trim().toLowerCase();
       const cuenta = cuentas.find((c) => c.correo === id || c.nombreUsuario.toLowerCase() === id);
-      if (!cuenta || cuenta.contrasena !== datos.contrasena) throw await errorDemo('datos-invalidos', 'Correo o contraseña incorrectos.');
+      if (!cuenta?.activo || cuenta.contrasena !== datos.contrasena) throw await errorDemo('datos-invalidos', 'Correo o contraseña incorrectos.');
       demo.sesion = cuenta;
       return publico(cuenta);
     }
     case 'cuenta.registrar': {
       const correo = datos.correo.trim().toLowerCase();
-      if (cuentas.some((c) => c.correo === correo)) throw await errorDemo('duplicado', 'Ese correo ya está registrado.');
-      if (cuentas.some((c) => c.nombreUsuario.toLowerCase() === datos.nombreUsuario.toLowerCase())) {
-        throw await errorDemo('duplicado', 'Ese nombre de usuario ya está ocupado.');
-      }
+      await revisarDuplicados(datos.nombreUsuario, correo);
       const cuenta = { id: 100 + cuentas.length, nombreUsuario: datos.nombreUsuario, correo, avatarUrl: null,
-        esModerador: false, esOrganizador: false, contrasena: datos.contrasena };
+        esModerador: false, esOrganizador: false, contrasena: datos.contrasena, activo: true };
       cuentas.push(cuenta);
       demo.sesion = cuenta;
       return publico(cuenta);
@@ -315,6 +362,33 @@ export async function responderDemo(accion, datos) {
       demo.de.contrasena = datos.contrasena;
       demo.abierto = null;
       return null;
+    }
+
+    // Mi perfil, Eliminar cuenta y Mis favoritos (ControladorPerfil.cs)
+    case 'perfil.actualizar': {
+      if (!demo.sesion) throw await errorDemo('requiere-sesion', 'Inicia sesión para editar tu perfil.');
+      const correo = datos.correo.trim().toLowerCase();
+      await revisarDuplicados(datos.nombreUsuario.trim(), correo, demo.sesion);
+      demo.sesion.nombreUsuario = datos.nombreUsuario.trim();
+      demo.sesion.correo = correo;
+      return publico(demo.sesion);
+    }
+    case 'perfil.contrasena': {
+      if (!demo.sesion) throw await errorDemo('requiere-sesion', 'Inicia sesión para cambiar tu contraseña.');
+      if (demo.sesion.contrasena !== datos.actual) throw await errorDemo('datos-invalidos', 'La contraseña actual no es correcta.');
+      demo.sesion.contrasena = datos.nueva;
+      return null;
+    }
+    case 'perfil.eliminar': {
+      if (!demo.sesion) throw await errorDemo('requiere-sesion', 'Inicia sesión para eliminar tu cuenta.');
+      if (demo.sesion.contrasena !== datos.contrasena) throw await errorDemo('datos-invalidos', 'La contraseña no es correcta.');
+      demo.sesion.activo = false;   // is_active = FALSE: no se borra
+      demo.sesion = null;
+      return null;
+    }
+    case 'favoritos.listar': {
+      if (!demo.sesion) throw await errorDemo('requiere-sesion', 'Inicia sesión para ver tus favoritos.');
+      return favoritosDemo();
     }
 
     case 'favoritos.alternar': {

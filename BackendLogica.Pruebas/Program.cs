@@ -394,6 +394,44 @@ async Task PruebasFalso()
         return "";
     });
 
+    // --- Mi perfil y Eliminar cuenta ---
+    await Prueba("Mi perfil: guardar cambios y duplicados", async () =>
+    {
+        Afirmar(await f.Usuarios.ActualizarPerfilAsync(6, "diego.m", "Diego.Nuevo@Example.com", null), "debió guardarse");
+        var diego = (await f.Usuarios.ObtenerAsync(6))!;
+        Afirmar(diego is { NombreUsuario: "diego.m", Correo: "diego.nuevo@example.com" }, "nombre y correo nuevos (correo en minúsculas)");
+        await EsperarError<DatosInvalidosException>(() => f.Usuarios.ActualizarPerfilAsync(6, "di", diego.Correo, null));
+        return await EsperarError<DuplicadoException>(() => f.Usuarios.ActualizarPerfilAsync(6, "diego.m", "mariana.r@example.com", null),
+            "Ese correo ya está registrado.");
+    });
+    await Prueba("Mi perfil: actualizar contraseña revisa la actual y la nueva", async () =>
+    {
+        Afirmar(!await f.Usuarios.CambiarContrasenaAsync(6, "equivocada", "OtraClave2"), "con la actual incorrecta no cambia");
+        await EsperarError<DatosInvalidosException>(() => f.Usuarios.CambiarContrasenaAsync(6, "NuevaClave1", "corta"));
+        Afirmar(await f.Usuarios.CambiarContrasenaAsync(6, "NuevaClave1", "OtraClave2"), "con la actual correcta cambia");
+        Afirmar(await f.Usuarios.IniciarSesionAsync("diego.m", "OtraClave2") != null, "entra con la nueva");
+        return "";
+    });
+    await Prueba("Eliminar cuenta: is_active = FALSE, no borra y ya no puede entrar", async () =>
+    {
+        Afirmar(await f.Usuarios.DesactivarAsync(6), "debió desactivarse");
+        Afirmar(await f.Usuarios.ObtenerAsync(6) is { Activo: false }, "la fila sigue ahí, desactivada");
+        Afirmar(await f.Usuarios.IniciarSesionAsync("diego.m", "OtraClave2") == null, "una cuenta desactivada no inicia sesión");
+        Afirmar(!await f.Usuarios.ActualizarPerfilAsync(6, "diego.m", "diego.nuevo@example.com", null), "ni edita su perfil");
+        return "";
+    });
+    await Prueba("Las reseñas de una cuenta eliminada no se muestran ni cuentan", async () =>
+    {
+        // diego (6) dejó 4★ en Dandelion (lugar 1) junto con 5★ de mariana: antes 4.5 de 2, ahora 5.0 de 1.
+        var resenas = await f.Resenas.ListarAsync(TipoResena.Lugar, 1);
+        var resumen = await f.Resenas.ObtenerResumenAsync(TipoResena.Lugar, 1);
+        var calificacion = await f.Lugares.ObtenerCalificacionAsync(1);
+        Afirmar(resenas.All(r => r.UsuarioId != 6), "no sale en la lista");
+        Afirmar(resumen is { Promedio: 5.0m, Total: 1 } && calificacion is { Calificacion: 5.0m, NumResenas: 1 }, "no cuenta en el promedio");
+        Afirmar((await f.Resenas.ListarAsync(TipoResena.Lugar, 1, incluirOcultas: true)).Any(r => r.UsuarioId == 6), "sigue guardada (no se borró)");
+        return $"{calificacion!.Calificacion}★ de {calificacion.NumResenas}";
+    });
+
     // --- Reglas de negocio: misma excepción y mismo texto que el trigger (1644) ---
     await Prueba("Un usuario normal no puede publicar (trigger → ReglaNegocioException)", () =>
         EsperarError<ReglaNegocioException>(() => f.Eventos.CrearAsync(5, new DatosEvento

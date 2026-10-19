@@ -17,6 +17,8 @@ Abre `http://localhost:4321`. Fuera de WebView2, `js/nucleo/puente.js` responde 
 index.html                 la landing: una etiqueta <sc-...> por sección, en el orden de Figma
 home.html                  Home (visitante y logueado): carrusel, filtros rápidos, recomendados, categorías y filas
 mapa.html                  pantalla Mapa (visitante y logueado): panel de lugares + <sc-mapa>
+perfil.html                Mi perfil: datos de la cuenta, contraseña y "Eliminar cuenta"
+favoritos.html             Mis favoritos: eventos y lugares guardados (Todos / Eventos / Lugares) y su estado vacío
 css/
   tokens.css               colores, tipografías, radios y sombras (variables de Figma)
   base.css                 reset, clases de texto (.t-h1, .t-body...), .contenedor, animación de aparición
@@ -26,6 +28,8 @@ js/
   main.js                  entrada de index.html: carga datos y conecta las secciones
   home.js                  entrada de home.html: reparte 'home.obtener' a las secciones y aplica los filtros rápidos
   mapa.js                  entrada de mapa.html: buscador, píldoras y lista sincronizados con el mapa
+  perfil.js                entrada de perfil.html: formularios de la cuenta y modal "Eliminar cuenta"
+  favoritos.js             entrada de favoritos.html: tarjetas guardadas, filtro por tipo y estado vacío
   nucleo/componente.js     clase base Componente + plantillas html`` con escape automático
   nucleo/puente.js         invocar('accion', datos) → C#
   nucleo/navegacion.js     cambiar de pantalla, acciones data-accion comunes y sesión del navbar
@@ -47,6 +51,7 @@ js/
     menu-cuenta.js         alternarMenuCuenta(): menú bajo el avatar del navbar
     modales/cuenta.js      modales de cuenta: iniciar sesión, crear cuenta, recuperar contraseña...
     modales/inscripcion.js "¿Vas a ir?" y "¿Cancelar tu inscripción?"
+    modales/eliminar-cuenta.js "¿Eliminar tu cuenta?" (pide la contraseña)
     secciones/             <sc-navbar>, <sc-hero>, <sc-collage-hero>, secciones fijas y con datos
 assets/iconos              SVG exportados de Figma (conservan tamaño y color)
 assets/demo                fotos solo para los datos demo
@@ -205,7 +210,8 @@ Cada pantalla es un `.html` con su script de entrada. Para ir de una a otra se u
   "Abrir enlace del correo" lo abre directo. Cuando haya SMTP solo cambia esa clase (ver sus comentarios).
 - "Continuar con Google / Apple" están como en Figma pero todavía no hacen login (muestran un aviso).
 - En el navegador (sin la app) funcionan con cuentas demo: `mariana_r`, `mod_ana`, `cafe_dande`, contraseña `Test1234!`.
-- Mi perfil, Mis planes, Mis favoritos, Panel de organizador y Moderación del menú aún muestran "llega en la siguiente versión".
+- Mi perfil y Mis favoritos ya tienen pantalla (ver "Mi perfil y Mis favoritos"). Mis planes, Panel de organizador y Moderación
+  del menú aún muestran "llega en la siguiente versión".
   "Panel de organizador" solo aparece a organizadores aprobados y "Moderación" a moderadores.
 
 ## Detalle de evento
@@ -255,7 +261,32 @@ Info: chip de tipo, "Acerca del lugar", mini mapa y "Opiniones" (hasta 2 reseña
 ahora), Precio promedio, Calificación, Dirección, "Cómo llegar" (Google Maps en el navegador), "Escribir reseña"
 y "Reportar lugar". Abajo, "También te puede gustar" con hasta 3 `tarjetaLugar()`.
 Datos: `invocar('lugar.obtener', { id })` → `{ lugar, galeria, favorito, opiniones, recomendados }`
-(`Controladores/ControladorLugar.cs`). El corazón de lugares sigue sin guardarse en la BD v1.
+(`Controladores/ControladorLugar.cs`). El corazón de lugares se guarda en `place_favorite`.
+
+## Mi perfil y Mis favoritos
+
+| Figma (página Rediseño) | Implementación | Acción de C# (`Controladores/ControladorPerfil.cs`) |
+|---|---|---|
+| Mi perfil | `perfil.html` + `js/perfil.js` · menú de cuenta → "Mi perfil" (`data-accion="mi-perfil"`) | `perfil.actualizar`, `perfil.contrasena` |
+| Modal / Eliminar cuenta | `confirmarEliminarCuenta()` (`modales/eliminar-cuenta.js`) | `perfil.eliminar` |
+| Toast / Cambios guardados | `mostrarToast('Cambios guardados')` (el de siempre, `sc-toast.js`) | — |
+| Mis favoritos / Mis favoritos (vacío) | `favoritos.html` + `js/favoritos.js` · corazón del navbar (`data-accion="favoritos"`) | `favoritos.listar` → `{ eventos, lugares }` |
+
+- **Guardar cambios** edita `user.username` y `user.email` con las reglas de siempre (las de `modales/cuenta.js`); un
+  correo o usuario repetido sale en su campo. El navbar y el menú cambian al instante (`actualizarUsuario()` de
+  `nucleo/navegacion.js`).
+- **Actualizar contraseña** revisa la actual con el mismo BCrypt del inicio de sesión; la nueva pide 8+ caracteres con letras y números.
+- **Eliminar cuenta** pide la contraseña y hace `UPDATE user SET is_active = FALSE` (nunca DELETE, para no perder
+  reseñas ni eventos). Cierra la sesión y vuelve al Home; una cuenta desactivada ya no puede iniciar sesión.
+  Sus reseñas se quedan guardadas pero dejan de mostrarse y de contar en las calificaciones (`v_place_rating`,
+  `v_event_stats` y `ResenaDB`). Si ya tenías la BD cargada, corre `BaseDeDatos/ocultar_resenas_cuentas_eliminadas.sql`.
+- **Cambiar foto** todavía muestra "llega en la siguiente versión": falta subir la imagen a Cloudinary y guardar `user.avatar_url`.
+  El avatar ya muestra la foto si `avatar_url` tiene una.
+- **Mis favoritos** usa las Card evento y Card lugar con el corazón lleno (primero los eventos, como en Figma). Las
+  píldoras filtran en el navegador. Al vaciar un corazón la tarjeta se va cuando C# lo confirma (evento
+  `sc:favorito-guardado`); sin nada guardado sale el estado vacío con "Explorar eventos" (al Home).
+- Sin sesión, las dos pantallas piden iniciarla; si la cierras estando en ellas, vuelves al Home.
+- En el navegador la sesión demo se guarda en `sessionStorage`, así sigue al cambiar de pantalla.
 
 ## Fotos de eventos y lugares (Cloudinary)
 

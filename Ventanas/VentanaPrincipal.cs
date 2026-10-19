@@ -63,6 +63,7 @@ namespace SuraChihIntegrativeProject.Ventanas
             new ControladorEvento(_bd, _sesion).Registrar(puente);
             new ControladorLugar(_bd, _sesion).Registrar(puente);
             new ControladorCuenta(_bd, _sesion, _correo).Registrar(puente);
+            new ControladorPerfil(_bd, _sesion).Registrar(puente);
 
             core.Navigate(UrlInicio);
         }

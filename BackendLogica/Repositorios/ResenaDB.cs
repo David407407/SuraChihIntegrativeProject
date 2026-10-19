@@ -59,14 +59,17 @@ namespace BackendLogica.Repositorios
                 """, new { resenaId, duenoId, respuesta = respuesta.Trim() }, ct) > 0;
         }
 
-        /// <summary>Reseñas de un evento o lugar, las más recientes primero.</summary>
+        /// <summary>
+        /// Reseñas de un evento o lugar, las más recientes primero. Sin <paramref name="incluirOcultas"/> solo
+        /// salen las visibles: no ocultas por moderación y de cuentas activas ("Eliminar cuenta" las esconde).
+        /// </summary>
         public Task<List<Resena>> ListarAsync(TipoResena tipo, int objetivoId, bool incluirOcultas = false, CancellationToken ct = default)
         {
             var t = De(tipo);
             return ConsultarAsync($"""
                 SELECT r.*, r.{t.ColObjetivo} AS target_id, r.{t.ColRespuesta} AS reply, u.username, u.avatar_url
                 FROM {t.Resenas} r JOIN user u ON u.id = r.user_id
-                WHERE r.{t.ColObjetivo} = @objetivoId AND (@incluirOcultas OR NOT r.is_hidden)
+                WHERE r.{t.ColObjetivo} = @objetivoId AND (@incluirOcultas OR (NOT r.is_hidden AND u.is_active))
                 ORDER BY r.created_at DESC
                 """, r => new Resena(
                     r.Entero("id"), tipo, r.Entero("target_id"), r.Entero("user_id"), r.Texto("username"),
@@ -80,10 +83,10 @@ namespace BackendLogica.Repositorios
         {
             var t = De(tipo);
             var filas = await ConsultarAsync($"""
-                SELECT rating, COUNT(*) AS total
-                FROM {t.Resenas}
-                WHERE {t.ColObjetivo} = @objetivoId AND NOT is_hidden
-                GROUP BY rating
+                SELECT r.rating, COUNT(*) AS total
+                FROM {t.Resenas} r JOIN user u ON u.id = r.user_id
+                WHERE r.{t.ColObjetivo} = @objetivoId AND NOT r.is_hidden AND u.is_active
+                GROUP BY r.rating
                 """, r => (Estrellas: r.Entero("rating"), Total: r.Entero("total")), new { objetivoId }, ct);
             return Resumir(filas);
         }
