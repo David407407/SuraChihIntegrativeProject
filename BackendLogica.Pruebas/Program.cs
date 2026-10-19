@@ -420,6 +420,17 @@ async Task PruebasFalso()
         Afirmar(!await f.Usuarios.ActualizarPerfilAsync(6, "diego.m", "diego.nuevo@example.com", null), "ni edita su perfil");
         return "";
     });
+    await Prueba("Las reseñas de una cuenta eliminada no se muestran ni cuentan", async () =>
+    {
+        // diego (6) dejó 4★ en Dandelion (lugar 1) junto con 5★ de mariana: antes 4.5 de 2, ahora 5.0 de 1.
+        var resenas = await f.Resenas.ListarAsync(TipoResena.Lugar, 1);
+        var resumen = await f.Resenas.ObtenerResumenAsync(TipoResena.Lugar, 1);
+        var calificacion = await f.Lugares.ObtenerCalificacionAsync(1);
+        Afirmar(resenas.All(r => r.UsuarioId != 6), "no sale en la lista");
+        Afirmar(resumen is { Promedio: 5.0m, Total: 1 } && calificacion is { Calificacion: 5.0m, NumResenas: 1 }, "no cuenta en el promedio");
+        Afirmar((await f.Resenas.ListarAsync(TipoResena.Lugar, 1, incluirOcultas: true)).Any(r => r.UsuarioId == 6), "sigue guardada (no se borró)");
+        return $"{calificacion!.Calificacion}★ de {calificacion.NumResenas}";
+    });
 
     // --- Reglas de negocio: misma excepción y mismo texto que el trigger (1644) ---
     await Prueba("Un usuario normal no puede publicar (trigger → ReglaNegocioException)", () =>

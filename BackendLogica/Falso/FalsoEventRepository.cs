@@ -111,7 +111,7 @@ namespace BackendLogica.Falso
             Hacer(a => a.Eventos.Where(e => e.OrganizadorId == organizadorId).Select(e =>
             {
                 var resenas = Repositorios.ResenaDB.Resumir(a.Resenas
-                    .Where(r => r.Tipo == TipoResena.Evento && r.ObjetivoId == e.Id && !r.Oculta)
+                    .Where(r => r.Tipo == TipoResena.Evento && r.ObjetivoId == e.Id && a.Visible(r))
                     .GroupBy(r => r.Calificacion).Select(g => (g.Key, g.Count())));
                 return new EstadisticasEvento(
                     e.Id,

@@ -69,7 +69,7 @@ namespace BackendLogica.Falso
 
         public Task<List<Resena>> ListarAsync(TipoResena tipo, int objetivoId, bool incluirOcultas = false, CancellationToken ct = default) =>
             Hacer(a => De(a, tipo)
-                .Where(r => r.ObjetivoId == objetivoId && (incluirOcultas || !r.Oculta))
+                .Where(r => r.ObjetivoId == objetivoId && (incluirOcultas || a.Visible(r)))
                 .OrderByDescending(r => r.CreadaEn).ThenByDescending(r => r.Id)
                 .Select(r =>
                 {
@@ -80,7 +80,7 @@ namespace BackendLogica.Falso
 
         public Task<ResumenResenas> ObtenerResumenAsync(TipoResena tipo, int objetivoId, CancellationToken ct = default) =>
             Hacer(a => ResenaDB.Resumir(De(a, tipo)
-                .Where(r => r.ObjetivoId == objetivoId && !r.Oculta)
+                .Where(r => r.ObjetivoId == objetivoId && a.Visible(r))
                 .GroupBy(r => r.Calificacion).Select(g => (g.Key, g.Count()))), ct);
 
         public Task<bool> CambiarVisibilidadAsync(TipoResena tipo, int resenaId, bool oculta, CancellationToken ct = default) =>

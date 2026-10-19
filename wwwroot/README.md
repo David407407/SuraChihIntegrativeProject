@@ -278,6 +278,8 @@ Datos: `invocar('lugar.obtener', { id })` → `{ lugar, galeria, favorito, opini
 - **Actualizar contraseña** revisa la actual con el mismo BCrypt del inicio de sesión; la nueva pide 8+ caracteres con letras y números.
 - **Eliminar cuenta** pide la contraseña y hace `UPDATE user SET is_active = FALSE` (nunca DELETE, para no perder
   reseñas ni eventos). Cierra la sesión y vuelve al Home; una cuenta desactivada ya no puede iniciar sesión.
+  Sus reseñas se quedan guardadas pero dejan de mostrarse y de contar en las calificaciones (`v_place_rating`,
+  `v_event_stats` y `ResenaDB`). Si ya tenías la BD cargada, corre `BaseDeDatos/ocultar_resenas_cuentas_eliminadas.sql`.
 - **Cambiar foto** todavía muestra "llega en la siguiente versión": falta subir la imagen a Cloudinary y guardar `user.avatar_url`.
   El avatar ya muestra la foto si `avatar_url` tiene una.
 - **Mis favoritos** usa las Card evento y Card lugar con el corazón lleno (primero los eventos, como en Figma). Las

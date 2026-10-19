@@ -140,11 +140,17 @@ namespace BackendLogica.Falso
             };
         }
 
+        /// <summary>
+        /// Reseña que se muestra y cuenta en las calificaciones: no la ocultó un moderador y su autor no eliminó
+        /// la cuenta (<c>user.is_active</c>), igual que las vistas y consultas de la BD.
+        /// </summary>
+        public bool Visible(FilaResena r) => !r.Oculta && Usuario(r.UsuarioId) is { Activo: true };
+
         /// <summary>Fila de <c>v_place_rating</c>: promedio (1 decimal) y número de reseñas visibles.</summary>
         public CalificacionLugar Calificacion(int lugarId)
         {
             var resumen = Repositorios.ResenaDB.Resumir(
-                Resenas.Where(r => r.Tipo == TipoResena.Lugar && r.ObjetivoId == lugarId && !r.Oculta)
+                Resenas.Where(r => r.Tipo == TipoResena.Lugar && r.ObjetivoId == lugarId && Visible(r))
                        .GroupBy(r => r.Calificacion)
                        .Select(g => (g.Key, g.Count())));
             return new CalificacionLugar(lugarId, resumen.Promedio, resumen.Total);
