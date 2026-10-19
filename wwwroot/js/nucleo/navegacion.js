@@ -20,6 +20,8 @@ const PAGINAS = {
   inicio: 'index.html',
   home: 'home.html',
   mapa: 'mapa.html',
+  perfil: 'perfil.html',
+  favoritos: 'favoritos.html',
 };
 
 /** Cambia de pantalla; si ya se está en ella, sube al inicio de la página. */
@@ -79,6 +81,15 @@ export function haySesion() {
   return Boolean(usuarioActual);
 }
 
+/**
+ * Cambia el usuario de la sesión sin mensajes de bienvenida: "Guardar cambios" de Mi perfil
+ * (usuario nuevo) o "Eliminar cuenta" (null). Actualiza el navbar y lanza `sc:usuario`.
+ * @param {object|null} usuario UsuarioSesion de C#.
+ */
+export function actualizarUsuario(usuario) {
+  ponerUsuario(usuario);
+}
+
 /** Sin sesión: modal "Inicia sesión para continuar". Con sesión, la pantalla aún no existe. */
 export function requiereSesion(que) {
   if (usuarioActual) proximamente(que);
@@ -102,10 +113,10 @@ const acciones = {
   'iniciar-sesion': () => abrirIniciarSesion(),
   'crear-cuenta': () => (usuarioActual ? mostrarToast('Ya tienes una sesión iniciada.', { tipo: 'info' }) : abrirCrearCuenta()),
   'mis-planes': () => (usuarioActual ? proximamente('Mis planes') : abrirRequiereSesion()),
-  'favoritos': () => (usuarioActual ? proximamente('Mis favoritos') : abrirRequiereSesion()),
+  'favoritos': () => (usuarioActual ? irA('favoritos') : abrirRequiereSesion()),
   'menu-cuenta': (_id, origen) => alternarMenuCuenta(origen, usuarioActual),
   // Menú de cuenta
-  'mi-perfil': () => proximamente('Mi perfil'),
+  'mi-perfil': () => (usuarioActual ? irA('perfil') : abrirRequiereSesion()),
   'panel-organizador': () => proximamente('El panel de organizador'),
   'moderacion': () => proximamente('Moderación'),
   'cerrar-sesion': () => cerrarSesion(),
@@ -141,6 +152,8 @@ export function atenderAcciones(propias = {}) {
       const activo = await invocar('favoritos.alternar', { tipo: detail.tipo, id: detail.id });
       detail.boton.activo = activo;
       mostrarToast(activo ? 'Guardado en favoritos' : 'Quitado de favoritos');
+      // Ya guardado en C#: Mis favoritos quita la tarjeta al vaciar su corazón.
+      document.dispatchEvent(new CustomEvent('sc:favorito-guardado', { detail: { tipo: detail.tipo, id: detail.id, activo } }));
     } catch (error) {
       detail.boton.revertir();
       if (error instanceof ErrorPuente && error.codigo === 'requiere-sesion') abrirRequiereSesion();

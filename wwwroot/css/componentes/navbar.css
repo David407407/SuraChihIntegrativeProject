@@ -102,6 +102,8 @@ sc-navbar {
 
 .navbar__favoritos { border: 1.5px solid var(--color-linea); }
 .navbar__favoritos:hover { border-color: var(--color-favorito); background: var(--color-favorito-suave); }
+/* En Mis favoritos: marcado como los enlaces de la pantalla actual */
+.navbar__favoritos[aria-current="page"] { border-color: var(--color-sol); background: var(--color-sol-suave); }
 
 .navbar__avatar {
   background: var(--color-sol-suave);

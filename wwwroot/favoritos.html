@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SuraChih · Mis favoritos</title>
+  <meta name="description" content="Los eventos y lugares que guardaste en SuraChih.">
+  <link rel="icon" href="assets/iconos/logo-sol.svg" type="image/svg+xml">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+
+  <link rel="stylesheet" href="css/estilos.css">
+  <script type="module" src="js/favoritos.js"></script>
+</head>
+<body>
+  <!--
+    Frames "Mis favoritos" y "Mis favoritos (vacío)" de Figma. Las tarjetas son las Card evento y
+    Card lugar de siempre; los datos llegan de C# ('favoritos.listar', ControladorPerfil.cs).
+  -->
+  <sc-navbar pagina="favoritos"></sc-navbar>
+
+  <main class="pantalla-cuenta contenedor">
+    <h1 class="t-h1">Mis favoritos</h1>
+    <div class="favoritos__segmentos" role="group" aria-label="Qué mostrar" hidden></div>
+    <div class="favoritos" id="favoritos" aria-live="polite"></div>
+  </main>
+
+  <sc-volver-arriba></sc-volver-arriba>
+</body>
+</html>

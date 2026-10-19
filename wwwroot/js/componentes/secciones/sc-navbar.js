@@ -61,7 +61,7 @@ class Navbar extends Componente {
     const nombre = usuario.nombreUsuario ?? '';
     return html`
       <button type="button" class="navbar__enlace t-small-fuerte" data-accion="mis-planes">${icono('mis-planes', 16)}Mis planes</button>
-      <button type="button" class="navbar__circulo navbar__favoritos" data-accion="favoritos" aria-label="Mis favoritos">
+      <button type="button" class="navbar__circulo navbar__favoritos" data-accion="favoritos" aria-label="Mis favoritos"${this.getAttribute('pagina') === 'favoritos' && html` aria-current="page"`}>
         ${icono('corazon-vacio', 16)}
       </button>
       <button type="button" class="navbar__circulo navbar__avatar" data-accion="menu-cuenta" aria-label="Cuenta de ${nombre}" aria-haspopup="menu">

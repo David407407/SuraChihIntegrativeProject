@@ -27,12 +27,12 @@ import { mostrarModal, cerrarModal } from '../sc-modal.js';
 // Reglas (las mismas de BackendLogica/Seguridad: Validar y Contrasenas, y del CHECK ck_user_username)
 // ---------------------------------------------------------------------
 
-const REGLAS = {
+export const REGLAS = {
   nombreUsuario: /^[A-Za-z0-9_.]{3,30}$/,
   correo: /^[^@\s]+@[^@\s]+\.[^@\s]+$/,
 };
 
-const MENSAJES = {
+export const MENSAJES = {
   nombreUsuario: 'El nombre de usuario debe tener de 3 a 30 caracteres: letras, números, punto o guion bajo.',
   correo: 'Escribe un correo válido.',
   contrasenaCorta: 'La contraseña debe tener al menos 8 caracteres.',
@@ -41,7 +41,7 @@ const MENSAJES = {
 };
 
 /** @returns {string|null} Mensaje de error de la contraseña, o null si está bien. */
-function errorContrasena(valor) {
+export function errorContrasena(valor) {
   if (valor.length < 8) return MENSAJES.contrasenaCorta;
   if (!/\p{L}/u.test(valor) || !/\d/.test(valor)) return MENSAJES.contrasenaDebil;
   return null;

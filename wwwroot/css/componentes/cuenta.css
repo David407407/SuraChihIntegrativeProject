@@ -1,0 +1,111 @@
+/* =====================================================================
+   Pantallas de la cuenta: "Mi perfil" y "Mis favoritos" (y su estado vacío).
+   ===================================================================== */
+
+/* Contenido: 48px arriba, 80px abajo y 24px entre el título y lo demás, como en Figma */
+.pantalla-cuenta {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-block: 48px 80px;
+}
+
+/* ---- Mi perfil: tarjeta de foto (320px) + formulario, 48px entre columnas ---- */
+.perfil {
+  display: flex;
+  align-items: flex-start;
+  gap: 48px;
+}
+
+.perfil__foto {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 320px;
+  padding: 32px;
+  border-radius: var(--radio-l);
+  background: var(--color-fondo);
+  text-align: center;
+}
+
+.perfil__avatar {
+  display: grid;
+  place-items: center;
+  width: 112px;
+  height: 112px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--color-sol-suave);
+  color: var(--color-cielo-texto);
+  font: 800 56px/62px var(--fuente-titulos);
+  letter-spacing: -1.12px;
+}
+.perfil__avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.perfil__nombre,
+.perfil__correo { max-width: 100%; overflow-wrap: anywhere; }
+
+.perfil__formulario {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.perfil__bloque {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+}
+.perfil__bloque .campo { align-self: stretch; }
+
+.perfil__divisor {
+  width: 100%;
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--color-linea);
+}
+
+.perfil__sin-sesion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+@media (max-width: 860px) {
+  .perfil { flex-direction: column; align-items: stretch; }
+  .perfil__foto { width: auto; }
+}
+
+/* ---- Mis favoritos ---- */
+.favoritos__segmentos { display: flex; flex-wrap: wrap; gap: 8px; }
+.favoritos__segmentos[hidden] { display: none; }
+
+/* Cuadrícula de Figma: 40px entre filas y 24px entre columnas */
+.favoritos__rejilla { row-gap: 40px; }
+.favoritos__esqueleto { aspect-ratio: 1; border-radius: var(--radio-m); }
+
+/* "Estado vacío": círculo de 88px con el corazón, título, texto y "Explorar eventos" */
+.favoritos__vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-top: 80px;
+  text-align: center;
+}
+.favoritos__vacio-icono {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--color-sol-suave);
+}
+.favoritos__vacio-boton { padding-top: 8px; }
