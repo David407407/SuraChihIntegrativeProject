@@ -27,7 +27,11 @@ namespace BackendLogica.Contratos
         /// <returns>false si la contraseña actual no coincide.</returns>
         Task<bool> CambiarContrasenaAsync(int usuarioId, string actual, string nueva, CancellationToken ct = default);
 
-        /// <summary>"Eliminar cuenta": se desactiva para conservar el historial (reseñas, eventos).</summary>
+        /// <summary>
+        /// "Eliminar cuenta": se desactiva (<c>is_active = FALSE</c>) para conservar el historial (reseñas,
+        /// eventos) y se invalidan sus enlaces de "Recuperar contraseña" pendientes.
+        /// </summary>
+        /// <returns>false si la cuenta no existe o ya estaba desactivada.</returns>
         Task<bool> DesactivarAsync(int usuarioId, CancellationToken ct = default);
     }
 }

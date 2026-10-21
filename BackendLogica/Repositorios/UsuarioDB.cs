@@ -82,9 +82,22 @@ namespace BackendLogica.Repositorios
             return true;
         }
 
-        /// <summary>"Eliminar cuenta": se desactiva para conservar el historial (reseñas, eventos).</summary>
-        public async Task<bool> DesactivarAsync(int usuarioId, CancellationToken ct = default) =>
-            await EjecutarAsync("UPDATE user SET is_active = FALSE WHERE id = @usuarioId", new { usuarioId }, ct) > 0;
+        /// <summary>
+        /// "Eliminar cuenta": <c>is_active = FALSE</c> (nunca DELETE, para conservar reseñas y eventos) e
+        /// invalida los enlaces de "Recuperar contraseña" que estuvieran pendientes.
+        /// </summary>
+        /// <returns>false si la cuenta no existe o ya estaba desactivada.</returns>
+        public Task<bool> DesactivarAsync(int usuarioId, CancellationToken ct = default) =>
+            EnTransaccionAsync(async tx =>
+            {
+                int filas = await tx.EjecutarAsync("UPDATE user SET is_active = FALSE WHERE id = @usuarioId AND is_active", new { usuarioId });
+                if (filas == 0) return false;
+
+                await tx.EjecutarAsync("""
+                    UPDATE password_reset SET used_at = NOW() WHERE user_id = @usuarioId AND used_at IS NULL
+                    """, new { usuarioId });
+                return true;
+            }, ct);
 
         internal static Usuario Mapear(DbDataReader r) => new(
             r.Entero("id"),

@@ -32,7 +32,9 @@ en el mismo proceso que la app y llaman directo a la librería **BackendLogica**
 ## Cómo correrlo
 
 1. Crea la BD ejecutando `BaseDeDatos/surachih_v1.sql` completo en MySQL Workbench o en la consola
-   `mysql` (MySQL 8.0.16+; los triggers usan `DELIMITER`).
+   `mysql` (MySQL 8.0.16+; los triggers usan `DELIMITER`). Si ya la tenías cargada, en vez de volver a
+   crearla puedes correr los scripts de cambios de `BaseDeDatos/` (`agregar_favoritos_lugares.sql`,
+   `ocultar_resenas_cuentas_eliminadas.sql`, `vista_unica_por_dia.sql`); ninguno borra datos.
 2. Copia `dbsettings.example.json` como `dbsettings.local.json` (git lo ignora) y pon tus datos.
    Para trabajar pantallas **sin MySQL**, pon `"UseFakeData": true`: la app usa los datos de prueba
    en memoria (ver [BackendLogica/README.md](BackendLogica/README.md#trabajar-sin-mysql-repositorio-falso)).

@@ -13,7 +13,7 @@ namespace BackendLogica.Contratos
         /// </returns>
         Task<string?> SolicitarAsync(string correo, CancellationToken ct = default);
 
-        /// <returns>false si el token no existe, ya se usó o expiró.</returns>
+        /// <returns>false si el token no existe, ya se usó, expiró o la cuenta ya no está activa.</returns>
         Task<bool> RestablecerAsync(string token, string nuevaContrasena, CancellationToken ct = default);
     }
 }

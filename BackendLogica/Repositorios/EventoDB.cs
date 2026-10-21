@@ -134,14 +134,26 @@ namespace BackendLogica.Repositorios
         /// Registra una vista para el embudo del organizador. Máximo una por usuario por evento por día;
         /// las de visitantes (<paramref name="usuarioId"/> null) siempre cuentan.
         /// </summary>
-        public Task<int> RegistrarVistaAsync(int eventoId, int? usuarioId, CancellationToken ct = default) =>
-            EjecutarAsync("""
-                INSERT INTO event_view (event_id, user_id)
-                SELECT @eventoId, @usuarioId FROM DUAL
-                WHERE @usuarioId IS NULL OR NOT EXISTS (
-                    SELECT 1 FROM event_view
-                    WHERE event_id = @eventoId AND user_id = @usuarioId AND viewed_at >= CURDATE())
-                """, new { eventoId, usuarioId }, ct);
+        /// <remarks>
+        /// La regla la garantiza la llave <c>uq_view_user_day</c> (event_id, user_id, view_date; el día lo pone
+        /// el trigger <c>trg_view_bi</c>): la segunda vista del día choca con la llave y no cuenta. Es un INSERT
+        /// simple a propósito: un <c>INSERT ... SELECT ... WHERE NOT EXISTS</c> toma bloqueos de rango y, con
+        /// varias aperturas al mismo tiempo, InnoDB lo resolvía con un deadlock.
+        /// </remarks>
+        /// <returns>1 si contó la vista, 0 si ese usuario ya había visto el evento hoy.</returns>
+        public async Task<int> RegistrarVistaAsync(int eventoId, int? usuarioId, CancellationToken ct = default)
+        {
+            try
+            {
+                return await EjecutarAsync(
+                    "INSERT INTO event_view (event_id, user_id) VALUES (@eventoId, @usuarioId)",
+                    new { eventoId, usuarioId }, ct);
+            }
+            catch (DuplicadoException)
+            {
+                return 0;
+            }
+        }
 
         // ------------------------------------------------------------------
         // Organizador

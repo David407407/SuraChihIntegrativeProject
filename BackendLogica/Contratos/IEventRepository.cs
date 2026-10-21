@@ -41,7 +41,11 @@ namespace BackendLogica.Contratos
         /// <summary>Detalle con galería, en cualquier estado (la pantalla decide si lo muestra).</summary>
         Task<EventoDetalle?> ObtenerAsync(int eventoId, CancellationToken ct = default);
 
-        /// <summary>Registra una vista para el embudo. Máximo una por usuario por evento por día.</summary>
+        /// <summary>
+        /// Registra una vista para el embudo. Máximo una por usuario por evento por día (llave
+        /// <c>uq_view_user_day</c>); las de visitantes (<paramref name="usuarioId"/> null) siempre cuentan.
+        /// </summary>
+        /// <returns>1 si contó la vista, 0 si ese usuario ya había visto el evento hoy.</returns>
         Task<int> RegistrarVistaAsync(int eventoId, int? usuarioId, CancellationToken ct = default);
 
         // --- Organizador ---------------------------------------------------------

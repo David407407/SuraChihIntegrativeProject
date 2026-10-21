@@ -73,6 +73,32 @@ Tampoco están en la BD (se quedaron fuera de las interfaces): las unidades del 
 ("por persona", "la entrada"), las vistas "Últimos 30 días" del panel (la vista cuenta todas) y la fecha
 "Enviado 8 oct" de un evento en revisión (`updated_at` no sale en `v_event_card`).
 
+## Implementación real (MySQL) para las pantallas de las semanas 1–2
+
+Todo esto funciona contra MySQL (repositorios de `Repositorios/`) y se comporta igual en el repositorio falso.
+
+| Qué | Métodos | Tablas / vistas | Quién lo consume |
+|---|---|---|---|
+| Crear cuenta | `Usuarios.RegistrarAsync` (valida y guarda el hash **BCrypt**, costo 11) | `user` (`uq_user_username`, `uq_user_email`) | Ivan (cuenta) |
+| Iniciar sesión | `Usuarios.IniciarSesionAsync` (usuario o correo; solo cuentas activas) | `user` | Ivan (cuenta) |
+| Recuperar contraseña | `RecuperacionContrasena.SolicitarAsync` → token por correo; `RestablecerAsync(token, nueva)` | `password_reset`: se guarda **solo el SHA-256** del token, vale 1 hora, un solo uso; pedir otro invalida el anterior | Ivan (cuenta) |
+| Eliminar cuenta | `Usuarios.DesactivarAsync` → `is_active = FALSE` (nunca DELETE) e invalida sus enlaces pendientes | `user`, `password_reset` | Ivan (Mi perfil) |
+| Tarjetas y detalle de evento | `Eventos.ListarMasGuardadosAsync`, `ListarProximosAsync`, `FiltrarAsync`, `ObtenerAsync` | `v_event_card` (+ etiquetas activas, galería) | Andy (Landing), Carlos (Home), Betsy (detalle) |
+| Destacados | `Eventos.ListarDestacadosAsync` (aprobados, vigentes, `is_featured`, en su `featured_order`) | `v_event_card` | Andy (Landing), Carlos (Home) |
+| Lugares | `Lugares.ListarAprobadosAsync`, `ListarRecomendadosAsync`, `ObtenerAsync` | `place` aprobados + `place_hours` ("abierto ahora") + `v_place_rating` | Carlos (Mapa, Home), Andy (Landing) |
+| Etiquetas | `Etiquetas.ListarAsync(alcance)` | `tag` con `is_active` (las apagadas tampoco salen en las tarjetas) | Carlos (Home), Andy (Landing) |
+| Favoritos | `Favoritos.AgregarAsync` (sin duplicar), `QuitarAsync`, `AlternarAsync`, `ListarIdsAsync`, `ListarAsync` (y los de lugares) | `favorite`, `place_favorite` | Ivan (favoritos) |
+| Inscripción | `Inscripciones.InscribirAsync` (reactiva si había cancelado), `CancelarAsync`, `EstaInscritoAsync`, `ListarPlanesAsync` | `inscription`; el trigger `trg_inscription_bi` rechaza eventos no aprobados o terminados con "No puedes inscribirte a este evento." (también al reactivar) | Betsy (detalle, Mis planes) |
+| Vistas del evento | `Eventos.RegistrarVistaAsync` → 1 si contó, 0 si ese usuario ya lo vio hoy | `event_view`: **máximo 1 por usuario por evento por día**, garantizado por la llave `uq_view_user_day` (el día lo pone `trg_view_bi`); los visitantes siempre cuentan | Betsy (detalle) |
+
+> **¿Ya tenías la BD cargada?** Corre `BaseDeDatos/vista_unica_por_dia.sql` una vez (no borra nada; quita
+> vistas repetidas del mismo día y agrega la llave). Quien cargue `surachih_v1.sql` desde cero ya lo tiene.
+
+**Probarlo contra MySQL de verdad:** `BackendLogica.Pruebas` tiene una sección que crea cuentas,
+inscripciones y vistas, y que solo corre si la base se llama `*_pruebas` (para no ensuciar la tuya).
+Carga `surachih_v1.sql` cambiando `surachih` por `surachih_pruebas` en sus tres primeras instrucciones,
+pon `"Database": "surachih_pruebas"` en `dbsettings.local.json` y corre `dotnet run --project BackendLogica.Pruebas`.
+
 ## Jerarquía de clases
 
 ```

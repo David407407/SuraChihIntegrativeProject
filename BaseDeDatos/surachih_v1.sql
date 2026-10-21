@@ -336,8 +336,14 @@ CREATE TABLE event_view (
     event_id   INT UNSIGNED NOT NULL,
     user_id    INT UNSIGNED NULL,                      -- NULL = visitante sin cuenta
     viewed_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- Dia de la vista. Lo llena trg_view_bi con DATE(viewed_at); no es columna generada porque MySQL
+    -- la calcula antes de aplicar el DEFAULT CURRENT_TIMESTAMP de viewed_at (daria '0000-00-00').
+    view_date  DATE         NOT NULL DEFAULT (CURRENT_DATE),
     CONSTRAINT fk_view_event FOREIGN KEY (event_id) REFERENCES event(id) ON DELETE CASCADE,
     CONSTRAINT fk_view_user  FOREIGN KEY (user_id)  REFERENCES user(id)  ON DELETE SET NULL,
+    -- Maximo 1 vista por usuario por evento por dia. Los visitantes (user_id NULL) no chocan:
+    -- en un UNIQUE de MySQL los NULL nunca se consideran repetidos, asi que siempre cuentan.
+    CONSTRAINT uq_view_user_day UNIQUE (event_id, user_id, view_date),
     INDEX ix_view_event_time (event_id, viewed_at)
 );
 
@@ -481,6 +487,13 @@ BEGIN
                    AND status = 'approved' AND end_at > NOW()) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No puedes inscribirte a este evento.';
     END IF;
+END$$
+
+-- Dia de la vista para la llave uq_view_user_day (1 vista por usuario por evento por dia).
+CREATE TRIGGER trg_view_bi BEFORE INSERT ON event_view
+FOR EACH ROW
+BEGIN
+    SET NEW.view_date = DATE(NEW.viewed_at);
 END$$
 
 -- Resena de evento: solo si ya termino, esta aprobado y no eres el organizador.

@@ -79,8 +79,11 @@ namespace BackendLogica.Falso
             Hacer(a =>
             {
                 var fila = a.Usuario(usuarioId);
-                if (fila == null) return false;
+                if (fila == null || !fila.Activo) return false;
                 fila.Activo = false;
+                // Igual que UsuarioDB: los enlaces de "Recuperar contraseña" pendientes dejan de servir.
+                foreach (var pendiente in a.Recuperaciones.Where(r => r.UsuarioId == usuarioId && r.UsadoEn == null))
+                    pendiente.UsadoEn = Ahora;
                 return true;
             }, ct);
 

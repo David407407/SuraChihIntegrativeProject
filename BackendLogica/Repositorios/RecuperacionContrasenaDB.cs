@@ -42,7 +42,10 @@ namespace BackendLogica.Repositorios
                 return (string?)token;
             }, ct);
 
-        /// <summary>Cambia la contraseña si el token existe, no se ha usado y no ha expirado.</summary>
+        /// <summary>
+        /// Cambia la contraseña si el token existe, no se ha usado, no ha expirado y la cuenta sigue activa
+        /// (un enlace pedido antes de "Eliminar cuenta" ya no sirve).
+        /// </summary>
         /// <returns>false si el token no es válido.</returns>
         public Task<bool> RestablecerAsync(string token, string nuevaContrasena, CancellationToken ct = default)
         {
@@ -50,8 +53,9 @@ namespace BackendLogica.Repositorios
             return EnTransaccionAsync(async tx =>
             {
                 var fila = (await tx.ConsultarAsync("""
-                    SELECT id, user_id FROM password_reset
-                    WHERE token_hash = @hash AND used_at IS NULL AND expires_at > NOW()
+                    SELECT pr.id, pr.user_id FROM password_reset pr
+                    JOIN user u ON u.id = pr.user_id AND u.is_active
+                    WHERE pr.token_hash = @hash AND pr.used_at IS NULL AND pr.expires_at > NOW()
                     FOR UPDATE
                     """, r => (Id: r.Entero("id"), UsuarioId: r.Entero("user_id")),
                     new { hash = Tokens.Hashear(token.Trim()) })).FirstOrDefault();

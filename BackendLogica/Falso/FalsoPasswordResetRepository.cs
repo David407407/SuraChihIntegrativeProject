@@ -36,7 +36,7 @@ namespace BackendLogica.Falso
                 Contrasenas.Validar(nuevaContrasena);
                 string hash = Tokens.Hashear(token.Trim());
                 var fila = a.Recuperaciones.FirstOrDefault(r => r.TokenHash == hash && r.UsadoEn == null && r.ExpiraEn > Ahora);
-                if (fila == null) return false;
+                if (fila == null || a.Usuario(fila.UsuarioId) is not { Activo: true }) return false;
 
                 a.Usuario(fila.UsuarioId)!.Hash = Contrasenas.Hashear(nuevaContrasena);
                 fila.UsadoEn = Ahora;

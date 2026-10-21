@@ -3,6 +3,13 @@
 // Uso:  dotnet run --project BackendLogica.Pruebas              (falso + MySQL)
 //       dotnet run --project BackendLogica.Pruebas -- --falso   (solo el falso, sin MySQL)
 // Contra MySQL solo lee datos, salvo el favorito de prueba, que se agrega y se quita (queda igual que antes).
+//
+// Implementación real completa (crea cuentas, inscripciones, vistas...): solo si "Database" en
+// dbsettings.local.json termina en "_pruebas". Para tener esa base, carga surachih_v1.sql cambiando
+// "surachih" por "surachih_pruebas" en sus tres primeras instrucciones (DROP, CREATE y USE).
+// Así nunca se ensucia la base con la que trabajas.
+
+using MySql.Data.MySqlClient;
 
 using BackendLogica;
 using BackendLogica.Configuracion;
@@ -246,6 +253,11 @@ await Prueba("Favorito de lugar: alternar dos veces deja todo igual", async () =
     Afirmar(primero == lista.Any(l => l.Id == 1), "Mis favoritos no coincide");
     return $"{antes} → {primero} → {segundo}";
 });
+
+if (bd.Configuracion.BaseDeDatos.EndsWith("_pruebas", StringComparison.OrdinalIgnoreCase))
+    await PruebasEscrituraMySql(bd);
+else
+    Console.WriteLine("\n(Las pruebas que crean cuentas e inscripciones solo corren contra una base *_pruebas; ver el inicio de este archivo.)");
 
 Console.WriteLine(fallas == 0 ? "\nTodo bien ✓" : $"\n{fallas} prueba(s) fallaron ✗");
 return fallas == 0 ? 0 : 1;
@@ -506,6 +518,206 @@ async Task PruebasFalso()
         Afirmar(await f.Reportes.ResolverAsync(id, 1, EstadoReporte.Descartado), "resolver");
         Afirmar((await f.Reportes.ListarAsync()).Count == 0, "ya no está abierto");
         return "";
+    });
+}
+
+// ----------------------------------------------------------------------
+// Implementación real contra MySQL (escribe: solo en una base *_pruebas)
+// Lo que consumen las pantallas de las semanas 1–2: cuenta, lectura, favoritos, inscripción y vistas.
+// ----------------------------------------------------------------------
+
+async Task PruebasEscrituraMySql(SuraChihBD bd)
+{
+    Console.WriteLine("\nImplementación real (MySQL, base de pruebas)");
+    string sufijo = DateTime.Now.ToString("HHmmssfff");
+
+    // Lectura directa de la BD para revisar lo que guardó la librería.
+    async Task<object?> Sql(string sql, object? parametros = null)
+    {
+        await using var c = new MySqlConnection(bd.Configuracion.CadenaConexion);
+        await c.OpenAsync();
+        await using var cmd = new MySqlCommand(sql, c);
+        foreach (var p in parametros?.GetType().GetProperties() ?? [])
+            cmd.Parameters.AddWithValue("@" + p.Name, p.GetValue(parametros));
+        object? valor = await cmd.ExecuteScalarAsync();
+        return valor is DBNull ? null : valor;
+    }
+
+    async Task<Usuario> CuentaNueva(string nombre) =>
+        await bd.Usuarios.RegistrarAsync($"{nombre}_{sufijo}", $"{nombre}.{sufijo}@prueba.mx", "Prueba2026");
+
+    // --- Cuenta ---
+    await Prueba("Registro guarda BCrypt (nunca la contraseña) y el login acepta usuario o correo", async () =>
+    {
+        var u = await CuentaNueva("registro");
+        string hash = (string)(await Sql("SELECT password_hash FROM user WHERE id = @id", new { id = u.Id }))!;
+        Afirmar(hash.StartsWith("$2") && hash != "Prueba2026", "el hash no es BCrypt");
+        Afirmar((await bd.Usuarios.IniciarSesionAsync(u.NombreUsuario, "Prueba2026"))?.Id == u.Id, "login con usuario");
+        Afirmar((await bd.Usuarios.IniciarSesionAsync(u.Correo.ToUpperInvariant(), "Prueba2026"))?.Id == u.Id, "login con correo en mayúsculas");
+        Afirmar(await bd.Usuarios.IniciarSesionAsync(u.NombreUsuario, "Otra2026") == null, "contraseña incorrecta");
+        await EsperarError<DuplicadoException>(() => bd.Usuarios.RegistrarAsync($"otro_{sufijo}", u.Correo, "Prueba2026"));
+        return hash[..7] + "…";
+    });
+    await Prueba("Recuperar contraseña guarda solo el SHA-256 del token y sirve una vez", async () =>
+    {
+        var u = await CuentaNueva("recupera");
+        Afirmar(await bd.RecuperacionContrasena.SolicitarAsync($"nadie.{sufijo}@prueba.mx") == null, "un correo sin cuenta no da token");
+        string viejo = (await bd.RecuperacionContrasena.SolicitarAsync(u.Correo))!;
+        string token = (await bd.RecuperacionContrasena.SolicitarAsync(u.Correo))!;
+
+        string guardado = (string)(await Sql(
+            "SELECT token_hash FROM password_reset WHERE user_id = @id AND used_at IS NULL", new { id = u.Id }))!;
+        Afirmar(guardado == BackendLogica.Seguridad.Tokens.Hashear(token) && guardado.Length == 64, "debe guardar el SHA-256 en hex");
+        Afirmar(await Sql("SELECT COUNT(*) FROM password_reset WHERE token_hash = @token", new { token }) is 0L, "el token en claro no se guarda");
+
+        Afirmar(!await bd.RecuperacionContrasena.RestablecerAsync(viejo, "Nueva2026"), "pedir otro enlace invalida el anterior");
+        Afirmar(await bd.RecuperacionContrasena.RestablecerAsync(token, "Nueva2026"), "el enlace vigente cambia la contraseña");
+        Afirmar(!await bd.RecuperacionContrasena.RestablecerAsync(token, "Otra2026"), "el enlace no sirve dos veces");
+        Afirmar(await bd.Usuarios.IniciarSesionAsync(u.NombreUsuario, "Nueva2026") != null, "entra con la nueva");
+        Afirmar(await bd.Usuarios.IniciarSesionAsync(u.NombreUsuario, "Prueba2026") == null, "ya no entra con la anterior");
+        return "";
+    });
+    await Prueba("Desactivar cuenta: is_active = FALSE, no borra, no entra y su enlace pendiente ya no sirve", async () =>
+    {
+        var u = await CuentaNueva("baja");
+        string token = (await bd.RecuperacionContrasena.SolicitarAsync(u.Correo))!;
+        Afirmar(await bd.Usuarios.DesactivarAsync(u.Id), "debió desactivarse");
+        Afirmar(!await bd.Usuarios.DesactivarAsync(u.Id), "la segunda vez no hay nada que desactivar");
+        Afirmar(await Sql("SELECT is_active FROM user WHERE id = @id", new { id = u.Id }) is false or 0 or (sbyte)0, "la fila sigue, con is_active = FALSE");
+        Afirmar(await bd.Usuarios.IniciarSesionAsync(u.NombreUsuario, "Prueba2026") == null, "una cuenta desactivada no entra");
+        Afirmar(!await bd.RecuperacionContrasena.RestablecerAsync(token, "Nueva2026"), "el enlace pedido antes de darse de baja no sirve");
+        Afirmar(await bd.RecuperacionContrasena.SolicitarAsync(u.Correo) == null, "no se dan enlaces a cuentas desactivadas");
+        return "";
+    });
+
+    // --- Lectura ---
+    await Prueba("Lugares aprobados con place_hours y v_place_rating", async () =>
+    {
+        var lugares = await bd.Lugares.ListarAprobadosAsync();
+        Afirmar(lugares.Count > 0 && lugares.All(l => l.Estado == EstadoLugar.Aprobado), "solo aprobados");
+        foreach (var l in lugares)
+        {
+            long dias = (long)(await Sql("SELECT COUNT(*) FROM place_hours WHERE place_id = @id", new { id = l.Id }))!;
+            Afirmar(l.Horario.Count == dias, $"{l.Nombre}: horario incompleto");
+            object? promedio = await Sql("SELECT avg_rating FROM v_place_rating WHERE place_id = @id", new { id = l.Id });
+            Afirmar(l.Calificacion == (promedio == null ? null : Convert.ToDecimal(promedio)), $"{l.Nombre}: calificación distinta a v_place_rating");
+        }
+        return string.Join(" | ", lugares.Select(l => $"{l.Nombre}: {l.Horario.Count} días, {l.Calificacion?.ToString() ?? "sin"}★"));
+    });
+    await Prueba("Solo etiquetas activas (lista, tarjetas de evento y de lugar)", async () =>
+    {
+        // Se apaga una etiqueta que usan eventos y lugares, y se vuelve a prender al final.
+        int id = Convert.ToInt32(await Sql("SELECT tag_id FROM event_tag LIMIT 1"));
+        await Sql("UPDATE tag SET is_active = FALSE WHERE id = @id", new { id });
+        try
+        {
+            Afirmar((await bd.Etiquetas.ListarAsync()).All(t => t.Id != id), "la lista trae la etiqueta apagada");
+            Afirmar((await bd.Eventos.ListarProximosAsync()).All(e => e.Etiquetas.All(t => t.Id != id)), "una tarjeta de evento la trae");
+            Afirmar((await bd.Lugares.ListarAprobadosAsync()).All(l => l.Etiquetas.All(t => t.Id != id)), "una tarjeta de lugar la trae");
+        }
+        finally
+        {
+            await Sql("UPDATE tag SET is_active = TRUE WHERE id = @id", new { id });
+        }
+        return $"etiqueta {id} oculta mientras estuvo apagada";
+    });
+    await Prueba("Destacados: solo aprobados, vigentes y marcados, en su orden (v_event_card)", async () =>
+    {
+        var destacados = await bd.Eventos.ListarDestacadosAsync(10);
+        Afirmar(destacados.All(e => e is { Destacado: true, Estado: EstadoEvento.Aprobado, Terminado: false }), "se coló uno que no debía");
+        long esperados = (long)(await Sql("""
+            SELECT COUNT(*) FROM v_event_card WHERE is_featured AND status = 'approved' AND end_at > NOW()
+            """))!;
+        Afirmar(destacados.Count == esperados, $"{destacados.Count} de {esperados}");
+        return string.Join(" | ", destacados.Select(e => e.Titulo));
+    });
+
+    // --- Favoritos ---
+    await Prueba("Favoritos: agregar (sin duplicar), listar y quitar", async () =>
+    {
+        var u = await CuentaNueva("favs");
+        await bd.Favoritos.AgregarAsync(u.Id, 1);
+        Afirmar(await bd.Favoritos.AgregarAsync(u.Id, 1) == 0, "agregar dos veces no duplica");
+        Afirmar((await bd.Favoritos.ListarIdsAsync(u.Id)).SetEquals([1]), "ids");
+        Afirmar((await bd.Favoritos.ListarAsync(u.Id)).Single().Id == 1, "Mis favoritos");
+        Afirmar(await bd.Favoritos.QuitarAsync(u.Id, 1) == 1 && (await bd.Favoritos.ListarAsync(u.Id)).Count == 0, "quitar");
+        return "";
+    });
+
+    // --- Inscripción ---
+    await Prueba("Inscribir, cancelar y volver a inscribirse; Mis planes refleja cada paso", async () =>
+    {
+        var u = await CuentaNueva("planes");
+        int vigente = (await bd.Eventos.ListarProximosAsync()).First().Id;
+        await bd.Inscripciones.InscribirAsync(u.Id, vigente);
+        Afirmar(await bd.Inscripciones.EstaInscritoAsync(u.Id, vigente), "inscrito");
+        Afirmar((await bd.Inscripciones.ListarPlanesAsync(u.Id, PestanaPlanes.Proximos)).Any(p => p.Evento.Id == vigente), "en Próximos");
+        Afirmar(await bd.Inscripciones.CancelarAsync(u.Id, vigente) && !await bd.Inscripciones.EstaInscritoAsync(u.Id, vigente), "cancelar");
+        Afirmar(!await bd.Inscripciones.CancelarAsync(u.Id, vigente), "cancelar dos veces no hace nada");
+        Afirmar((await bd.Inscripciones.ListarPlanesAsync(u.Id, PestanaPlanes.Cancelados)).Any(p => p.Evento.Id == vigente), "en Cancelados");
+        await bd.Inscripciones.InscribirAsync(u.Id, vigente);
+        Afirmar(await bd.Inscripciones.EstaInscritoAsync(u.Id, vigente), "se reactiva");
+        return $"evento {vigente}";
+    });
+    await Prueba("trg_inscription_bi rechaza eventos no aprobados o terminados (también al reactivar)", async () =>
+    {
+        var u = await CuentaNueva("rechazo");
+        var ids = (await Sql("""
+            SELECT GROUP_CONCAT(id) FROM event WHERE status <> 'approved' OR end_at <= NOW()
+            """) as string ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
+        Afirmar(ids.Count > 0, "los datos de prueba deben traer eventos terminados o no aprobados");
+        foreach (int id in ids)
+            await EsperarError<ReglaNegocioException>(() => bd.Inscripciones.InscribirAsync(u.Id, id), "No puedes inscribirte a este evento.");
+
+        // Reactivar una inscripción cancelada usa INSERT ... ON DUPLICATE KEY UPDATE, que también dispara el
+        // trigger BEFORE INSERT: si el evento ya terminó, no se reactiva. Se simula que un evento vigente
+        // (ya empezado) terminó hace una hora y al final se le regresa su fecha (cambiar end_at no lo manda a moderación).
+        int evento = Convert.ToInt32(await Sql("""
+            SELECT id FROM event WHERE status = 'approved' AND end_at > NOW() AND start_at < NOW() - INTERVAL 1 DAY LIMIT 1
+            """));
+        object fin = (await Sql("SELECT end_at FROM event WHERE id = @evento", new { evento }))!;
+        await bd.Inscripciones.InscribirAsync(u.Id, evento);
+        await bd.Inscripciones.CancelarAsync(u.Id, evento);
+        await Sql("UPDATE event SET end_at = NOW() - INTERVAL 1 HOUR WHERE id = @evento", new { evento });
+        try
+        {
+            await EsperarError<ReglaNegocioException>(() => bd.Inscripciones.InscribirAsync(u.Id, evento), "No puedes inscribirte a este evento.");
+            Afirmar(!await bd.Inscripciones.EstaInscritoAsync(u.Id, evento), "no debió reactivarse");
+        }
+        finally
+        {
+            await Sql("UPDATE event SET end_at = @fin WHERE id = @evento", new { fin, evento });
+        }
+        return $"eventos {string.Join(", ", ids)}; reactivar en el {evento} también se rechaza";
+    });
+
+    // --- Vistas (event_view) ---
+    await Prueba("event_view: máximo 1 por usuario por evento por día; los visitantes siempre cuentan", async () =>
+    {
+        var u = await CuentaNueva("vistas");
+        async Task<long> Vistas(int? usuario) => (long)(await Sql(
+            "SELECT COUNT(*) FROM event_view WHERE event_id = 2 AND user_id <=> @usuario", new { usuario }))!;
+
+        Afirmar(await bd.Eventos.RegistrarVistaAsync(2, u.Id) == 1, "la primera cuenta");
+        Afirmar(await bd.Eventos.RegistrarVistaAsync(2, u.Id) == 0, "la segunda del día no");
+        Afirmar(await Vistas(u.Id) == 1, "una sola fila");
+
+        long visitantes = await Vistas(null);
+        await bd.Eventos.RegistrarVistaAsync(2, null);
+        await bd.Eventos.RegistrarVistaAsync(2, null);
+        Afirmar(await Vistas(null) == visitantes + 2, "las de visitantes cuentan siempre");
+        return "";
+    });
+    await Prueba("event_view: la llave uq_view_user_day lo garantiza aunque lleguen al mismo tiempo", async () =>
+    {
+        var u = await CuentaNueva("simultaneas");
+        int[] resultados = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => bd.Eventos.RegistrarVistaAsync(1, u.Id)));
+        long filas = (long)(await Sql("SELECT COUNT(*) FROM event_view WHERE event_id = 1 AND user_id = @id", new { id = u.Id }))!;
+        Afirmar(resultados.Sum() == 1 && filas == 1, $"contaron {resultados.Sum()} y hay {filas} filas");
+
+        // Aunque alguien inserte directo con SQL, la BD no deja la segunda del día.
+        await EsperarError<MySqlException>(() => Sql("INSERT INTO event_view (event_id, user_id) VALUES (1, @id)", new { id = u.Id }));
+        return "8 aperturas → 1 vista";
     });
 }
 
