@@ -1,0 +1,103 @@
+@*
+  Detalle de lugar: la hoja "Lugar / ..." de Figma (página Rediseño). Los 17 frames "Lugar / Café de la
+  Tercera", "Lugar / Museo del Mamut"... son ESTA misma plantilla con otros datos. Misma ventana que el
+  detalle de evento (HojaDetalle.razor). Se abre al elegir un pin del mapa y con "Ver detalles" de las Card lugar.
+
+  Partes (de arriba a abajo, igual que las capas de Figma):
+    Portada   foto + Compartir, favorito y Cerrar.
+    Info      chip de tipo, nombre, "Acerca del lugar", "Ubicación" (mini mapa) y "Opiniones" (hasta 2).
+    Boleto    Horario (abierto ahora), Precio promedio, Calificación, Dirección + "Cómo llegar",
+              "Escribir reseña" y "Reportar lugar".
+    También te puede gustar   hasta 3 Card lugar que elige ServicioLugar.
+*@
+@inject Acciones Acciones
+
+<PortadaHoja Tipo="TipoFavorito.Lugar" Id="L.Id" Titulo="@L.Nombre" ImagenUrl="@L.ImagenUrl" Favorito="Datos.Favorito"
+             AlCompartir='() => Acciones.Proximamente("Compartir lugares")' />
+
+<div class="hoja__cuerpo">
+    <div class="hoja__info">
+        @if (L.Etiquetas.FirstOrDefault() is { } tipo)
+        {
+            <div class="hoja__categorias"><Chip Texto="@tipo.Nombre" Variante="fondo" /></div>
+        }
+        <h1 @ref="_titulo" class="t-h1 hoja__titulo" id="hoja-titulo" tabindex="-1">@L.Nombre</h1>
+        <h2 class="t-h3">Acerca del lugar</h2>
+        <p class="t-body texto-2 hoja__descripcion">@(string.IsNullOrWhiteSpace(L.Descripcion) ? "Este lugar todavía no tiene descripción." : L.Descripcion)</p>
+        <h2 class="t-h3">Ubicación</h2>
+        <Mapa Clase="hoja__mapa" Lat="L.Latitud" Lng="L.Longitud" Titulo="@L.Nombre" AriaLabel="@($"Mapa: {L.Nombre}")" />
+        <p class="t-small texto-2">@Formato.DireccionConCiudad(L.Direccion)</p>
+        <h2 class="t-h3">Opiniones</h2>
+        @if (Datos.Opiniones.Count > 0)
+        {
+            <div class="hoja__opiniones">
+                @foreach (var resena in Datos.Opiniones)
+                {
+                    <article class="opinion">
+                        <p class="opinion__cabeza">
+                            <span class="t-small-fuerte">@resena.NombreUsuario</span>
+                            <span class="opinion__estrellas" role="img" aria-label="@resena.Calificacion de 5 estrellas">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <Icono Nombre="@(i <= resena.Calificacion ? "estrella-12" : "estrella-12-vacia")" Caja="12" />
+                                }
+                            </span>
+                        </p>
+                        @if (!string.IsNullOrEmpty(resena.Comentario))
+                        {
+                            <p class="t-small texto-2">@resena.Comentario</p>
+                        }
+                    </article>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="t-small texto-2">Todavía no hay opiniones. ¡Sé la primera persona en escribir una!</p>
+        }
+    </div>
+
+    <aside class="boleto" aria-label="Horario, precio y calificación">
+        <DatoBoleto Icono="reloj" Etiqueta="Horario" Valor="@Formato.HorarioLugar(L.HorarioAhora).Texto" />
+        <DatoBoleto Icono="etiqueta-16" Etiqueta="Precio promedio" Valor="@(Formato.PrecioLugar(L) is { Length: > 0 } precio ? precio : "Precio por confirmar")" />
+        <DatoBoleto Icono="estrella-16" Etiqueta="Calificación" Valor="@(L.Calificacion != null ? Formato.Calificacion(L.Calificacion) : "Sin reseñas todavía")" />
+        <DatoBoleto Icono="ubicacion-16" Etiqueta="Dirección" Valor="@L.Direccion" />
+        <hr class="boleto__divisor" />
+        <Boton Texto="Cómo llegar" Icono="como-llegar" Href="@ComoLlegar" Externo />
+        <Boton Texto="Escribir reseña" Variante="secundario" Icono="estrella-18" OnClick='() => Acciones.RequiereSesion("Escribir reseñas")' />
+        <button type="button" class="boleto__enlace t-small texto-2" @onclick='() => Acciones.RequiereSesion("Reportar lugares")'>
+            <Icono Nombre="bandera" Caja="12" /><span>Reportar lugar</span>
+        </button>
+    </aside>
+</div>
+
+@if (Datos.Recomendados.Count > 0)
+{
+    <section class="hoja__recomendados">
+        <h2 class="t-h2">También te puede gustar</h2>
+        <div class="hoja__fila">
+            @foreach (var (recomendado, i) in Datos.Recomendados.Select((r, i) => (r, i)))
+            {
+                <Tarjeta @key="recomendado.Id" Lugar="recomendado" Orden="i" Favorito="Datos.Favoritos.Contains(recomendado.Id)" />
+            }
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public DatosDetalleLugar Datos { get; set; } = default!;
+
+    private ElementReference _titulo;
+
+    private LugarTarjeta L => Datos.Lugar;
+
+    /// <summary>Liga de Google Maps con las coordenadas del lugar (se abre en el navegador del sistema).</summary>
+    private string ComoLlegar => "https://www.google.com/maps/search/?api=1&query=" +
+        Uri.EscapeDataString(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{L.Latitud},{L.Longitud}"));
+
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        // El foco va al título: los lectores de pantalla lo anuncian y Tab sigue con la acción principal.
+        if (primeraVez) await _titulo.FocusAsync(preventScroll: true);
+    }
+}

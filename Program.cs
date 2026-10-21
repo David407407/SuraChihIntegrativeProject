@@ -4,7 +4,7 @@ namespace SuraChihIntegrativeProject
 {
     internal static class Program
     {
-        /// <summary>Punto de entrada: abre la ventana principal que hospeda la interfaz web.</summary>
+        /// <summary>Punto de entrada: abre la ventana principal que hospeda la interfaz Blazor.</summary>
         [STAThread]
         static void Main()
         {

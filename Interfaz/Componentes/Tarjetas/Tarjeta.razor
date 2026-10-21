@@ -1,0 +1,77 @@
+@*
+  "Card evento" y "Card lugar" de Figma (Normal / Hover). Misma estructura: foto cuadrada con el
+  favorito y "Ver detalles" en hover, y la información debajo. Se da Evento o Lugar:
+
+  <div class="rejilla-tarjetas">
+    @foreach (var (e, i) in eventos.Select((e, i) => (e, i))) { <Tarjeta Evento="e" Orden="i" Favorito="ids.Contains(e.Id)" /> }
+  </div>
+  <Tarjeta Lugar="lugar" />
+
+  Evento: fecha, título (2 líneas), lugar y precio ("Fecha por confirmar" y "Precio por confirmar" incluidos).
+  Lugar: chip de tipo sobre la foto, nombre, dirección, calificación, precio y horario de hoy.
+  El ancho lo pone la cuadrícula que las contiene. Toda la tarjeta abre el detalle.
+*@
+@inject Acciones Acciones
+
+<article class="tarjeta" data-revelar style="--orden:@Orden">
+    <div class="tarjeta__imagen">
+        <Imagen Src="@ImagenUrl" Alt="@Nombre" Ancho="282" Alto="282" />
+        @if (Lugar?.Etiquetas.FirstOrDefault() is { } tipo)
+        {
+            <span class="tarjeta__tipo"><Chip Texto="@tipo.Nombre" Variante="superficie" /></span>
+        }
+        <BotonFavorito Clase="tarjeta__favorito" Tipo="@(Evento != null ? TipoFavorito.Evento : TipoFavorito.Lugar)"
+                       Id="Id" Etiqueta="@Nombre" Activo="Favorito" />
+        <span class="tarjeta__ver t-small-fuerte" aria-hidden="true">Ver detalles <Icono Nombre="chevron-tinta-10" Caja="10" /></span>
+    </div>
+
+    <div class="tarjeta__info">
+        @if (Evento is { } e)
+        {
+            <p class="t-small-fuerte tarjeta__fecha tarjeta__linea">@Formato.FechaEvento(e)</p>
+            <h3 class="t-card-titulo tarjeta__titulo">
+                <button type="button" class="tarjeta__enlace" @onclick="() => Acciones.VerEvento(e.Id)"><span class="tarjeta__titulo-texto">@e.Titulo</span></button>
+            </h3>
+            @if (Formato.UbicacionEvento(e) is { Length: > 0 } ubicacion)
+            {
+                <p class="t-small texto-2 tarjeta__linea">@ubicacion</p>
+            }
+            @if (Formato.PrecioEvento(e) is { Length: > 0 } precio)
+            {
+                <p class="t-small-fuerte tarjeta__linea">@precio</p>
+            }
+        }
+        else if (Lugar is { } l)
+        {
+            var horario = Formato.HorarioLugar(l.HorarioAhora);
+            <h3 class="t-card-titulo tarjeta__titulo">
+                <button type="button" class="tarjeta__enlace" @onclick="() => Acciones.VerLugar(l.Id)"><span class="tarjeta__titulo-texto">@l.Nombre</span></button>
+            </h3>
+            <p class="t-small texto-2 tarjeta__linea">@l.Direccion</p>
+            <p class="t-small tarjeta__meta">
+                @if (l.Calificacion != null)
+                {
+                    <span class="tarjeta__calificacion t-small-fuerte"><Icono Nombre="estrella" Caja="13" />@Formato.Calificacion(l.Calificacion)</span>
+                }
+                @if (Formato.PrecioLugar(l) is { Length: > 0 } precio)
+                {
+                    <span class="texto-2">@precio</span>
+                }
+                <span class="@(horario.Abierto ? "tarjeta__abierto" : "texto-2")">@horario.Texto</span>
+            </p>
+        }
+    </div>
+</article>
+
+@code {
+    [Parameter] public EventoTarjeta? Evento { get; set; }
+    [Parameter] public LugarTarjeta? Lugar { get; set; }
+    /// <summary>Para escalonar la animación de aparición.</summary>
+    [Parameter] public int Orden { get; set; }
+    /// <summary>Corazón lleno (Favoritos.ListarIdsAsync / ListarIdsLugaresAsync dicen cuáles).</summary>
+    [Parameter] public bool Favorito { get; set; }
+
+    private int Id => Evento?.Id ?? Lugar!.Id;
+    private string Nombre => Evento?.Titulo ?? Lugar!.Nombre;
+    private string? ImagenUrl => Evento != null ? Evento.ImagenUrl : Lugar!.ImagenUrl;
+}

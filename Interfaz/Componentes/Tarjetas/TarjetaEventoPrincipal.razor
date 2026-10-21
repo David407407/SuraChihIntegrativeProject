@@ -1,0 +1,40 @@
+@* Evento grande de "No te los pierdas" en la landing ("Evento principal" en Figma). *@
+@inject Acciones Acciones
+
+<article class="evento-principal" data-revelar>
+    <button type="button" class="evento-principal__imagen" aria-label="Ver @Evento.Titulo" @onclick="() => Acciones.VerEvento(Evento.Id)">
+        <Imagen Src="@Evento.ImagenUrl" Alt="@Evento.Titulo" Ancho="588" Alto="330" />
+        <span class="evento-principal__fecha">
+            <span class="t-h1">@Fecha.Dia</span>
+            <span class="t-small-fuerte">@Fecha.Mes</span>
+        </span>
+    </button>
+    <div class="evento-principal__info">
+        @if (Evento.Etiquetas.FirstOrDefault() is { } categoria)
+        {
+            <Chip Texto="@categoria.Nombre" />
+        }
+        <h3 class="evento-principal__titulo t-h1">@Evento.Titulo</h3>
+        @if (!string.IsNullOrEmpty(Evento.Descripcion))
+        {
+            <p class="evento-principal__descripcion t-body texto-2">@Evento.Descripcion</p>
+        }
+        <div class="evento-principal__meta t-small-fuerte texto-2">
+            @if (Formato.UbicacionEvento(Evento) is { Length: > 0 } ubicacion)
+            {
+                <span><Icono Nombre="ubicacion" Caja="14" />@ubicacion</span>
+            }
+            <span><Icono Nombre="etiqueta-precio" Caja="14" />@Formato.PrecioEvento(Evento, Formato.EstiloPrecio.Desde)</span>
+        </div>
+        <div class="evento-principal__acciones">
+            <Boton Texto="Voy a ir" Icono="calendario-check" OnClick="() => Acciones.Inscribirse(Evento.Id)" />
+            <Boton Texto="Ver detalles" Variante="secundario" OnClick="() => Acciones.VerEvento(Evento.Id)" />
+        </div>
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public EventoTarjeta Evento { get; set; } = default!;
+
+    private (string Dia, string Mes) Fecha => Formato.DiaYMes(Evento.Inicio);
+}

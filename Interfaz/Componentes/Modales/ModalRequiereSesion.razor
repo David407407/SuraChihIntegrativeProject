@@ -1,0 +1,16 @@
+@*
+  "Modal / Inicia sesión para continuar" de Figma. Se abre cuando un visitante intenta algo que
+  necesita cuenta (inscribirse, favoritos, reseñas...): Modales.RequiereSesion(texto).
+*@
+@inject Modales Modales
+
+<EncabezadoModal Titulo="Inicia sesión para continuar" Texto="@Texto" Icono="candado-cielo" />
+<div class="modal__botones">
+    <Boton Texto="Iniciar sesión" Variante="oscuro" Clase="modal__ancho" OnClick="() => Modales.IniciarSesion()" />
+    <Boton Texto="Crear cuenta" Variante="secundario" Clase="modal__ancho" OnClick="() => Modales.CrearCuenta()" />
+</div>
+<div><button type="button" class="modal__enlace modal__enlace--suave t-small-fuerte" data-cerrar-modal @onclick="() => Modales.Cerrar()">Ahora no</button></div>
+
+@code {
+    [Parameter] public string Texto { get; set; } = "Necesitas una cuenta para inscribirte, guardar favoritos y escribir reseñas.";
+}

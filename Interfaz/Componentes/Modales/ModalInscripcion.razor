@@ -1,0 +1,63 @@
+@*
+  "Modal / Confirmar inscripción" (¿Vas a ir?) y "Modal / Cancelar inscripción" (¿Cancelar tu inscripción?)
+  de Figma. Los abre el boleto del detalle de evento con Modales.ConfirmarInscripcionAsync(evento) /
+  ConfirmarCancelacionAsync(evento), que devuelven el estado final de la inscripción.
+  Si hace falta sesión, la modal cambia a "Inicia sesión para continuar" sin cerrarse.
+*@
+@inject ServicioEvento Eventos
+@inject Modales Modales
+
+<EncabezadoModal Titulo="@(Cancelar ? "¿Cancelar tu inscripción?" : "¿Vas a ir?")"
+                 Texto="@(Cancelar ? "Se quitará de Mis planes. Puedes volver a inscribirte después." : "Lo guardaremos en Mis planes y te avisaremos si hay cambios.")"
+                 Icono="@(Cancelar ? "calendario-x-error" : "calendario-check-cielo")" Peligro="Cancelar" />
+
+@* "Resumen" en Figma: título, fecha escrita completa y lugar del evento *@
+<div class="modal__resumen">
+    <p class="t-body-fuerte">@Evento.Titulo</p>
+    <p class="modal__resumen-dato t-small texto-2"><Icono Nombre="calendario-14" Caja="14" /><span>@Formato.FechaLarga(Evento)</span></p>
+    @if (Formato.UbicacionEvento(Evento) is { Length: > 0 } lugar)
+    {
+        <p class="modal__resumen-dato t-small texto-2"><Icono Nombre="ubicacion" Caja="14" /><span>@lugar</span></p>
+    }
+</div>
+<AvisoModal Errores="_errores" />
+<div class="modal__botones">
+    <Boton Texto="@(Cancelar ? "Cancelar inscripción" : "Sí, voy a ir")" Variante="@(Cancelar ? "peligro" : "primario")"
+           Icono="@(Cancelar ? null : "check-circulo")" Clase="modal__ancho" Ocupado="_enviando" OnClick="ConfirmarAsync" />
+    <Boton Texto="@(Cancelar ? "Mantener mi lugar" : "Ahora no")" Variante="secundario" Clase="modal__ancho"
+           data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EventoTarjeta Evento { get; set; } = default!;
+    /// <summary>true: "¿Cancelar tu inscripción?"; false: "¿Vas a ir?".</summary>
+    [Parameter] public bool Cancelar { get; set; }
+
+    private readonly ErroresFormulario _errores = new();
+    private bool _enviando;
+
+    private async Task ConfirmarAsync()
+    {
+        _errores.Limpiar();
+        _enviando = true;
+        try
+        {
+            bool inscrito = Cancelar
+                ? await Eventos.CancelarInscripcionAsync(Evento.Id)
+                : await Eventos.InscribirAsync(Evento.Id);
+            Modales.Cerrar(inscrito);
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();   // misma ventana: quien la abrió recibe el estado de antes
+        }
+        catch (Exception ex)
+        {
+            _errores.PonerAviso(MensajesError.Para(ex));   // texto de C# (o del trigger) tal cual
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+}

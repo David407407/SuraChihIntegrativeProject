@@ -1,0 +1,22 @@
+@*
+  Componente raíz de la interfaz: elige la página según la dirección (los @page de Paginas/).
+  La app de escritorio lo monta en #app (Ventanas/VentanaPrincipal.cs) y el servidor del navegador
+  dentro de su App.razor (Interfaz.Navegador).
+*@
+<Router AppAssembly="typeof(Rutas).Assembly">
+    <Found Context="ruta">
+        <RouteView RouteData="ruta" DefaultLayout="typeof(PlantillaPrincipal)" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="typeof(PlantillaPrincipal)">
+            <main class="contenedor no-encontrada">
+                <h1 class="t-h1">Esta pantalla no existe</h1>
+                <Boton Texto="Ir al inicio" Variante="oscuro" OnClick="Acciones.Inicio" />
+            </main>
+        </LayoutView>
+    </NotFound>
+</Router>
+
+@code {
+    [Inject] private Acciones Acciones { get; set; } = default!;
+}

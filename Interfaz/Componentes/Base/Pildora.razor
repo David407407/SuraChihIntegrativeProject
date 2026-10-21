@@ -1,0 +1,16 @@
+@*
+  "Pildora" de Figma (Normal / Activa): una opción de un grupo de segmentos, p. ej. los tipos de lugar
+  del mapa (Todo · Cafés · Museos · Parques). Solo una del grupo va activa.
+
+  <div role="group" aria-label="Tipo de lugar">
+    <Pildora Texto="Todo" Activa="tipo == null" OnClick="() => tipo = null" />
+    <Pildora Texto="Cafés" Activa='tipo == "coffee"' OnClick='() => tipo = "coffee"' />
+  </div>
+*@
+<button type="button" class="pildora t-small-fuerte" aria-pressed="@(Activa ? "true" : "false")" @onclick="OnClick">@Texto</button>
+
+@code {
+    [Parameter, EditorRequired] public string Texto { get; set; } = "";
+    [Parameter] public bool Activa { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+}

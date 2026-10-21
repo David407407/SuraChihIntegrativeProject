@@ -1,0 +1,16 @@
+@* "Chihuahua tiene mucho que hacer..." con los datos de la encuesta (landing). *@
+<section class="seccion encuesta" aria-label="Por qué SuraChih">
+    <div class="contenedor">
+        <h2 class="t-h1 encuesta__titulo" data-revelar>@TextosLanding.Encuesta.Titulo</h2>
+        <dl class="encuesta__datos">
+            @foreach (var (dato, i) in TextosLanding.Encuesta.Datos.Select((d, i) => (d, i)))
+            {
+                <div class="encuesta__dato" data-revelar style="--orden:@i">
+                    <dt class="t-display">@dato.Cifra</dt>
+                    <dd class="t-body">@dato.Texto</dd>
+                </div>
+            }
+        </dl>
+        <p class="t-small encuesta__fuente" data-revelar>@TextosLanding.Encuesta.Fuente</p>
+    </div>
+</section>

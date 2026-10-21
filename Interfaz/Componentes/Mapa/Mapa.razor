@@ -1,0 +1,78 @@
+@*
+  Mapa reutilizable: pinta el Web Component <sc-mapa> (Leaflet, wwwroot/js/sc-mapa.js) y lo conecta
+  con C#. El alto se lo da el contenedor (o la clase que le pases con Clase).
+
+  1. Detalle de evento o de lugar (un pin fijo):
+       <Mapa Lat="evento.Latitud" Lng="evento.Longitud" Titulo="@evento.LugarNombre" />
+     Sin coordenadas (borrador sin ubicación) el mapa se muestra sin pin.
+
+  2. Explorar (pantalla Mapa, varios pines):
+       <Mapa @ref="mapa" AlElegirPin="..." AlCambiarZona="..." AlDeseleccionar="..." />
+       await mapa.MostrarAsync(lugares.Select(Lugares.Punto), ajustar: true);
+       await mapa.SeleccionarAsync(punto, mover: true);
+
+  3. Elegir ubicación ("Publicar evento", pin arrastrable):
+       <Mapa Arrastrable Lat="datos.Latitud" Lng="datos.Longitud" AlMoverUbicacion="..." />
+     Las coordenadas llegan con 6 decimales y dentro del estado de Chihuahua, como lo pide la BD.
+
+  Solo las teselas (las imágenes del mapa) se piden a internet; la atribución de OpenStreetMap es obligatoria.
+*@
+@using System.Globalization
+@implements IDisposable
+@inject InteropJs Js
+
+<sc-mapa @ref="_elemento" class="@Clase" lat="@Coordenada(Lat)" lng="@Coordenada(Lng)" titulo="@Titulo" zoom="@Zoom"
+         arrastrable="@Arrastrable" aria-label="@AriaLabel"></sc-mapa>
+
+@code {
+    [Parameter] public decimal? Lat { get; set; }
+    [Parameter] public decimal? Lng { get; set; }
+    /// <summary>Texto del pin único (aparece al pasar el mouse).</summary>
+    [Parameter] public string? Titulo { get; set; }
+    /// <summary>Zoom con un solo pin (por defecto 16).</summary>
+    [Parameter] public int? Zoom { get; set; }
+    /// <summary>El pin se puede mover; un clic en el mapa lo coloca ahí.</summary>
+    [Parameter] public bool Arrastrable { get; set; }
+    [Parameter] public string? AriaLabel { get; set; }
+    [Parameter] public string? Clase { get; set; }
+
+    /// <summary>Clic (o Enter) en un pin: id y tipo ("lugar" o "evento") del punto.</summary>
+    [Parameter] public EventCallback<(int Id, string Tipo)> AlElegirPin { get; set; }
+    /// <summary>Clic en el mapa fuera de los pines con un pin activo (el pin ya se desmarcó solo).</summary>
+    [Parameter] public EventCallback AlDeseleccionar { get; set; }
+    /// <summary>Cambió lo que se ve (al mover, acercar o cambiar los puntos): ids de los puntos visibles.</summary>
+    [Parameter] public EventCallback<int[]> AlCambiarZona { get; set; }
+    /// <summary>Se movió el pin arrastrable.</summary>
+    [Parameter] public EventCallback<(decimal Lat, decimal Lng)> AlMoverUbicacion { get; set; }
+
+    private ElementReference _elemento;
+    private DotNetObjectReference<Mapa>? _puente;
+
+    private static string? Coordenada(decimal? valor) => valor?.ToString(CultureInfo.InvariantCulture);
+
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (!primeraVez) return;
+        _puente = DotNetObjectReference.Create(this);
+        await Js.LlamarAsync("mapaConectar", _elemento, _puente);
+    }
+
+    /// <summary>Pinta estos pines (los que no tienen coordenadas se ignoran).</summary>
+    /// <param name="ajustar">Encuadra el mapa para verlos todos.</param>
+    public ValueTask MostrarAsync(IEnumerable<PuntoMapa> puntos, bool ajustar = false) =>
+        Js.LlamarAsync("mapaMostrar", _elemento, puntos.Select(ParaJs).ToArray(), ajustar);
+
+    /// <summary>Marca un pin como activo (null = ninguno). Con <paramref name="mover"/> desplaza el mapa lo justo para que se vea.</summary>
+    public ValueTask SeleccionarAsync(PuntoMapa? punto, bool mover = false) =>
+        Js.LlamarAsync("mapaSeleccionar", _elemento, punto == null ? null : new { id = punto.Id, tipo = punto.Tipo }, mover);
+
+    private static object ParaJs(PuntoMapa p) =>
+        new { id = p.Id, tipo = p.Tipo, lat = p.Lat, lng = p.Lng, titulo = p.Titulo, icono = p.Icono };
+
+    [JSInvokable] public Task AlElegirPinJs(int id, string tipo) => AlElegirPin.InvokeAsync((id, tipo));
+    [JSInvokable] public Task AlDeseleccionarJs() => AlDeseleccionar.InvokeAsync();
+    [JSInvokable] public Task AlCambiarZonaJs(int[] visibles) => AlCambiarZona.InvokeAsync(visibles);
+    [JSInvokable] public Task AlMoverUbicacionJs(decimal lat, decimal lng) => AlMoverUbicacion.InvokeAsync((lat, lng));
+
+    public void Dispose() => _puente?.Dispose();
+}

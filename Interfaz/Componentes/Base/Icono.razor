@@ -1,0 +1,14 @@
+@*
+  Icono SVG exportado de Figma. Se dibuja centrado en una caja cuadrada de Caja px, igual que en el
+  diseño (los SVG traen su tamaño y color originales).
+  <Icono Nombre="calendario-check" Caja="18" />
+*@
+<span class="icono @Clase" style="--caja:@(Caja)px" aria-hidden="true"><img src="@Recursos.Icono(Nombre)" alt="" /></span>
+
+@code {
+    /// <summary>Archivo en assets/iconos sin extensión.</summary>
+    [Parameter, EditorRequired] public string Nombre { get; set; } = "";
+    /// <summary>Tamaño de la caja en px.</summary>
+    [Parameter] public int Caja { get; set; } = 16;
+    [Parameter] public string? Clase { get; set; }
+}

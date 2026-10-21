@@ -1,0 +1,18 @@
+/* Fila de la lista del mapa: foto de 72px, nombre, tipo + dirección, calificación y precio */
+.item-lugar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 8px;
+  border-radius: var(--radio-m);
+  transition: background-color var(--duracion-rapida);
+}
+.item-lugar:hover,
+.item-lugar[aria-current="true"] { background: var(--color-fondo); }
+
+.item-lugar__imagen { flex: none; width: 72px; height: 72px; overflow: hidden; border-radius: var(--radio-s); }
+.item-lugar__textos { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.item-lugar__linea { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-lugar__meta { display: flex; align-items: center; gap: 4px; }
+.item-lugar__precio { margin-left: 8px; }

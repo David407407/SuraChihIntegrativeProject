@@ -1,0 +1,93 @@
+@*
+  Barra superior fija (componente "Navbar" de Figma, estados Visitante y Logueado). Va en la plantilla
+  de todas las pantallas. El enlace de la pantalla actual sale marcado para que siempre se vea dónde
+  estás y cómo volver. El logo y "Inicio" llevan al Home.
+*@
+@implements IDisposable
+@inject Sesion Sesion
+@inject Acciones Acciones
+@inject NavigationManager Nav
+
+<header class="barra">
+    <nav class="navbar @(Usuario != null ? " navbar--logueado" : "")" aria-label="Principal">
+        <div class="navbar__contenido contenedor">
+            <a class="logo" href="@Acciones.Rutas.Home" aria-label="SuraChih, ir al inicio" @onclick="Acciones.Inicio" @onclick:preventDefault>
+                <img src="@Recursos.Icono("logo-sol")" alt="" width="26" height="26" />
+                <span>SuraChih</span>
+            </a>
+            @Enlace(Acciones.Rutas.Home, "inicio", "Inicio", Acciones.Inicio)
+            <form class="navbar__buscador" role="search" @onsubmit="Buscar">
+                <Icono Nombre="buscar-gris" />
+                <label class="solo-lectores" for="navbar-buscar">Buscar</label>
+                <input id="navbar-buscar" type="search" class="t-small" placeholder="Busca eventos, cafés o museos" autocomplete="off"
+                       @bind="_busqueda" @bind:event="oninput" />
+            </form>
+            <div class="navbar__acciones">
+                @Enlace(Acciones.Rutas.Mapa, "mapa", "Mapa", Acciones.Mapa)
+                @if (Usuario is { } usuario)
+                {
+                    <button type="button" class="navbar__enlace t-small-fuerte" @onclick="Acciones.MisPlanes"><Icono Nombre="mis-planes" />Mis planes</button>
+                    <button type="button" class="navbar__circulo navbar__favoritos" aria-label="Mis favoritos"
+                            aria-current="@(EsActual(Acciones.Rutas.Favoritos) ? "page" : null)" @onclick="Acciones.Favoritos">
+                        <Icono Nombre="corazon-vacio" />
+                    </button>
+                    <button type="button" class="navbar__circulo navbar__avatar" popovertarget="menu-cuenta"
+                            aria-label="Cuenta de @usuario.NombreUsuario" aria-haspopup="menu">
+                        @if (usuario.AvatarUrl != null)
+                        {
+                            <img src="@usuario.AvatarUrl" alt="" width="40" height="40" />
+                        }
+                        else
+                        {
+                            <span aria-hidden="true">@Inicial(usuario)</span>
+                        }
+                    </button>
+                    <MenuCuenta Usuario="usuario" EsOrganizador="Sesion.EsOrganizador" />
+                }
+                else
+                {
+                    <Boton Texto="Iniciar sesión" Variante="fantasma" Tamano="s" OnClick="Acciones.IniciarSesion" />
+                    <Boton Texto="Crear cuenta" Variante="oscuro" Tamano="s" OnClick="Acciones.CrearCuenta" />
+                }
+            </div>
+        </div>
+    </nav>
+</header>
+
+@code {
+    private string _busqueda = "";
+
+    private Usuario? Usuario => Sesion.Usuario;
+
+    private bool EsActual(string ruta) => Acciones.RutaActual == ruta;
+
+    /// <summary>Enlace de texto con icono; el de la pantalla actual sale activo.</summary>
+    private RenderFragment Enlace(string ruta, string icono, string texto, Action accion) =>
+        @<button type="button" class="navbar__enlace t-small-fuerte" aria-current="@(EsActual(ruta) ? "page" : null)" @onclick="accion">
+            <Icono Nombre="@icono" />@texto
+        </button>;
+
+    public static string Inicial(Usuario usuario) =>
+        usuario.NombreUsuario.Length > 0 ? usuario.NombreUsuario[..1].ToUpperInvariant() : "";
+
+    private void Buscar()
+    {
+        string texto = _busqueda.Trim();
+        if (texto.Length > 0) Acciones.Buscar(texto);
+    }
+
+    protected override void OnInitialized()
+    {
+        Sesion.Cambio += AlCambiar;
+        Nav.LocationChanged += AlNavegar;
+    }
+
+    private void AlCambiar() => InvokeAsync(StateHasChanged);
+    private void AlNavegar(object? sender, LocationChangedEventArgs e) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Sesion.Cambio -= AlCambiar;
+        Nav.LocationChanged -= AlNavegar;
+    }
+}

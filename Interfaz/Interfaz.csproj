@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!--
+    Interfaz de SuraChih en Blazor (componentes .razor, estilos y recursos de wwwroot).
+    La usan dos anfitriones:
+      - SuraChihIntegrativeProject: la app de escritorio (WinForms + BlazorWebView).
+      - Interfaz.Navegador: un servidor de prueba para abrir la misma interfaz en el navegador.
+    Los archivos de wwwroot se sirven como _content/Interfaz/... (ver Utilidades/Recursos.cs).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Interfaz</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BackendLogica\BackendLogica.csproj" />
+  </ItemGroup>
+
+</Project>

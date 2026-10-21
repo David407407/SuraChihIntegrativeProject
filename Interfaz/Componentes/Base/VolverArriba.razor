@@ -1,0 +1,10 @@
+@*
+  Botón flotante que regresa al principio de la página. Aparece abajo a la derecha cuando ya se bajó
+  más de una pantalla (solo con CSS: animación ligada al scroll en VolverArriba.razor.css).
+  Se usa en pantallas largas: basta con poner <VolverArriba /> al final de la página.
+*@
+@inject InteropJs Js
+
+<button type="button" class="volver-arriba" aria-label="Volver arriba" title="Volver arriba" @onclick="() => Js.SubirAsync()">
+    <Icono Nombre="flecha-siguiente-blanca" Caja="14" />
+</button>

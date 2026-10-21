@@ -1,0 +1,53 @@
+@*
+  "Modal / Eliminar cuenta" de Figma: insignia roja, "¿Eliminar tu cuenta?", contraseña para confirmar,
+  "Eliminar mi cuenta" (rojo) y "Cancelar". La abre Mi perfil con Modales.ConfirmarEliminarCuentaAsync().
+  C# revisa la contraseña y desactiva la cuenta (is_active = FALSE, no se borra).
+*@
+@inject ServicioPerfil Perfil
+@inject Modales Modales
+
+<EncabezadoModal Titulo="¿Eliminar tu cuenta?" Icono="alerta-error" Peligro
+                 Texto="Se borrarán tu perfil, tus planes, favoritos y reseñas. No se puede deshacer." />
+<EditForm Model="_datos" OnSubmit="EnviarAsync" class="modal__formulario" novalidate>
+    <Campo Nombre="contrasena" Etiqueta="Escribe tu contraseña" Tipo="password" Icono="candado-16" @bind-Valor="_datos.Contrasena"
+           Requerido Autocompletar="current-password" Errores="_errores" />
+    <AvisoModal Errores="_errores" />
+    <div class="modal__botones">
+        <Boton Texto="Eliminar mi cuenta" Variante="peligro" Icono="bote-blanco" Tipo="submit" Clase="modal__ancho" Ocupado="_enviando" />
+        <Boton Texto="Cancelar" Variante="secundario" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+    </div>
+</EditForm>
+
+@code {
+    private readonly Datos _datos = new();
+    private readonly ErroresFormulario _errores = new();
+    private bool _enviando;
+
+    private sealed class Datos
+    {
+        public string? Contrasena { get; set; }
+    }
+
+    private async Task EnviarAsync()
+    {
+        _errores.Limpiar();
+        if (string.IsNullOrEmpty(_datos.Contrasena)) { _errores.Poner("contrasena", "Escribe tu contraseña para confirmar."); return; }
+
+        _enviando = true;
+        try
+        {
+            await Perfil.EliminarAsync(_datos.Contrasena);
+            Modales.Cerrar(true);
+        }
+        catch (Exception ex)
+        {
+            string mensaje = MensajesError.Para(ex);
+            if (mensaje.Contains("contraseña", StringComparison.OrdinalIgnoreCase)) _errores.Poner("contrasena", mensaje);
+            else _errores.PonerAviso(mensaje);
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+}

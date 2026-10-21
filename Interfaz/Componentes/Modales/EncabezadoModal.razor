@@ -1,0 +1,21 @@
+@* Encabezado de los modales: icono en círculo (opcional), título y texto. *@
+@if (Icono != null)
+{
+    <div class="modal__icono @(Peligro ? " modal__icono--peligro" : "")"><Icono Nombre="@Icono" Caja="24" /></div>
+}
+<header class="modal__encabezado">
+    @* VentanaModal anuncia este título a los lectores de pantalla (aria-labelledby="modal-titulo"). *@
+    <h2 class="modal__titulo t-h2" id="modal-titulo">@Titulo</h2>
+    @if (Texto != null)
+    {
+        <p class="t-body texto-2">@Texto</p>
+    }
+</header>
+
+@code {
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    [Parameter] public string? Texto { get; set; }
+    [Parameter] public string? Icono { get; set; }
+    /// <summary>Círculo rojo en vez de amarillo.</summary>
+    [Parameter] public bool Peligro { get; set; }
+}

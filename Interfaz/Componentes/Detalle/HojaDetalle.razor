@@ -1,0 +1,208 @@
+@*
+  Hoja de detalle: la ventana grande de los frames "Evento / ..." y "Lugar / ..." de Figma (portada de
+  1040 × 440, cuerpo con Info + Boleto y una fila de recomendaciones). Va una sola vez en la plantilla y
+  se abre encima de cualquier pantalla con el servicio Hojas.
+
+  Aquí vive lo que comparten las dos: el <dialog>, el esqueleto de carga, cerrar (Esc, "Fondo cerrar",
+  botón), el foco y la dirección #evento-N / #lugar-N (Atrás la cierra; Adelante la vuelve a abrir).
+  Lo de dentro lo pintan DetalleEvento.razor y DetalleLugar.razor; sus estilos están en
+  HojaDetalle.razor.css porque se pintan aquí dentro.
+*@
+@implements IDisposable
+@inject Hojas Hojas
+@inject ServicioEvento Eventos
+@inject ServicioLugar Lugares
+@inject Sesion Sesion
+@inject Avisos Avisos
+@inject InteropJs Js
+@inject NavigationManager Nav
+
+<dialog @ref="_dialogo" class="hoja" aria-labelledby="hoja-titulo" aria-busy="@(_cargando ? "true" : null)">
+    <article class="hoja__caja">
+        @if (_cargando)
+        {
+            <div class="esqueleto hoja__portada hoja__esqueleto-portada" aria-hidden="true"></div>
+            <div class="hoja__cuerpo" aria-hidden="true">
+                <div class="hoja__info">
+                    <div class="esqueleto hoja__esqueleto-linea hoja__esqueleto-linea--chips"></div>
+                    <div class="esqueleto hoja__esqueleto-linea hoja__esqueleto-linea--titulo"></div>
+                    <div class="esqueleto hoja__esqueleto-linea"></div>
+                    <div class="esqueleto hoja__esqueleto-linea"></div>
+                    <div class="esqueleto hoja__mapa"></div>
+                </div>
+                <div class="esqueleto boleto hoja__esqueleto-boleto"></div>
+            </div>
+            <p class="solo-lectores" role="status">Cargando…</p>
+        }
+        else if (_evento != null)
+        {
+            <DetalleEvento @key="_evento" Datos="_evento" Inscribir="_inscribir" />
+        }
+        else if (_lugar != null)
+        {
+            <DetalleLugar @key="_lugar" Datos="_lugar" />
+        }
+    </article>
+</dialog>
+
+@code {
+    private const string ClaseHtml = "con-hoja";
+
+    private ElementReference _dialogo;
+    private DotNetObjectReference<HojaDetalle>? _puente;
+    private bool _abierto;
+    /// <summary>Esta hoja agregó #evento-N al historial (cerrar hace Atrás).</summary>
+    private bool _conHistorial;
+    private bool _cargando;
+    private bool _inscribir;
+    private DatosDetalleEvento? _evento;
+    private DatosDetalleLugar? _lugar;
+    /// <summary>Una respuesta lenta de un id anterior no pisa al nuevo.</summary>
+    private int _solicitud;
+    private TipoHoja? _tipoActual;
+    private int _idActual;
+
+    protected override void OnInitialized()
+    {
+        Hojas.Cambio += AlPedirCambio;
+        Sesion.Cambio += AlCambiarSesion;
+        Nav.LocationChanged += AlCambiarDireccion;
+    }
+
+    protected override void OnAfterRender(bool primeraVez)
+    {
+        // Una pantalla abierta con #evento-N o #lugar-N muestra ese detalle.
+        if (primeraVez && LeerDireccion(Nav.Uri) is { } enDireccion)
+            Hojas.Abrir(enDireccion.Tipo, enDireccion.Id, inscribir: false, historial: false);
+    }
+
+    private void AlPedirCambio() => InvokeAsync(async () =>
+    {
+        if (Hojas.Tipo is { } tipo) await AbrirAsync(tipo, Hojas.Id, Hojas.ConHistorial);
+        else await CerrarAsync(desdeHistorial: false);
+    });
+
+    /// <summary>Al iniciar sesión con la hoja abierta se recarga para mostrar la inscripción y el corazón de ese usuario.</summary>
+    private void AlCambiarSesion() => InvokeAsync(async () =>
+    {
+        if (_abierto && _tipoActual is { } tipo) await AbrirAsync(tipo, _idActual, historial: false, recargar: true);
+    });
+
+    /// <summary>Atrás / Adelante: la dirección manda.</summary>
+    private void AlCambiarDireccion(object? sender, LocationChangedEventArgs e) => InvokeAsync(async () =>
+    {
+        if (LeerDireccion(e.Location) is { } enDireccion)
+        {
+            if (!_abierto || enDireccion.Tipo != _tipoActual || enDireccion.Id != _idActual)
+                Hojas.Abrir(enDireccion.Tipo, enDireccion.Id, inscribir: false, historial: false);
+        }
+        else if (_abierto)
+        {
+            Hojas.Olvidar();
+            _conHistorial = false;
+            await CerrarAsync(desdeHistorial: true);
+        }
+    });
+
+    private static (TipoHoja Tipo, int Id)? LeerDireccion(string url)
+    {
+        string fragmento = new Uri(url).Fragment;
+        foreach (var (prefijo, tipo) in new[] { ("#evento-", TipoHoja.Evento), ("#lugar-", TipoHoja.Lugar) })
+        {
+            if (fragmento.StartsWith(prefijo) && int.TryParse(fragmento[prefijo.Length..], out int id) && id > 0)
+                return (tipo, id);
+        }
+        return null;
+    }
+
+    private static string Direccion(TipoHoja tipo, int id) => $"#{(tipo == TipoHoja.Evento ? "evento" : "lugar")}-{id}";
+
+    private async Task AbrirAsync(TipoHoja tipo, int id, bool historial, bool recargar = false)
+    {
+        int numero = ++_solicitud;
+        _tipoActual = tipo;
+        _idActual = id;
+
+        if (!_abierto)
+        {
+            _abierto = true;
+            _puente ??= DotNetObjectReference.Create(this);
+            await Js.LlamarAsync("abrirDialogo", _dialogo, _puente, ClaseHtml);
+        }
+        else
+        {
+            await Js.LlamarAsync("abrirDialogo", _dialogo, _puente, ClaseHtml);   // de una recomendación a otra: vuelve arriba
+        }
+        if (historial)
+        {
+            // De una recomendación a otra se reemplaza: un solo Atrás cierra la hoja.
+            await Js.LlamarAsync("ponerDireccion", Direccion(tipo, id), _conHistorial);
+            _conHistorial = true;
+        }
+
+        if (!recargar)
+        {
+            _cargando = true;
+            _evento = null;
+            _lugar = null;
+            StateHasChanged();
+        }
+
+        try
+        {
+            if (tipo == TipoHoja.Evento)
+            {
+                var datos = await Eventos.ObtenerAsync(id);
+                if (numero != _solicitud) return;
+                (_evento, _lugar) = (datos, null);
+            }
+            else
+            {
+                var datos = await Lugares.ObtenerAsync(id);
+                if (numero != _solicitud) return;
+                (_evento, _lugar) = (null, datos);
+            }
+            _inscribir = Hojas.TomarInscribir();
+            _cargando = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            if (numero != _solicitud) return;
+            Hojas.Cerrar();
+            Avisos.Mostrar(ex is BackendLogica.Datos.SuraChihException
+                ? ex.Message
+                : tipo == TipoHoja.Evento ? "No se pudo abrir el evento." : "No se pudo abrir el lugar.", TipoAviso.Error);
+        }
+    }
+
+    /// <summary>Cierra con animación y regresa el foco a donde estaba.</summary>
+    private async Task CerrarAsync(bool desdeHistorial)
+    {
+        if (!_abierto) return;
+        _solicitud++;
+        _abierto = false;
+        _tipoActual = null;
+        if (!desdeHistorial) await Js.LlamarAsync("quitarDireccion", _conHistorial);
+        _conHistorial = false;
+
+        await Js.LlamarAsync("cerrarDialogo", _dialogo, ClaseHtml);
+        if (_abierto) return;   // se volvió a abrir mientras salía
+        _evento = null;
+        _lugar = null;
+        _cargando = false;
+        StateHasChanged();
+    }
+
+    /// <summary>Esc o clic fuera de la hoja ("Fondo cerrar").</summary>
+    [JSInvokable]
+    public void PedirCierre() => Hojas.Cerrar();
+
+    public void Dispose()
+    {
+        Hojas.Cambio -= AlPedirCambio;
+        Sesion.Cambio -= AlCambiarSesion;
+        Nav.LocationChanged -= AlCambiarDireccion;
+        _puente?.Dispose();
+    }
+}

@@ -1,0 +1,21 @@
+@*
+  Encabezado de sección de la landing (título H1 + bajada) con acción opcional a la derecha.
+  <EncabezadoSeccion Titulo="..." Bajada="..."><Boton ... /></EncabezadoSeccion>
+*@
+<header class="encabezado-seccion" data-revelar>
+    <div class="encabezado-seccion__textos">
+        <h2 class="t-h1">@Titulo</h2>
+        @if (Bajada != null)
+        {
+            <p class="t-lead texto-2">@Bajada</p>
+        }
+    </div>
+    @ChildContent
+</header>
+
+@code {
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    [Parameter] public string? Bajada { get; set; }
+    /// <summary>Acción a la derecha (normalmente un <see cref="Boton"/>).</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

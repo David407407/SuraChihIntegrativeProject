@@ -1,0 +1,53 @@
+@*
+  Portada azul de la landing con mensaje, acciones, cifras y collage.
+  Mientras no llegan los datos las cifras muestran "–"; al llegar cuentan de 0 a su valor (solo CSS,
+  ver .hero__contador en Hero.razor.css).
+*@
+@inject Acciones Acciones
+
+<section class="hero" id="inicio" aria-labelledby="hero-titulo">
+    <img class="hero__brillo" src="@Recursos.Icono("hero-brillo")" alt="" aria-hidden="true" />
+    <img class="hero__sol" src="@Recursos.Icono("hero-sol")" alt="" aria-hidden="true" />
+    <div class="hero__contenido contenedor">
+        <div class="hero__mensaje">
+            <span class="hero__sello t-small-fuerte" data-revelar>
+                <img src="@Recursos.Icono("punto-sol-10")" alt="" width="10" height="10" />@TextosLanding.Hero.Sello
+            </span>
+            <h1 id="hero-titulo" class="hero__titulo" data-revelar style="--orden:1">@TextosLanding.Hero.Titulo</h1>
+            <p class="hero__bajada t-lead" data-revelar style="--orden:2">@TextosLanding.Hero.Bajada</p>
+            <div class="hero__acciones" data-revelar style="--orden:3">
+                <Boton Texto="Explorar eventos" Icono="buscar-tinta" OnClick="Acciones.ExplorarEventos" />
+                <Boton Texto="Crear cuenta gratis" Variante="contorno-claro" OnClick="Acciones.CrearCuenta" />
+            </div>
+            <dl class="hero__cifras" data-revelar style="--orden:4">
+                @Cifra("eventos esta semana", Resumen?.EventosEstaSemana)
+                @Cifra("lugares para descubrir", Resumen?.LugaresParaDescubrir)
+                @Cifra("categorías", Resumen?.Categorias)
+            </dl>
+        </div>
+        <CollageHero Clase="hero__collage" Elementos="Collage" />
+    </div>
+</section>
+
+@code {
+    /// <summary>Cifras del hero; null mientras cargan.</summary>
+    [Parameter] public ResumenPlataforma? Resumen { get; set; }
+    /// <summary>Hasta 3 tarjetas (evento o lugar); null mientras cargan.</summary>
+    [Parameter] public IReadOnlyList<ElementoCollage>? Collage { get; set; }
+
+    private static RenderFragment Cifra(string texto, int? valor) =>
+        @<div class="hero__cifra">
+            <dt class="t-small">@texto</dt>
+            <dd class="t-h2">
+                @if (valor is int n)
+                {
+                    <span class="solo-lectores">@n</span>
+                    <span class="hero__contador" style="--valor:@n" aria-hidden="true"></span>
+                }
+                else
+                {
+                    <text>–</text>
+                }
+            </dd>
+        </div>;
+}

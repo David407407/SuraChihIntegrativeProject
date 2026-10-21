@@ -1,0 +1,78 @@
+/* "Menú de cuenta" (bajo el avatar del navbar). Es un popover: el navegador lo pone en la capa superior. */
+.menu-cuenta {
+  width: 264px;
+  padding: 8px;
+  margin: 0;
+  border: 1px solid var(--color-linea);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+  box-shadow: var(--sombra-suave);
+  transform-origin: top right;
+  /* Sin anclaje CSS: arriba a la derecha, justo debajo del navbar */
+  inset: auto;
+  top: calc(var(--altura-navbar) - 4px);
+  right: var(--margen-lateral);
+}
+/* Bajo el avatar, alineado a su borde derecho y 12px más abajo */
+@supports (position-anchor: --a) {
+  .menu-cuenta {
+    position-anchor: --avatar-cuenta;
+    top: calc(anchor(bottom) + 12px);
+    right: anchor(right);
+  }
+}
+.menu-cuenta:popover-open { animation: menu-entra var(--duracion-rapida) var(--curva-salida); }
+
+.menu-cuenta__encabezado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 12px;
+}
+
+.menu-cuenta__avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: var(--radio-pildora);
+  background: var(--color-sol-suave);
+  color: var(--color-cielo-texto);
+  font: 700 18px/24px var(--fuente-titulos);
+}
+.menu-cuenta__avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.menu-cuenta__datos { display: flex; flex-direction: column; min-width: 0; }
+.menu-cuenta__nombre,
+.menu-cuenta__correo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menu-cuenta__nombre { color: var(--color-tinta); }
+
+.menu-cuenta__linea {
+  height: 1px;
+  margin: 4px 0;
+  border: 0;
+  background: var(--color-linea);
+}
+
+.menu-cuenta__opcion {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: var(--radio-s);
+  color: var(--color-tinta);
+  font: 600 15px/20px var(--fuente-cuerpo);
+  transition: background-color var(--duracion-rapida);
+}
+.menu-cuenta__opcion:hover,
+.menu-cuenta__opcion:focus-visible { background: var(--color-fondo); outline: none; }
+.menu-cuenta__opcion--peligro { color: var(--color-error); }
+.menu-cuenta__opcion--peligro:hover,
+.menu-cuenta__opcion--peligro:focus-visible { background: #fdecec; }
+
+@keyframes menu-entra { from { opacity: 0; transform: translateY(-6px) scale(0.97); } }

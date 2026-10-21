@@ -1,0 +1,97 @@
+@*
+  Menú de cuenta (frame "Menú de cuenta" de Figma): se despliega bajo el avatar del navbar.
+  Encabezado con avatar, nombre y correo; opciones según el usuario y "Cerrar sesión".
+  "Panel de organizador" solo sale a organizadores aprobados y "Moderación" solo a moderadores.
+
+  Es un popover nativo: el avatar lo abre con popovertarget="menu-cuenta"; el navegador lo cierra con
+  Esc o con un clic fuera, y lo coloca bajo el avatar con anclaje CSS (sin JavaScript).
+  Las flechas ↑ ↓, Inicio y Fin mueven el foco entre las opciones.
+*@
+<div class="menu-cuenta" id="menu-cuenta" popover role="menu" aria-label="Cuenta de @Usuario.NombreUsuario"
+     @ontoggle="AlAbrirOCerrar" @onkeydown="AlTeclado">
+    <div class="menu-cuenta__encabezado">
+        <span class="menu-cuenta__avatar" aria-hidden="true">
+            @if (Usuario.AvatarUrl != null)
+            {
+                <img src="@Usuario.AvatarUrl" alt="" width="40" height="40" />
+            }
+            else
+            {
+                @Navbar.Inicial(Usuario)
+            }
+        </span>
+        <span class="menu-cuenta__datos">
+            <span class="menu-cuenta__nombre t-body-fuerte">@Usuario.NombreUsuario</span>
+            <span class="menu-cuenta__correo t-small texto-2">@Usuario.Correo</span>
+        </span>
+    </div>
+    <hr class="menu-cuenta__linea" />
+    @foreach (var (opcion, i) in Opciones.Select((o, i) => (o, i)))
+    {
+        @if (opcion.Peligro)
+        {
+            <hr class="menu-cuenta__linea" />
+        }
+        <button @ref="_botones[i]" type="button" role="menuitem" tabindex="-1"
+                class="menu-cuenta__opcion @(opcion.Peligro ? " menu-cuenta__opcion--peligro" : "")"
+                popovertarget="menu-cuenta" popovertargetaction="hide" @onclick="opcion.Accion">
+            <Icono Nombre="@opcion.Icono" /><span>@opcion.Texto</span>
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Usuario Usuario { get; set; } = default!;
+    [Parameter] public bool EsOrganizador { get; set; }
+    [Inject] private Acciones Acciones { get; set; } = default!;
+
+    private readonly ElementReference[] _botones = new ElementReference[6];
+    private int _foco;
+    private bool _abierto;
+
+    private sealed record Opcion(string Texto, string Icono, Action Accion, bool Peligro = false);
+
+    private List<Opcion> Opciones
+    {
+        get
+        {
+            var lista = new List<Opcion>
+            {
+                new("Mi perfil", "perfil", Acciones.MiPerfil),
+                new("Mis planes", "mis-planes", Acciones.MisPlanes),
+                new("Mis favoritos", "corazon-vacio", Acciones.Favoritos),
+            };
+            if (EsOrganizador) lista.Add(new("Panel de organizador", "tienda-16", Acciones.PanelOrganizador));
+            if (Usuario.EsModerador) lista.Add(new("Moderación", "escudo", Acciones.Moderacion));
+            lista.Add(new("Cerrar sesión", "salir", Acciones.CerrarSesion, Peligro: true));
+            return lista;
+        }
+    }
+
+    /// <summary>El evento toggle llega al abrir y al cerrar; al abrir, el foco va a la primera opción.</summary>
+    private async Task AlAbrirOCerrar()
+    {
+        _abierto = !_abierto;
+        if (_abierto) await EnfocarAsync(0);
+    }
+
+    private async Task AlTeclado(KeyboardEventArgs e)
+    {
+        int total = Opciones.Count;
+        int? destino = e.Key switch
+        {
+            "ArrowDown" => (_foco + 1) % total,
+            "ArrowUp" => (_foco - 1 + total) % total,
+            "Home" => 0,
+            "End" => total - 1,
+            _ => null
+        };
+        if (destino is int i) await EnfocarAsync(i);
+    }
+
+    private async Task EnfocarAsync(int indice)
+    {
+        _foco = indice;
+        await _botones[indice].FocusAsync(preventScroll: true);
+    }
+}

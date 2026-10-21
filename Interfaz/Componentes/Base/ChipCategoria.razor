@@ -1,0 +1,36 @@
+@*
+  "Chip categoría" de Figma (Familiar, Música, Deportes...), estados Normal y Activo.
+  - Interactivo (por defecto): se activa / desactiva y avisa con ActivoChanged.
+  - Estático (Interactivo="false"): solo muestra la categoría, p. ej. en el detalle de un evento.
+
+  <ChipCategoria Etiqueta="t" @bind-Activo="filtro[t.Id]" />
+  <ChipCategoria Etiqueta="t" Interactivo="false" />
+
+  El color y el icono salen de Etiqueta.Icono (tag.icon: family, music, run, robot, food); las demás
+  etiquetas (coffee, museum...) se pintan con fondo neutro y sin icono.
+*@
+@if (Interactivo)
+{
+    <button type="button" class="@Clases" aria-pressed="@(Activo ? "true" : "false")" @onclick="Alternar">@Contenido</button>
+}
+else
+{
+    <span class="@Clases">@Contenido</span>
+}
+
+@code {
+    [Parameter, EditorRequired] public Etiqueta Etiqueta { get; set; } = default!;
+    [Parameter] public bool Activo { get; set; }
+    [Parameter] public EventCallback<bool> ActivoChanged { get; set; }
+    [Parameter] public bool Interactivo { get; set; } = true;
+
+    private string Clases => Categorias.Tipo(Etiqueta.Icono) is { } tipo ? $"chip-categoria chip-categoria--{tipo}" : "chip-categoria";
+
+    private RenderFragment Contenido => @<text>@if (Categorias.Icono(Etiqueta.Icono) is { } icono) {<Icono Nombre="@icono" />}@Etiqueta.Nombre</text>;
+
+    private async Task Alternar()
+    {
+        Activo = !Activo;
+        await ActivoChanged.InvokeAsync(Activo);
+    }
+}

@@ -1,0 +1,9 @@
+@* Aviso dentro de la modal (los toasts quedan detrás del <dialog>). Muestra Errores.Aviso. *@
+@if (Errores.Aviso is { } aviso)
+{
+    <p class="modal__aviso @(Errores.AvisoInformativo ? " modal__aviso--info" : "")" role="alert">@aviso</p>
+}
+
+@code {
+    [Parameter, EditorRequired] public ErroresFormulario Errores { get; set; } = default!;
+}

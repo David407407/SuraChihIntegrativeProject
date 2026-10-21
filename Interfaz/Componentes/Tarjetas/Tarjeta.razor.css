@@ -1,0 +1,73 @@
+/* "Card evento" y "Card lugar" (estados Normal / Hover). Misma estructura en Figma: imagen cuadrada de
+   282px con favorito, "Ver detalles" en hover y la información debajo. */
+.tarjeta { position: relative; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+.tarjeta__imagen {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radio-m);
+  background: var(--color-fondo);
+  transition: box-shadow var(--duracion-media);
+}
+.tarjeta__imagen ::deep .imagen { transition: transform 700ms var(--curva-salida); }
+/* Borde azul del estado Hover (3px por dentro, sin mover el contenido) */
+.tarjeta__imagen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 3px solid var(--color-cielo);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity var(--duracion-media);
+  pointer-events: none;
+}
+
+.tarjeta__tipo { position: absolute; top: 12px; left: 12px; }
+.tarjeta__imagen ::deep .tarjeta__favorito { position: absolute; top: 12px; right: 12px; z-index: 2; }
+
+.tarjeta__ver {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity var(--duracion-media), transform var(--duracion-media) var(--curva-salida);
+}
+
+.tarjeta__info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+.tarjeta__titulo { transition: color var(--duracion-rapida); }
+
+/* Título: dos líneas como máximo, con "…" (Card evento: "Nombre del evento con dos líneas como máximo").
+   Va en un span dentro del botón: un <button> no se puede recortar por líneas. */
+.tarjeta__titulo-texto {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* Toda la tarjeta es clicable: el botón del título se extiende sobre ella */
+.tarjeta__enlace { font: inherit; text-align: left; }
+.tarjeta__enlace::after { content: ""; position: absolute; inset: 0; z-index: 1; }
+
+.tarjeta__fecha { color: var(--color-cielo-texto); }
+.tarjeta__linea { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tarjeta__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.tarjeta__calificacion { display: inline-flex; align-items: center; gap: 4px; }
+.tarjeta__abierto { color: var(--color-exito); }
+
+.tarjeta:hover .tarjeta__imagen { box-shadow: var(--sombra-hover-cielo); }
+.tarjeta:hover .tarjeta__imagen::after { opacity: 1; }
+.tarjeta:hover .tarjeta__imagen ::deep .imagen { transform: scale(1.04); }
+.tarjeta:hover .tarjeta__ver { opacity: 1; transform: none; }
+.tarjeta:hover .tarjeta__titulo { color: var(--color-cielo-texto); }
+.tarjeta:has(.tarjeta__enlace:focus-visible) .tarjeta__imagen::after { opacity: 1; }
+.tarjeta:has(.tarjeta__enlace:focus-visible) .tarjeta__ver { opacity: 1; transform: none; }

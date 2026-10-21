@@ -1,0 +1,13 @@
+@*
+  Chip de texto pequeño ("Chip tipo" de Figma): categoría de un evento o lugar.
+  <Chip Texto="Café" Variante="superficie" />
+  Variantes: sol-suave (por defecto) · superficie · fondo · sol
+*@
+<span class="chip chip--@Variante @Clase">@if (Icono != null) {<Icono Nombre="@Icono" Caja="12" />}@Texto</span>
+
+@code {
+    [Parameter, EditorRequired] public string Texto { get; set; } = "";
+    [Parameter] public string Variante { get; set; } = "sol-suave";
+    [Parameter] public string? Icono { get; set; }
+    [Parameter] public string? Clase { get; set; }
+}

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    Servidor de prueba: abre la misma interfaz (proyecto Interfaz) en un navegador normal, sin la app de
+    escritorio. Sirve para diseñar y probar con las herramientas del navegador. Ver README.md.
+      dotnet run (desde la carpeta Interfaz.Navegador)
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Interfaz.Navegador</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BackendLogica\BackendLogica.csproj" />
+    <ProjectReference Include="..\Interfaz\Interfaz.csproj" />
+  </ItemGroup>
+
+</Project>

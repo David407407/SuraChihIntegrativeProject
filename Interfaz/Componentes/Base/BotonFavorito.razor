@@ -1,0 +1,69 @@
+@*
+  Corazón para guardar un evento o lugar ("Botón favorito" de Figma).
+  Estados del diseño: Vacío → Hover (borde y corazón rojos) → Lleno (fondo rosa, corazón relleno).
+
+  <BotonFavorito Tipo="TipoFavorito.Evento" Id="evento.Id" Etiqueta="@evento.Titulo" Activo="esFavorito" />
+
+  Al hacer clic cambia de inmediato (respuesta optimista) y lo guarda ServicioFavoritos. Si falla
+  regresa al estado anterior; sin sesión abre "Inicia sesión para continuar".
+*@
+@inject ServicioFavoritos Favoritos
+@inject Avisos Avisos
+@inject Modales Modales
+
+<div class="@Clases">
+    <button type="button" class="boton-favorito__boton" aria-pressed="@(_activo ? "true" : "false")"
+            aria-label="@($"{(_activo ? "Quitar de" : "Guardar en")} favoritos {Etiqueta}".Trim())"
+            @onclick="AlternarAsync" @onclick:stopPropagation>
+        <img class="boton-favorito__vacio" src="@Recursos.Icono("corazon-vacio")" alt="" />
+        <img class="boton-favorito__hover" src="@Recursos.Icono("corazon-hover")" alt="" />
+        @* Cambiar la llave crea otra imagen: así el latido se repite cada vez que se guarda. *@
+        <img @key="_latidos" class="boton-favorito__lleno @(_latidos > 0 ? " boton-favorito__lleno--latido" : "")" src="@Recursos.Icono("corazon-lleno")" alt="" />
+    </button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TipoFavorito Tipo { get; set; }
+    /// <summary>Id del evento o lugar.</summary>
+    [Parameter, EditorRequired] public int Id { get; set; }
+    /// <summary>Ya es favorito.</summary>
+    [Parameter] public bool Activo { get; set; }
+    /// <summary>"s" (36px, por defecto) o "m" (40px).</summary>
+    [Parameter] public string Tamano { get; set; } = "s";
+    /// <summary>Nombre de lo que se guarda, para lectores de pantalla.</summary>
+    [Parameter] public string? Etiqueta { get; set; }
+    [Parameter] public string? Clase { get; set; }
+
+    private bool _activo;
+    private string Clases => $"boton-favorito{(Tamano == "m" ? " boton-favorito--m" : "")}{(_activo ? " boton-favorito--activo" : "")} {Clase}".TrimEnd();
+    private bool? _activoRecibido;
+    private int _latidos;
+
+    protected override void OnParametersSet()
+    {
+        // Solo cuando el padre manda otro valor (p. ej. el Home recargado tras iniciar sesión), no en cada pintado.
+        if (_activoRecibido != Activo) _activo = Activo;
+        _activoRecibido = Activo;
+    }
+
+    private async Task AlternarAsync()
+    {
+        _activo = !_activo;
+        if (_activo) _latidos++;
+        try
+        {
+            _activo = await Favoritos.AlternarAsync(Tipo, Id);
+            Avisos.Mostrar(_activo ? "Guardado en favoritos" : "Quitado de favoritos");
+        }
+        catch (RequiereSesionException)
+        {
+            _activo = !_activo;
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            _activo = !_activo;
+            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
+        }
+    }
+}

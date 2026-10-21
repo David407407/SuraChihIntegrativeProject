@@ -1,0 +1,19 @@
+@* "Tu plan, en tres pasos" (landing). *@
+<section class="seccion" aria-label="@TextosLanding.ComoFunciona.Titulo">
+    <div class="contenedor">
+        <EncabezadoSeccion Titulo="@TextosLanding.ComoFunciona.Titulo" Bajada="@TextosLanding.ComoFunciona.Bajada" />
+        <ol class="pasos">
+            @foreach (var (paso, i) in TextosLanding.ComoFunciona.Pasos.Select((p, i) => (p, i)))
+            {
+                <li class="paso" data-revelar style="--orden:@i">
+                    <div class="paso__marcas">
+                        <span class="paso__numero t-h3">@(i + 1)</span>
+                        <span class="paso__icono"><Icono Nombre="@paso.Icono" /></span>
+                    </div>
+                    <h3 class="t-h2">@paso.Titulo</h3>
+                    <p class="t-body texto-2">@paso.Texto</p>
+                </li>
+            }
+        </ol>
+    </div>
+</section>

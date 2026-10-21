@@ -1,0 +1,31 @@
+@* Pie de página (landing y Home). *@
+@inject Acciones Acciones
+
+<footer class="pie @Clase">
+    <div class="pie__contenido contenedor">
+        <div class="pie__marca">
+            <span class="pie__logo t-h2"><img src="@Recursos.Icono("punto-sol-24")" alt="" width="24" height="24" />SuraChih</span>
+            <p class="t-small">@TextosLanding.Pie.Lema</p>
+        </div>
+        <nav class="pie__columna t-small" aria-label="Explorar">
+            <p class="t-small-fuerte">Explorar</p>
+            <button type="button" class="pie__enlace" @onclick="Acciones.ExplorarEventos">Eventos</button>
+            <button type="button" class="pie__enlace" @onclick="Acciones.ExplorarLugares">Lugares</button>
+            <button type="button" class="pie__enlace" @onclick="Acciones.Mapa">Mapa</button>
+        </nav>
+        <nav class="pie__columna t-small" aria-label="Cuenta">
+            <p class="t-small-fuerte">Cuenta</p>
+            <button type="button" class="pie__enlace" @onclick="Acciones.IniciarSesion">Iniciar sesión</button>
+            <button type="button" class="pie__enlace" @onclick="Acciones.CrearCuenta">Crear cuenta</button>
+        </nav>
+        <nav class="pie__columna t-small" aria-label="Proyecto">
+            <p class="t-small-fuerte">Proyecto</p>
+            <p>Proyecto integrador UTCH</p>
+            <p>2026</p>
+        </nav>
+    </div>
+</footer>
+
+@code {
+    [Parameter] public string? Clase { get; set; }
+}

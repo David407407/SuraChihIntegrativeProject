@@ -1,0 +1,34 @@
+@*
+  Página anfitriona en el navegador. Es el equivalente de wwwroot/index.html de la app de escritorio:
+  mismos estilos, mismo interop.js y la misma raíz (Interfaz.Rutas), aquí con Blazor Server.
+*@
+@using Interfaz
+@using Microsoft.AspNetCore.Components.Web
+
+<!doctype html>
+<html lang="es-MX">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="/" />
+    <link rel="icon" href="_content/Interfaz/assets/iconos/logo-sol.svg" type="image/svg+xml" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
+
+    <link rel="stylesheet" href="@Assets["_content/Interfaz/css/estilos.css"]" />
+    <link rel="stylesheet" href="@Assets["Interfaz.Navegador.styles.css"]" />
+    <script type="module" src="_content/Interfaz/js/interop.js"></script>
+    <HeadOutlet @rendermode="Modo" />
+</head>
+<body>
+    @* Sin prerender: la interfaz usa JavaScript (diálogos, mapa) desde el primer pintado, igual que en la app. *@
+    <Rutas @rendermode="Modo" />
+    <script src="_framework/blazor.web.js"></script>
+</body>
+</html>
+
+@code {
+    private static readonly IComponentRenderMode Modo = new InteractiveServerRenderMode(prerender: false);
+}

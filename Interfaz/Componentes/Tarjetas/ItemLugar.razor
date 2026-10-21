@@ -1,0 +1,47 @@
+@*
+  "Item" de la lista del mapa: foto de 72px, nombre, tipo + dirección, calificación y precio.
+  Va dentro de un <ul>; quien pinta la lista decide qué pasa al elegirlo (OnClick).
+
+  <ItemLugar Lugar="l" Activo="l.Id == seleccionado" Desplazar="desdeElMapa" OnClick="() => Elegir(l.Id)" />
+*@
+@inject InteropJs Js
+
+<li>
+    <button @ref="_boton" type="button" class="item-lugar" aria-current="@(Activo ? "true" : "false")" @onclick="OnClick">
+        <span class="item-lugar__imagen">
+            <Imagen Src="@Lugar.ImagenUrl" Ancho="72" Alto="72" />
+        </span>
+        <span class="item-lugar__textos">
+            <span class="t-body-fuerte item-lugar__linea">@Lugar.Nombre</span>
+            <span class="t-small texto-2 item-lugar__linea">@Lugares.Subtitulo(Lugar)</span>
+            <span class="t-small item-lugar__meta">
+                @if (Lugar.Calificacion != null)
+                {
+                    <Icono Nombre="estrella-12" Caja="12" /><span class="t-small-fuerte">@Formato.Calificacion(Lugar.Calificacion)</span>
+                }
+                @if (Formato.PrecioLugar(Lugar) is { Length: > 0 } precio)
+                {
+                    <span class="texto-2 @(Lugar.Calificacion != null ? " item-lugar__precio" : "")">@precio</span>
+                }
+            </span>
+        </span>
+    </button>
+</li>
+
+@code {
+    [Parameter, EditorRequired] public LugarTarjeta Lugar { get; set; } = default!;
+    /// <summary>Es el lugar elegido en el mapa.</summary>
+    [Parameter] public bool Activo { get; set; }
+    /// <summary>Al volverse activo, la lista se desplaza hasta esta fila (cuando se eligió su pin en el mapa).</summary>
+    [Parameter] public bool Desplazar { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private ElementReference _boton;
+    private bool _eraActivo;
+
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (Activo && !_eraActivo && Desplazar) await Js.MostrarElementoAsync(_boton);
+        _eraActivo = Activo;
+    }
+}

@@ -1,0 +1,27 @@
+.pasos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+
+.paso {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 32px;
+  border-radius: var(--radio-xl);
+  background: var(--color-fondo);
+  transition: transform var(--duracion-media) var(--curva-salida), box-shadow var(--duracion-media);
+}
+.paso:hover { transform: translateY(-4px); box-shadow: var(--sombra-suave); }
+
+.paso__marcas { display: flex; gap: 12px; }
+.paso__numero, .paso__icono {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radio-pildora);
+}
+.paso__numero { background: var(--color-tinta); color: var(--color-superficie); }
+.paso__icono { background: var(--color-sol-suave); }
+
+@media (max-width: 760px) {
+  .pasos { grid-template-columns: minmax(0, 1fr); }
+}

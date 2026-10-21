@@ -1,0 +1,49 @@
+@*
+  Foto de evento o lugar que viene de la nube (Cloudinary).
+
+  POR QUÉ EXISTE: los eventos todavía no tienen su foto real en la BD. Este componente es el único
+  lugar que sabe cómo mostrar una foto remota, así que cuando suban las imágenes a Cloudinary y llenen
+  main_image_url en la BD, todas las tarjetas se actualizan solas.
+
+  - Pide a Cloudinary la versión del tamaño exacto (Utilidades/Cloudinary.cs).
+  - Muestra un brillo de "cargando" y aparece con un fundido al terminar.
+  - Si no hay URL o la imagen falla, pinta un relleno con el sol de SuraChih (nunca un ícono roto).
+  - Carga diferida (loading="lazy"): solo descarga cuando está por verse. Con Prioridad, de inmediato.
+
+  <Imagen Src="@evento.ImagenUrl" Alt="@evento.Titulo" Ancho="588" Alto="330" />
+
+  Ocupa todo su contenedor; el redondeo y el tamaño los pone el padre.
+*@
+<div class="imagen @Clase" data-estado="@_estado" role="@(_estado == "vacia" ? "img" : null)"
+     aria-label="@(_estado == "vacia" ? (string.IsNullOrEmpty(Alt) ? "Imagen no disponible" : Alt) : null)">
+    @if (_estado != "vacia")
+    {
+        <img @key="_url" src="@_url" alt="@Alt" decoding="async" loading="@(Prioridad ? "eager" : "lazy")"
+             @onload='() => _estado = "cargada"' @onerror='() => _estado = "vacia"' />
+    }
+</div>
+
+@code {
+    /// <summary>URL de la imagen (Cloudinary o local). Vacía = relleno.</summary>
+    [Parameter] public string? Src { get; set; }
+    /// <summary>Texto alternativo (título del evento o lugar).</summary>
+    [Parameter] public string? Alt { get; set; }
+    /// <summary>Ancho en px CSS con el que se muestra (para pedir el tamaño a Cloudinary).</summary>
+    [Parameter] public int? Ancho { get; set; }
+    [Parameter] public int? Alto { get; set; }
+    /// <summary>Imágenes visibles al abrir (hero, portada del detalle): sin carga diferida.</summary>
+    [Parameter] public bool Prioridad { get; set; }
+    [Parameter] public string? Clase { get; set; }
+
+    private string? _url;
+    private string _estado = "vacia";
+
+    protected override void OnParametersSet()
+    {
+        string? src = Src?.Trim();
+        string? url = string.IsNullOrEmpty(src) ? null : Cloudinary.UrlOptimizada(src, Ancho, Alto);
+        if (url == _url && _url != null) return;
+        _url = url;
+        _estado = url == null ? "vacia" : "cargando";
+    }
+}

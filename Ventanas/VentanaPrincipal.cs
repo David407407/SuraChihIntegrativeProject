@@ -1,29 +1,22 @@
-using System.Diagnostics;
 using BackendLogica;
+using Interfaz;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.WebView;
+using Microsoft.AspNetCore.Components.WebView.WindowsForms;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
-using Microsoft.Web.WebView2.WinForms;
-using SuraChihIntegrativeProject.Controladores;
-using SuraChihIntegrativeProject.Puente;
-using SuraChihIntegrativeProject.Servicios;
 
 namespace SuraChihIntegrativeProject.Ventanas
 {
     /// <summary>
-    /// Única ventana de la app. Hospeda la interfaz web de <c>wwwroot</c> en un WebView2 y conecta
-    /// el puente de mensajes con los controladores, que a su vez usan BackendLogica.
+    /// Única ventana de la app. Hospeda la interfaz Blazor (proyecto Interfaz) en un BlazorWebView:
+    /// los componentes Razor corren en este mismo proceso y llaman directo a BackendLogica.
     /// </summary>
+    /// <remarks>
+    /// Los enlaces externos (boletos, "Cómo llegar"...) los abre BlazorWebView en el navegador del sistema.
+    /// </remarks>
     public sealed class VentanaPrincipal : Form
     {
-        /// <summary>Dominio virtual con el que WebView2 sirve la carpeta wwwroot (no sale a internet).</summary>
-        private const string HostApp = "app.surachih";
-        private static readonly string UrlInicio = $"https://{HostApp}/index.html";
-
-        private readonly WebView2 _web = new() { Dock = DockStyle.Fill, DefaultBackgroundColor = Color.White };
-        /// <summary>MySQL o datos de prueba en memoria, según "UseFakeData" en dbsettings.local.json.</summary>
-        private readonly BackendLogica.Contratos.ISuraChihBD _bd = FabricaBD.Crear();
-        private readonly Sesion _sesion = new();
-        private readonly CorreoSimulado _correo = new();
-
         public VentanaPrincipal()
         {
             Text = "SuraChih";
@@ -31,41 +24,54 @@ namespace SuraChihIntegrativeProject.Ventanas
             ClientSize = new Size(1366, 820);
             MinimumSize = new Size(1024, 700);
             StartPosition = FormStartPosition.CenterScreen;
-            Controls.Add(_web);
-            Load += async (_, _) => await InicializarAsync();
+
+            if (!HayWebView2()) return;
+
+            var servicios = new ServiceCollection();
+            servicios.AddWindowsFormsBlazorWebView();
+#if DEBUG
+            servicios.AddBlazorWebViewDeveloperTools();   // F12 para depurar la interfaz
+#endif
+            // MySQL o datos de prueba en memoria, según "UseFakeData" en dbsettings.local.json.
+            servicios.AgregarInterfaz(FabricaBD.Crear());
+
+            var web = new BlazorWebView
+            {
+                Dock = DockStyle.Fill,
+                HostPage = Path.Combine("wwwroot", "index.html"),
+                Services = servicios.BuildServiceProvider()
+            };
+            web.RootComponents.Add<Rutas>("#app");
+            web.RootComponents.Add<HeadOutlet>("head::after");
+            web.BlazorWebViewInitializing += (_, e) =>
+            {
+                // Perfil del navegador en %LocalAppData%\SuraChih (no junto al .exe, que puede ser de solo lectura).
+                e.UserDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SuraChih", "WebView2");
+                e.EnvironmentOptions = OpcionesNavegador();
+            };
+            web.BlazorWebViewInitialized += (_, e) => ConfigurarNavegador(e.WebView.CoreWebView2);
+            Controls.Add(web);
         }
 
-        private async Task InicializarAsync()
+        /// <summary>BlazorWebView necesita el runtime de WebView2 (viene con Windows 11 y con Edge).</summary>
+        private bool HayWebView2()
         {
             try
             {
-                // Perfil del navegador en %LocalAppData%\SuraChih (no junto al .exe, que puede ser de solo lectura).
-                string datosUsuario = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SuraChih", "WebView2");
-                var entorno = await CoreWebView2Environment.CreateAsync(userDataFolder: datosUsuario, options: OpcionesNavegador());
-                await _web.EnsureCoreWebView2Async(entorno);
+                CoreWebView2Environment.GetAvailableBrowserVersionString();
+                return true;
             }
             catch (WebView2RuntimeNotFoundException)
             {
-                MessageBox.Show(this,
-                    "Falta el componente Microsoft Edge WebView2 Runtime.\nDescárgalo de https://developer.microsoft.com/microsoft-edge/webview2/ e intenta de nuevo.",
-                    "SuraChih", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                Close();
-                return;
+                Load += (_, _) =>
+                {
+                    MessageBox.Show(this,
+                        "Falta el componente Microsoft Edge WebView2 Runtime.\nDescárgalo de https://developer.microsoft.com/microsoft-edge/webview2/ e intenta de nuevo.",
+                        "SuraChih", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    Close();
+                };
+                return false;
             }
-
-            CoreWebView2 core = _web.CoreWebView2;
-            ConfigurarNavegador(core);
-
-            var puente = new PuenteWeb(core);
-            new ControladorLanding(_bd, _sesion).Registrar(puente);
-            new ControladorMapa(_bd).Registrar(puente);
-            new ControladorHome(_bd, _sesion).Registrar(puente);
-            new ControladorEvento(_bd, _sesion).Registrar(puente);
-            new ControladorLugar(_bd, _sesion).Registrar(puente);
-            new ControladorCuenta(_bd, _sesion, _correo).Registrar(puente);
-            new ControladorPerfil(_bd, _sesion).Registrar(puente);
-
-            core.Navigate(UrlInicio);
         }
 
         /// <summary>
@@ -81,38 +87,12 @@ namespace SuraChihIntegrativeProject.Ventanas
 
         private static void ConfigurarNavegador(CoreWebView2 core)
         {
-            string carpetaWeb = Path.Combine(AppContext.BaseDirectory, "wwwroot");
-            core.SetVirtualHostNameToFolderMapping(HostApp, carpetaWeb, CoreWebView2HostResourceAccessKind.Allow);
-
             core.Settings.IsZoomControlEnabled = false;
             core.Settings.IsStatusBarEnabled = false;
-#if DEBUG
-            core.Settings.AreDevToolsEnabled = true;          // F12 para depurar la interfaz
-#else
+#if !DEBUG
             core.Settings.AreDevToolsEnabled = false;
             core.Settings.AreDefaultContextMenusEnabled = false;
 #endif
-
-            // Los enlaces externos (boletos, redes sociales...) se abren en el navegador del sistema.
-            core.NewWindowRequested += (_, e) =>
-            {
-                e.Handled = true;
-                AbrirExterno(e.Uri);
-            };
-            core.NavigationStarting += (_, e) =>
-            {
-                if (Uri.TryCreate(e.Uri, UriKind.Absolute, out var destino) && destino.Host != HostApp)
-                {
-                    e.Cancel = true;
-                    AbrirExterno(e.Uri);
-                }
-            };
-        }
-
-        private static void AbrirExterno(string url)
-        {
-            if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp))
-                Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
         }
     }
 }

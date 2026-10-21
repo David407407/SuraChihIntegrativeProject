@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -12,22 +12,22 @@
 
   <!-- Otros proyectos y código viejo viven en subcarpetas: no compilarlos dentro de este -->
   <ItemGroup>
-    <Compile Remove="BackendLogica\**;BackendLogica.Pruebas\**;Legacy\**" />
-    <EmbeddedResource Remove="BackendLogica\**;BackendLogica.Pruebas\**;Legacy\**" />
-    <None Remove="BackendLogica\**;BackendLogica.Pruebas\**;Legacy\**" />
-  </ItemGroup>
-
-  <!-- La interfaz (HTML/CSS/JS + imágenes) se copia junto al ejecutable y la carga WebView2 -->
-  <ItemGroup>
-    <None Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
+    <Compile Remove="BackendLogica\**;BackendLogica.Pruebas\**;Interfaz\**;Interfaz.Navegador\**;Legacy\**;Prototipo\**" />
+    <EmbeddedResource Remove="BackendLogica\**;BackendLogica.Pruebas\**;Interfaz\**;Interfaz.Navegador\**;Legacy\**;Prototipo\**" />
+    <None Remove="BackendLogica\**;BackendLogica.Pruebas\**;Interfaz\**;Interfaz.Navegador\**;Legacy\**;Prototipo\**" />
+    <Content Remove="BackendLogica\**;BackendLogica.Pruebas\**;Interfaz\**;Interfaz.Navegador\**;Legacy\**;Prototipo\**" />
   </ItemGroup>
 
   <ItemGroup>
+    <!-- BlazorWebView: la ventana WinForms pinta los componentes Razor del proyecto Interfaz -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="10.0.110" />
+    <!-- La misma versión de WebView2 que ya usaba la app (BlazorWebView trae una más vieja) -->
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="BackendLogica\BackendLogica.csproj" />
+    <ProjectReference Include="Interfaz\Interfaz.csproj" />
   </ItemGroup>
 
 </Project>

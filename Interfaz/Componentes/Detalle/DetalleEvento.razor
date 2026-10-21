@@ -1,0 +1,181 @@
+@*
+  Detalle de evento: la hoja "Evento / ..." de Figma (página Rediseño). Los 24 frames "Evento / Minecraft...",
+  "Evento / Las Ligas Menores"... son ESTA misma plantilla con otros datos. La ventana, el historial y la
+  carga son los de HojaDetalle.razor (los comparte con el detalle de lugar).
+
+  Partes (de arriba a abajo, igual que las capas de Figma):
+    Portada   foto + Compartir, favorito y Cerrar (PortadaHoja).
+    Info      categorías, título, "Acerca del evento", "Ubicación" con el mini mapa.
+    Boleto    Fecha, Horario, Lugar, Precio y las acciones según el estado.
+    Te podría interesar   hasta 3 Card evento que elige ServicioEvento.
+
+  Estados (columnas de v_event_card: status, is_finished, cancel_reason; más la inscripción del usuario):
+    normal      "Voy a ir" + "Comprar boletos".
+    inscrito    "Ya vas a ir" (verde) + "Cancelar inscripción" + "Comprar boletos".
+    finalizado  aviso "Este evento ya terminó" + "Escribir reseña" + "Ver reseñas (N)".
+    cancelado   aviso "Este evento fue cancelado" + "Motivo".
+*@
+@implements IDisposable
+@inject Modales Modales
+@inject Avisos Avisos
+@inject Acciones Acciones
+@inject Sesion Sesion
+
+<PortadaHoja Tipo="TipoFavorito.Evento" Id="E.Id" Titulo="@E.Titulo" ImagenUrl="@E.ImagenUrl" Favorito="Datos.Favorito"
+             AlCompartir='() => Acciones.Proximamente("Compartir eventos")' />
+
+<div class="hoja__cuerpo">
+    <div class="hoja__info">
+        @if (E.Etiquetas.Count > 0)
+        {
+            <div class="hoja__categorias">
+                @foreach (var etiqueta in E.Etiquetas)
+                {
+                    <ChipCategoria Etiqueta="etiqueta" Interactivo="false" />
+                }
+            </div>
+        }
+        <h1 @ref="_titulo" class="t-h1 hoja__titulo" id="hoja-titulo" tabindex="-1">@E.Titulo</h1>
+        <h2 class="t-h3">Acerca del evento</h2>
+        <p class="t-body texto-2 hoja__descripcion">@(string.IsNullOrWhiteSpace(E.Descripcion) ? "El organizador todavía no agrega una descripción." : E.Descripcion)</p>
+        <h2 class="t-h3">Ubicación</h2>
+        @if (E.Latitud != null && E.Longitud != null)
+        {
+            <Mapa Clase="hoja__mapa" Lat="E.Latitud" Lng="E.Longitud" Titulo="@(Lugar ?? E.Titulo)"
+                  AriaLabel="@($"Mapa: {Lugar ?? "ubicación del evento"}")" />
+        }
+        <p class="t-small texto-2">@Formato.DireccionConCiudad(E.LugarNombre, E.Direccion)</p>
+    </div>
+
+    <aside class="boleto" aria-label="Fecha, lugar y precio">
+        @if (Aviso is { } aviso)
+        {
+            <p class="boleto__aviso boleto__aviso--@Estado.ToString().ToLowerInvariant() t-small-fuerte"><Icono Nombre="@aviso.Icono" /><span>@aviso.Texto</span></p>
+        }
+        <DatoBoleto Icono="calendario" Etiqueta="Fecha" Valor="@Formato.FechaEvento(E)" />
+        @if (Activo && Formato.HorarioEvento(E) is { Length: > 0 } horario)
+        {
+            <DatoBoleto Icono="reloj" Etiqueta="Horario" Valor="@horario" />
+        }
+        <DatoBoleto Icono="ubicacion-16" Etiqueta="Lugar" Valor="@(Lugar ?? "Por confirmar")" />
+        <DatoBoleto Icono="etiqueta-16" Etiqueta="Precio" Valor="@(Formato.PrecioEvento(E) is { Length: > 0 } precio ? precio : "Precio por confirmar")" />
+        <hr class="boleto__divisor" />
+
+        @switch (Estado)
+        {
+            case EstadoBoleto.Normal:
+                <Boton Texto="Voy a ir" Icono="calendario-check" OnClick="VoyAIrAsync" />
+                @Comprar
+                break;
+            case EstadoBoleto.Inscrito:
+                <button type="button" class="boleto__inscrito" @onclick="CancelarInscripcionAsync">
+                    <Icono Nombre="check-circulo-blanco" Caja="18" /><span>Ya vas a ir</span>
+                </button>
+                <button type="button" class="boleto__enlace boleto__enlace--peligro t-small-fuerte" @onclick="CancelarInscripcionAsync">
+                    <Icono Nombre="x-error-12" Caja="12" /><span>Cancelar inscripción</span>
+                </button>
+                @Comprar
+                break;
+            case EstadoBoleto.Finalizado:
+                <Boton Texto="Escribir reseña" Icono="estrella-18" OnClick='() => Acciones.RequiereSesion("Escribir reseñas")' />
+                <Boton Texto="@($"Ver reseñas ({Datos.NumResenas ?? 0})")" Variante="secundario" OnClick='() => Acciones.Proximamente("Las reseñas")' />
+                break;
+            case EstadoBoleto.Cancelado when !string.IsNullOrEmpty(E.MotivoCancelacion):
+                <div class="boleto__motivo t-small">
+                    <p class="t-small-fuerte">Motivo</p>
+                    <p class="texto-2">@E.MotivoCancelacion</p>
+                </div>
+                break;
+        }
+
+        <button type="button" class="boleto__enlace t-small texto-2" @onclick='() => Acciones.RequiereSesion("Reportar eventos")'>
+            <Icono Nombre="bandera" Caja="12" /><span>Reportar evento</span>
+        </button>
+    </aside>
+</div>
+
+@if (Datos.Recomendados.Count > 0)
+{
+    <section class="hoja__recomendados">
+        <h2 class="t-h2">Te podría interesar</h2>
+        <div class="hoja__fila">
+            @foreach (var (recomendado, i) in Datos.Recomendados.Select((r, i) => (r, i)))
+            {
+                <Tarjeta @key="recomendado.Id" Evento="recomendado" Orden="i" Favorito="Datos.Favoritos.Contains(recomendado.Id)" />
+            }
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public DatosDetalleEvento Datos { get; set; } = default!;
+    /// <summary>Al mostrarse abre "¿Vas a ir?" ("Voy a ir" de las tarjetas).</summary>
+    [Parameter] public bool Inscribir { get; set; }
+
+    private enum EstadoBoleto { Normal, Inscrito, Finalizado, Cancelado, NoPublicado }
+
+    private ElementReference _titulo;
+    private bool _inscrito;
+    private bool _visible = true;
+
+    private EventoTarjeta E => Datos.Evento;
+    /// <summary>Lugar del evento o, si es en la calle, su dirección.</summary>
+    private string? Lugar => Formato.UbicacionEvento(E);
+
+    private EstadoBoleto Estado =>
+        E.Estado == EstadoEvento.Cancelado ? EstadoBoleto.Cancelado
+        : E.Terminado ? EstadoBoleto.Finalizado
+        : E.Estado != EstadoEvento.Aprobado ? EstadoBoleto.NoPublicado   // borrador o en revisión: solo lo ve su organizador
+        : _inscrito ? EstadoBoleto.Inscrito
+        : EstadoBoleto.Normal;
+
+    private bool Activo => Estado is EstadoBoleto.Normal or EstadoBoleto.Inscrito;
+
+    private (string Icono, string Texto)? Aviso => Estado switch
+    {
+        EstadoBoleto.Finalizado => ("evento-terminado", "Este evento ya terminó"),
+        EstadoBoleto.Cancelado => ("evento-cancelado", "Este evento fue cancelado"),
+        EstadoBoleto.NoPublicado => ("evento-terminado", "Este evento todavía no está publicado"),
+        _ => null
+    };
+
+    /// <summary>"Comprar boletos": solo si hay página oficial; se abre en el navegador.</summary>
+    private RenderFragment? Comprar => Activo && !string.IsNullOrEmpty(E.BoletosUrl)
+        ? @<Boton Texto="Comprar boletos" Variante="secundario" Icono="boleto" Href="@E.BoletosUrl" Externo />
+        : null;
+
+    protected override void OnInitialized() => _inscrito = Datos.Inscrito;
+
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (!primeraVez) return;
+        // El foco va al título: los lectores de pantalla lo anuncian y Tab sigue con la acción principal.
+        await _titulo.FocusAsync(preventScroll: true);
+        if (Inscribir && Estado == EstadoBoleto.Normal) await VoyAIrAsync();
+    }
+
+    private async Task VoyAIrAsync()
+    {
+        if (!Sesion.Iniciada)
+        {
+            Modales.RequiereSesion();
+            return;
+        }
+        if (await Modales.ConfirmarInscripcionAsync(E)) CambiarInscripcion(true, "¡Listo! Lo agregamos a Mis planes");
+    }
+
+    private async Task CancelarInscripcionAsync()
+    {
+        if (!await Modales.ConfirmarCancelacionAsync(E)) CambiarInscripcion(false, "Cancelaste tu inscripción");
+    }
+
+    private void CambiarInscripcion(bool inscrito, string aviso)
+    {
+        if (!_visible) return;   // mientras tanto se cerró o se abrió otro evento
+        _inscrito = inscrito;
+        Avisos.Mostrar(aviso);
+        StateHasChanged();
+    }
+
+    public void Dispose() => _visible = false;
+}

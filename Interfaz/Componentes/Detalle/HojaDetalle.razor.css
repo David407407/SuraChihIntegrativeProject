@@ -1,0 +1,239 @@
+/* =====================================================================
+   Hoja de detalle: "Evento / ..." y "Lugar / ..." de Figma.
+   Medidas del frame de 1440px: hoja de 1040px a 40px del borde de arriba, portada de 440px,
+   cuerpo con 40px de margen, info flexible + boleto de 340px separados 48px.
+   El contenido (DetalleEvento, DetalleLugar, PortadaHoja, DatoBoleto) se pinta dentro de .hoja__caja,
+   por eso sus reglas van con ::deep.
+   ===================================================================== */
+
+.hoja {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 40px 24px;
+  border: 0;
+  background: transparent;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* Solo abierta: un display propio le ganaría al display:none del <dialog> cerrado. */
+.hoja[open] { display: block; }
+
+.hoja::backdrop {
+  background: var(--color-velo-modal);
+  animation: velo-entra var(--duracion-media) ease;
+}
+
+.hoja__caja {
+  position: relative;
+  width: min(1040px, 100%);
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: var(--radio-xl);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-modal);
+  animation: hoja-entra var(--duracion-media) var(--curva-salida);
+}
+
+/* Cerrar (la clase la pone js/interop.js mientras dura la animación) */
+.hoja.hoja--cerrando::backdrop { animation: velo-sale var(--duracion-rapida) ease forwards; }
+.hoja--cerrando .hoja__caja { animation: hoja-sale var(--duracion-rapida) ease forwards; }
+
+@keyframes hoja-entra { from { opacity: 0; transform: translateY(24px); } }
+@keyframes hoja-sale { to { opacity: 0; transform: translateY(12px); } }
+@keyframes velo-entra { from { opacity: 0; } }
+@keyframes velo-sale { to { opacity: 0; } }
+
+/* ---- Portada: foto + Compartir / favorito / Cerrar ---- */
+.hoja__caja ::deep .hoja__portada {
+  position: relative;
+  height: clamp(220px, 34vw, 440px);
+  background: var(--color-fondo);
+}
+
+.hoja__caja ::deep .hoja__acciones {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  gap: 8px;
+}
+
+.hoja__caja ::deep .hoja__accion {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radio-pildora);
+  background: var(--color-superficie);
+  transition: background-color var(--duracion-rapida), transform var(--duracion-rapida);
+}
+.hoja__caja ::deep .hoja__accion:hover { background: var(--color-fondo); }
+.hoja__caja ::deep .hoja__accion:active { transform: scale(0.94); }
+
+/* ---- Cuerpo: Info + Boleto ---- */
+.hoja__caja ::deep .hoja__cuerpo {
+  display: flex;
+  align-items: flex-start;
+  gap: 48px;
+  padding: 32px 40px 40px;
+}
+
+.hoja__caja ::deep .hoja__info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.hoja__caja ::deep .hoja__categorias { display: flex; flex-wrap: wrap; gap: 8px; }
+.hoja__caja ::deep .hoja__titulo { overflow-wrap: anywhere; }
+.hoja__caja ::deep .hoja__titulo:focus { outline: none; }   /* recibe el foco al abrir (tabindex="-1"), no es un control */
+.hoja__caja ::deep .hoja__descripcion { white-space: pre-line; overflow-wrap: anywhere; }
+
+/* Mini mapa: el mapa en modo "detalle" (un pin fijo); el alto lo da esta clase. */
+.hoja__caja ::deep .hoja__mapa {
+  width: 100%;
+  height: 200px;
+  border-radius: var(--radio-m);
+}
+
+/* ---- Boleto ---- */
+.hoja__caja ::deep .boleto {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 16px;
+  width: 340px;
+  padding: 24px;
+  border: 1.5px solid var(--color-linea);
+  border-radius: var(--radio-l);
+}
+
+.hoja__caja ::deep .boleto__dato { display: flex; align-items: center; gap: 12px; }
+
+.hoja__caja ::deep .boleto__icono {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--color-fondo);
+}
+
+.hoja__caja ::deep .boleto__textos { display: flex; flex-direction: column; min-width: 0; }
+.hoja__caja ::deep .boleto__textos .t-body-fuerte { overflow-wrap: anywhere; }
+
+.hoja__caja ::deep .boleto__divisor { width: 100%; height: 1px; margin: 0; border: 0; background: var(--color-linea); }
+
+.hoja__caja ::deep .boleto .boton { width: 100%; }
+
+/* "Este evento ya terminó" / "Este evento fue cancelado" */
+.hoja__caja ::deep .boleto__aviso {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radio-s);
+  background: var(--color-fondo);
+  color: var(--color-texto-2);
+}
+.hoja__caja ::deep .boleto__aviso--cancelado { background: var(--color-error-suave); color: var(--color-error); }
+
+/* Botón verde "Ya vas a ir" (en Figma es un frame propio, no la variante de "Botón") */
+.hoja__caja ::deep .boleto__inscrito {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 48px;
+  border-radius: var(--radio-s);
+  background: var(--color-exito);
+  color: var(--color-superficie);
+  font: 600 16px/20px var(--fuente-cuerpo);
+  transition: background-color var(--duracion-rapida), transform var(--duracion-rapida);
+}
+.hoja__caja ::deep .boleto__inscrito:hover { background: var(--color-exito-hover); }
+.hoja__caja ::deep .boleto__inscrito:active { transform: scale(0.98); }
+.hoja__caja ::deep .boleto__inscrito .icono { animation: inscrito-latido 420ms var(--curva-salida); }
+
+@keyframes inscrito-latido { from { transform: scale(0.4); opacity: 0; } }
+
+/* "Cancelar inscripción" y "Reportar evento" */
+.hoja__caja ::deep .boleto__enlace {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  border-radius: var(--radio-s);
+  transition: color var(--duracion-rapida);
+}
+.hoja__caja ::deep .boleto__enlace:hover span { text-decoration: underline; text-underline-offset: 3px; }
+.hoja__caja ::deep .boleto__enlace--peligro { color: var(--color-error); }
+
+/* Motivo de la cancelación */
+.hoja__caja ::deep .boleto__motivo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radio-s);
+  background: var(--color-fondo);
+}
+
+/* ---- Opiniones (detalle de lugar) ---- */
+.hoja__caja ::deep .hoja__opiniones { display: flex; flex-direction: column; gap: 12px; }
+
+.hoja__caja ::deep .opinion {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: var(--radio-m);
+  background: var(--color-fondo);
+}
+.hoja__caja ::deep .opinion__cabeza { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.hoja__caja ::deep .opinion__estrellas { display: inline-flex; gap: 2px; }
+
+/* ---- Te podría interesar / También te puede gustar ---- */
+.hoja__caja ::deep .hoja__recomendados {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0 40px 40px;
+}
+
+.hoja__caja ::deep .hoja__fila {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 282px));
+  gap: 24px;
+}
+
+/* ---- Cargando ---- */
+.hoja__portada { height: clamp(220px, 34vw, 440px); }
+.hoja__esqueleto-portada { border-radius: 0; }
+.hoja__cuerpo { display: flex; align-items: flex-start; gap: 48px; padding: 32px 40px 40px; }
+.hoja__info { display: flex; flex: 1; flex-direction: column; gap: 20px; min-width: 0; }
+.hoja__mapa { width: 100%; height: 200px; border-radius: var(--radio-m); }
+.boleto { flex: none; width: 340px; border-radius: var(--radio-l); }
+.hoja__esqueleto-linea { height: 24px; border-radius: var(--radio-s); }
+.hoja__esqueleto-linea--chips { width: 40%; height: 26px; }
+.hoja__esqueleto-linea--titulo { width: 80%; height: 96px; }
+.hoja__esqueleto-boleto { height: 380px; border: 0; }
+
+/* ---- Ventanas angostas (la app permite hasta 1024px; aquí también se ve bien en un navegador) ---- */
+@media (max-width: 900px) {
+  .hoja { padding: 16px 12px; }
+  .hoja__cuerpo,
+  .hoja__caja ::deep .hoja__cuerpo { flex-direction: column; align-items: stretch; gap: 32px; padding: 24px 24px 32px; }
+  .boleto,
+  .hoja__caja ::deep .boleto { width: 100%; }
+  .hoja__caja ::deep .hoja__recomendados { padding: 0 24px 32px; }
+  .hoja__caja ::deep .hoja__fila { grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); }
+  .hoja__caja ::deep .hoja__titulo { font-size: 34px; line-height: 40px; }
+}

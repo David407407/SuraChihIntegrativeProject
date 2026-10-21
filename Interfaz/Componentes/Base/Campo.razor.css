@@ -1,0 +1,49 @@
+/* "Campo" de Figma: 48px, borde línea, icono + texto */
+.campo { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.campo__etiqueta { color: var(--color-tinta); }
+
+.campo__caja {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 18px;   /* un poco más que en Figma: con esquinas de píldora el icono no queda pegado a la curva */
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  border: 1.5px solid var(--color-linea);
+  transition: border-color var(--duracion-rapida), box-shadow var(--duracion-rapida);
+}
+.campo__caja:hover { border-color: #c9d3e3; }
+.campo__caja:focus-within { border-color: var(--color-cielo); box-shadow: 0 0 0 3px rgba(47, 123, 255, 0.15); }
+
+.campo__entrada {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-tinta);
+  font: 400 16px/24px var(--fuente-cuerpo);
+}
+.campo__entrada::placeholder { color: var(--color-texto-2); }
+
+/* Edge/WebView2 agrega su propio ojito a las contraseñas. Choca con el botón "Mostrar" del diseño:
+   al cambiar el campo a texto, el ojito desaparece. Va en su propia regla porque los navegadores
+   que no la entienden descartan la regla completa. */
+.campo__entrada::-ms-reveal { display: none; }
+
+/* Botón de mostrar / ocultar contraseña */
+.campo__ver { flex: none; color: var(--color-texto-2); font: 600 13px/20px var(--fuente-cuerpo); }
+.campo__ver:hover { color: var(--color-tinta); }
+
+.campo__ayuda { color: var(--color-texto-2); }
+.campo__error { display: none; color: var(--color-error); }
+
+.campo--error .campo__caja { border-color: var(--color-error); }
+.campo--error .campo__caja:focus-within { box-shadow: 0 0 0 3px rgba(217, 54, 54, 0.15); }
+.campo--error .campo__error { display: block; }
+.campo--error .campo__ayuda { display: none; }
+
+.campo--deshabilitado .campo__caja { background: var(--color-fondo); }
+.campo--deshabilitado .campo__entrada { color: var(--color-texto-2); cursor: not-allowed; }
