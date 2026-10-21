@@ -1,0 +1,41 @@
+@*
+  Landing: la primera pantalla de la app. Las secciones siguen las capas del frame "Landing" de Figma.
+  Los datos (cifras, collage, eventos y lugares) llegan en una sola consulta de ServicioLanding.
+*@
+@page "/"
+@inject ServicioLanding Servicio
+@inject Avisos Avisos
+@inject ILogger<Landing> Registro
+
+<PageTitle>SuraChih · Eventos y lugares de Chihuahua</PageTitle>
+
+<main>
+    <Hero Resumen="_datos?.Resumen" Collage="_datos?.Collage" />
+    <CintaCategorias />
+    <ComoFunciona />
+    <EventosDestacados Eventos="_datos?.Eventos" />
+    <Encuesta />
+    <LugaresParaDescubrir Lugares="_datos?.Lugares" />
+    <BandaOrganizadores />
+    <LlamadoFinal />
+</main>
+
+<Pie />
+
+@code {
+    private DatosLanding? _datos;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _datos = await Servicio.ObtenerAsync();
+        }
+        catch (Exception ex)
+        {
+            Registro.LogError(ex, "No se pudo cargar la landing");
+            Avisos.Mostrar(ex is BackendLogica.Datos.SuraChihException ? ex.Message : "No se pudieron cargar los datos.", TipoAviso.Error);
+            _datos = new DatosLanding(new ResumenPlataforma(0, 0, 0), [], [], []);
+        }
+    }
+}

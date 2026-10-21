@@ -1,0 +1,66 @@
+@*
+  Fila del Home con "Ver todo" ("Te podrían interesar", "Música en vivo"...): Card evento o Card lugar
+  que se salen por la derecha y se deslizan. Si no hay datos en la BD la sección se oculta (Visible);
+  si los filtros la dejan vacía, lo dice. Null = cargando.
+
+  <FilaTarjetas Id="fila-musica" Titulo="Música en vivo" Eventos="eventos" Favoritos="ids" AlVerTodo="..." />
+*@
+@if (Visible)
+{
+    <section class="home-seccion fila" id="@Id" aria-labelledby="@($"{Id}-titulo")">
+        <div class="contenedor">
+            <header class="fila__encabezado">
+                <h2 class="t-h2" id="@($"{Id}-titulo")">@Titulo</h2>
+                <button type="button" class="fila__ver-todo t-small-fuerte" @onclick="AlVerTodo">
+                    Ver todo <Icono Nombre="chevron-tinta-10" Caja="10" />
+                </button>
+            </header>
+            @if (Eventos == null && Lugares == null)
+            {
+                <div class="fila__pista">
+                    @for (int i = 0; i < 5; i++)
+                    {
+                        <div class="esqueleto home__esqueleto-tarjeta" aria-hidden="true"></div>
+                    }
+                </div>
+            }
+            else if ((Eventos?.Count ?? Lugares?.Count ?? 0) == 0)
+            {
+                <p class="fila__vacio t-body texto-2">Nada por aquí con estos filtros. Prueba quitando alguno.</p>
+            }
+            else
+            {
+                <div class="fila__pista">
+                    @if (Eventos != null)
+                    {
+                        @foreach (var (evento, i) in Eventos.Select((e, i) => (e, i)))
+                        {
+                            <Tarjeta @key="evento.Id" Evento="evento" Orden="Math.Min(i, 4)" Favorito="Favoritos?.Contains(evento.Id) == true" />
+                        }
+                    }
+                    else
+                    {
+                        @foreach (var (lugar, i) in Lugares!.Select((l, i) => (l, i)))
+                        {
+                            <Tarjeta @key="lugar.Id" Lugar="lugar" Orden="Math.Min(i, 4)" Favorito="Favoritos?.Contains(lugar.Id) == true" />
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    /// <summary>Id de la sección: los tiles de "Explora por categoría" saltan a ella.</summary>
+    [Parameter, EditorRequired] public string Id { get; set; } = "";
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    /// <summary>Eventos ya filtrados (fila de eventos). Null mientras carga.</summary>
+    [Parameter] public IReadOnlyList<EventoTarjeta>? Eventos { get; set; }
+    /// <summary>Lugares ya filtrados (fila de lugares). Null mientras carga.</summary>
+    [Parameter] public IReadOnlyList<LugarTarjeta>? Lugares { get; set; }
+    /// <summary>Ids guardados por el usuario (corazón lleno).</summary>
+    [Parameter] public IReadOnlySet<int>? Favoritos { get; set; }
+    [Parameter] public bool Visible { get; set; } = true;
+    [Parameter] public EventCallback AlVerTodo { get; set; }
+}

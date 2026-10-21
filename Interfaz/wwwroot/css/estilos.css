@@ -1,0 +1,8 @@
+/*
+  Estilos globales: solo los tokens, la base y el mapa (que crea Leaflet desde JavaScript).
+  Cada componente trae su propio Componente.razor.css (CSS aislado): Blazor los junta en
+  Interfaz.bundle.scp.css, que se carga con <AnfitrionApp>.styles.css (ver los index.html).
+*/
+@import url("tokens.css");
+@import url("base.css");
+@import url("mapa.css");

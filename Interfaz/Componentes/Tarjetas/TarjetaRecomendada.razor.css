@@ -1,0 +1,53 @@
+/* "Card recomendada" (Normal / Hover): horizontal, 588 × 236 en Figma */
+.tarjeta-rec {
+  position: relative;
+  display: flex;
+  min-height: 236px;
+  overflow: hidden;
+  border: 1px solid var(--color-linea);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  transition: box-shadow var(--duracion-media);
+}
+/* Borde azul de 2px del estado Hover, dibujado por dentro para que la tarjeta no cambie de tamaño */
+.tarjeta-rec::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 2px solid var(--color-cielo);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity var(--duracion-media);
+  pointer-events: none;
+}
+
+.tarjeta-rec__imagen { position: relative; flex: none; width: min(236px, 40%); background: var(--color-fondo); }
+/* La foto rellena su columna sin decidir el alto de la tarjeta (una foto alta la estiraba). */
+.tarjeta-rec__imagen ::deep .imagen { position: absolute; inset: 0; transition: transform 700ms var(--curva-salida); }
+
+.tarjeta-rec__info { display: flex; flex: 1; flex-direction: column; gap: 8px; min-width: 0; padding: 22px 24px; }
+.tarjeta-rec__tipo { display: flex; }
+.tarjeta-rec__titulo { transition: color var(--duracion-rapida); }
+.tarjeta-rec__meta span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tarjeta-rec__titulo,
+.tarjeta-rec__descripcion {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.tarjeta-rec__meta { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.tarjeta-rec__abajo { display: flex; align-items: center; gap: 12px; margin-top: auto; padding-top: 8px; }
+.tarjeta-rec__abajo > .t-body-fuerte { flex: 1; min-width: 0; }
+
+/* Toda la tarjeta es clicable: el botón del título se extiende sobre ella */
+.tarjeta-rec__enlace { font: inherit; text-align: left; }
+.tarjeta-rec__enlace::after { content: ""; position: absolute; inset: 0; z-index: 1; }
+
+.tarjeta-rec:hover { box-shadow: 0 16px 32px rgba(46, 122, 255, 0.18); }
+.tarjeta-rec:hover::after,
+.tarjeta-rec:has(.tarjeta-rec__enlace:focus-visible)::after { opacity: 1; }
+.tarjeta-rec:hover .tarjeta-rec__imagen ::deep .imagen { transform: scale(1.04); }
+.tarjeta-rec:hover .tarjeta-rec__titulo { color: var(--color-cielo-texto); }
+/* "Ver detalles" pasa de Secundario a Oscuro, como en el estado Hover de Figma */
+.tarjeta-rec:hover ::deep .tarjeta-rec__ver { border-color: var(--color-tinta); background: var(--color-tinta); color: var(--color-superficie); }

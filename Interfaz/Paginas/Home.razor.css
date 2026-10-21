@@ -1,0 +1,2 @@
+/* 64px antes del pie, como en Figma */
+.home { display: block; padding-bottom: 64px; }

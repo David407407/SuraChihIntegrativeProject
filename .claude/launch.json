@@ -2,10 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "landing-demo",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "4321", "--directory", "wwwroot"],
-      "port": 4321
+      "name": "interfaz-navegador",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "Interfaz.Navegador", "--urls", "http://localhost:5180", "--DatosFalsos", "true"],
+      "port": 5180
     }
   ]
 }

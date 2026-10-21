@@ -1,0 +1,13 @@
+.lugares { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.esqueleto--lugar { aspect-ratio: 282 / 365; border-radius: var(--radio-m); }
+
+.seccion__vacio {
+  padding: 48px 24px;
+  border-radius: var(--radio-xl);
+  border: 1.5px dashed var(--color-linea);
+  text-align: center;
+}
+
+@media (max-width: 960px) {
+  .lugares { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -1,0 +1,81 @@
+@*
+  "Modal / Crear cuenta" de Figma. Las reglas son las de la BD (Utilidades/ReglasCuenta.cs): usuario de 3 a
+  30 caracteres con letras, números, punto o guion bajo, correo válido y contraseña de 8+ con letras y números.
+  Se revisan antes de mandar y BackendLogica las vuelve a revisar; sus errores (correo repetido...) se
+  pintan en su campo.
+*@
+@inject ServicioCuenta Cuenta
+@inject Modales Modales
+@inject Avisos Avisos
+
+<EncabezadoModal Titulo="Crea tu cuenta" Texto="Es gratis y toma menos de un minuto." />
+<BotonesSociales Proveedores="@(["Google"])" Errores="_errores" AlAvisar="StateHasChanged" />
+<EditForm Model="_datos" OnSubmit="EnviarAsync" class="modal__formulario" novalidate>
+    <AvisoModal Errores="_errores" />
+    <Campo Nombre="nombreUsuario" Etiqueta="Nombre de usuario" Icono="usuario" @bind-Valor="_datos.NombreUsuario"
+           Requerido Autocompletar="username" Maximo="30" Errores="_errores" />
+    <Campo Nombre="correo" Etiqueta="Correo electrónico" Tipo="email" Icono="correo" @bind-Valor="_datos.Correo"
+           Requerido Autocompletar="email" Maximo="254" Errores="_errores" />
+    <Campo Nombre="contrasena" Etiqueta="Contraseña" Tipo="password" Icono="candado" @bind-Valor="_datos.Contrasena"
+           Requerido Autocompletar="new-password" Errores="_errores" />
+    <Campo Nombre="confirmacion" Etiqueta="Confirma tu contraseña" Tipo="password" Icono="candado" @bind-Valor="_datos.Confirmacion"
+           Requerido Autocompletar="new-password" Errores="_errores" />
+    <Boton Texto="Crear cuenta" Variante="oscuro" Tipo="submit" Clase="modal__ancho" Ocupado="_enviando" />
+</EditForm>
+<p class="modal__pie t-small texto-2">
+    ¿Ya tienes cuenta?
+    <button type="button" class="modal__enlace t-small-fuerte" @onclick="() => Modales.IniciarSesion(_datos.Correo?.Trim())">Inicia sesión</button>
+</p>
+
+@code {
+    /// <summary>Lo que traía "Inicia sesión": solo se rellena si es un correo (no un nombre de usuario).</summary>
+    [Parameter] public string? Correo { get; set; }
+
+    private readonly Datos _datos = new();
+    private readonly ErroresFormulario _errores = new();
+    private bool _enviando;
+
+    private sealed class Datos
+    {
+        public string? NombreUsuario { get; set; }
+        public string? Correo { get; set; }
+        public string? Contrasena { get; set; }
+        public string? Confirmacion { get; set; }
+    }
+
+    protected override void OnInitialized()
+    {
+        if (ReglasCuenta.EsCorreo(Correo)) _datos.Correo = Correo;
+    }
+
+    private async Task EnviarAsync()
+    {
+        _errores.Limpiar();
+        string nombre = _datos.NombreUsuario?.Trim() ?? "";
+        string correo = _datos.Correo?.Trim() ?? "";
+        string contrasena = _datos.Contrasena ?? "";
+
+        if (ReglasCuenta.ErrorNombreUsuario(nombre) is { } errorNombre) { _errores.Poner("nombreUsuario", errorNombre); return; }
+        if (ReglasCuenta.ErrorCorreo(correo) is { } errorCorreo) { _errores.Poner("correo", errorCorreo); return; }
+        if (ReglasCuenta.ErrorContrasena(contrasena) is { } debil) { _errores.Poner("contrasena", debil); return; }
+        if (contrasena != _datos.Confirmacion) { _errores.Poner("confirmacion", ReglasCuenta.NoCoinciden); return; }
+
+        _enviando = true;
+        try
+        {
+            Usuario usuario = await Cuenta.RegistrarAsync(nombre, correo, contrasena, _datos.Confirmacion);
+            Modales.Cerrar();
+            Avisos.Mostrar($"¡Bienvenido a SuraChih, {usuario.NombreUsuario}!");
+        }
+        catch (Exception ex)
+        {
+            string mensaje = MensajesError.Para(ex);
+            if (ErroresCuenta.CampoDe(mensaje, "nombreUsuario", "correo", "contrasena", "confirmacion") is { } campo) _errores.Poner(campo, mensaje);
+            else _errores.PonerAviso(mensaje);
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+}

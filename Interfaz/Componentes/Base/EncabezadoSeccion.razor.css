@@ -1,0 +1,13 @@
+.encabezado-seccion {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  margin-bottom: 40px;
+}
+.encabezado-seccion__textos { display: flex; flex-direction: column; gap: 12px; flex: 1; min-width: 0; }
+.encabezado-seccion__textos h2 { max-width: 760px; }
+.encabezado-seccion__textos p { max-width: 640px; }
+
+@media (max-width: 760px) {
+  .encabezado-seccion { flex-direction: column; align-items: flex-start; }
+}

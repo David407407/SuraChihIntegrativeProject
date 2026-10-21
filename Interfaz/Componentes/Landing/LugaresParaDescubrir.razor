@@ -1,0 +1,38 @@
+@* "Lugares para descubrir" (landing): cuatro Card lugar mejor calificadas. Null = cargando. *@
+@inject Acciones Acciones
+
+<section class="seccion" aria-label="@TextosLanding.LugaresParaDescubrir.Titulo">
+    <div class="contenedor">
+        <EncabezadoSeccion Titulo="@TextosLanding.LugaresParaDescubrir.Titulo" Bajada="@TextosLanding.LugaresParaDescubrir.Bajada">
+            <Boton Texto="Ver en el mapa" Variante="secundario" Icono="mapa-18" OnClick="Acciones.Mapa" />
+        </EncabezadoSeccion>
+        <div class="seccion__contenido" aria-busy="@(Lugares == null ? "true" : null)">
+            @if (Lugares == null)
+            {
+                <div class="lugares">
+                    @for (int i = 0; i < 4; i++)
+                    {
+                        <div class="esqueleto esqueleto--lugar" aria-hidden="true"></div>
+                    }
+                </div>
+            }
+            else if (Lugares.Count == 0)
+            {
+                <p class="seccion__vacio t-body texto-2">@TextosLanding.LugaresParaDescubrir.Vacio</p>
+            }
+            else
+            {
+                <div class="lugares">
+                    @foreach (var (lugar, i) in Lugares.Take(4).Select((l, i) => (l, i)))
+                    {
+                        <Tarjeta Lugar="lugar" Orden="i" />
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+@code {
+    [Parameter] public IReadOnlyList<LugarTarjeta>? Lugares { get; set; }
+}

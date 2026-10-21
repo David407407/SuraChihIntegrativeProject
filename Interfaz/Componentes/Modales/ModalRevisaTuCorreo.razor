@@ -1,0 +1,31 @@
+@*
+  "Modal / Revisa tu correo" de Figma. "Abrir enlace del correo": mientras el proyecto no tenga servidor
+  de correo, C# guarda el enlace y aquí se abre directo (ver Servicios/CorreoSimulado.cs).
+*@
+@inject ServicioCuenta Cuenta
+@inject Modales Modales
+
+<EncabezadoModal Titulo="Revisa tu correo" Icono="correo-cielo"
+                 Texto="Te enviamos un enlace para crear una contraseña nueva. Puede tardar unos minutos." />
+<AvisoModal Errores="_errores" />
+<Boton Texto="Abrir enlace del correo" Variante="oscuro" Clase="modal__ancho" OnClick="AbrirEnlace" />
+<div><button type="button" class="modal__enlace t-small-fuerte" @onclick="() => Modales.IniciarSesion(Correo)">Volver a iniciar sesión</button></div>
+
+@code {
+    [Parameter, EditorRequired] public string Correo { get; set; } = "";
+
+    private readonly ErroresFormulario _errores = new();
+
+    private void AbrirEnlace()
+    {
+        try
+        {
+            string token = Cuenta.AbrirEnlaceDelCorreo();
+            Modales.ContrasenaNueva(token, Correo);
+        }
+        catch (Exception ex)
+        {
+            _errores.PonerAviso(MensajesError.Para(ex));
+        }
+    }
+}

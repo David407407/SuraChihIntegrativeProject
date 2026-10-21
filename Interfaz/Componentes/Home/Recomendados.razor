@@ -1,0 +1,32 @@
+@* "Recomendados para ti" del Home (Card recomendada). Null = cargando; vacía = no se muestra. *@
+@if (Elementos is not { Count: 0 })
+{
+    <section class="home-seccion" aria-labelledby="titulo-recomendados">
+        <div class="contenedor">
+            <header class="home-seccion__encabezado">
+                <h2 class="t-h2" id="titulo-recomendados">Recomendados para ti</h2>
+                <p class="t-body texto-2">Lo que más se está guardando esta semana en Chihuahua.</p>
+            </header>
+            <div class="rejilla-recomendadas">
+                @if (Elementos == null)
+                {
+                    @for (int i = 0; i < 4; i++)
+                    {
+                        <div class="esqueleto home__esqueleto-recomendada" aria-hidden="true"></div>
+                    }
+                }
+                else
+                {
+                    @foreach (var (elemento, i) in Elementos.Select((e, i) => (e, i)))
+                    {
+                        <TarjetaRecomendada @key="elemento" Elemento="elemento" Orden="i" />
+                    }
+                }
+            </div>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<ElementoCollage>? Elementos { get; set; }
+}

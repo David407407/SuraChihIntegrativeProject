@@ -1,0 +1,27 @@
+@* Avisos flotantes ("Toast / Cambios guardados" de Figma). Se muestran con el servicio Avisos. *@
+@implements IDisposable
+@inject Avisos Avisos
+
+<div class="toasts" role="status" aria-live="polite">
+    @foreach (var aviso in Avisos.Lista)
+    {
+        <div @key="aviso.Id" class="@ClaseDe(aviso)">
+            @if (aviso.Tipo == TipoAviso.Exito)
+            {
+                <Icono Nombre="check-sol" />
+            }
+            <span>@aviso.Mensaje</span>
+        </div>
+    }
+</div>
+
+@code {
+    private static string ClaseDe(Aviso aviso) =>
+        $"toast toast--{aviso.Tipo.ToString().ToLowerInvariant()}{(aviso.Saliendo ? " toast--saliendo" : "")}";
+
+    protected override void OnInitialized() => Avisos.Cambio += AlCambiar;
+
+    private void AlCambiar() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Avisos.Cambio -= AlCambiar;
+}

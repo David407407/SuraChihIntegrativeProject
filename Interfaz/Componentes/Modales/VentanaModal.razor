@@ -1,0 +1,85 @@
+@*
+  Ventana modal base (los "Modal / ..." de Figma): caja blanca centrada sobre un velo, con botón de
+  cerrar. Va una sola vez en la plantilla; lo que lleva dentro lo decide el servicio Modales.
+  Usa <dialog> nativo (showModal desde js/interop.js): foco atrapado, Esc cierra y lo de atrás no se toca.
+
+  Las clases comunes de los modales (modal__encabezado, modal__formulario, modal__ancho, modal__aviso...)
+  están en VentanaModal.razor.css, porque todos se pintan aquí dentro.
+*@
+@implements IDisposable
+@inject Modales Modales
+@inject InteropJs Js
+
+<dialog @ref="_dialogo" class="modal" aria-labelledby="modal-titulo">
+    <div class="modal__caja">
+        <button type="button" class="modal__cerrar" data-cerrar-modal aria-label="Cerrar" @onclick="() => Modales.Cerrar()">
+            <Icono Nombre="cerrar" Caja="14" />
+        </button>
+        @if (Modales.Componente is { } tipo)
+        {
+            <div @key="Modales.Version" @ref="_contenido" class="modal__contenido @(_cambio ? " modal__contenido--cambio" : "")">
+                <DynamicComponent Type="tipo" Parameters="Parametros" />
+            </div>
+        }
+    </div>
+</dialog>
+
+@code {
+    private const string ClaseHtml = "con-modal";
+
+    private ElementReference _dialogo;
+    private ElementReference _contenido;
+    private DotNetObjectReference<VentanaModal>? _puente;
+    private bool _abierto;
+    /// <summary>Se cambió el contenido con la modal ya abierta: pequeño desvanecido en vez de abrir de nuevo.</summary>
+    private bool _cambio;
+    private int _versionPintada;
+    private bool _cerrando;
+
+    private IDictionary<string, object> Parametros => Modales.Parametros.ToDictionary(p => p.Key, p => p.Value!);
+
+    protected override void OnInitialized() => Modales.Cambio += AlCambiar;
+
+    private void AlCambiar() => InvokeAsync(() =>
+    {
+        if (Modales.Abierta && Modales.Version != _versionPintada) _cambio = _abierto && !_cerrando;
+        StateHasChanged();
+    });
+
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (Modales.Cerrando && !_cerrando)
+        {
+            _cerrando = true;
+            await Js.LlamarAsync("cerrarDialogo", _dialogo, ClaseHtml);
+            _cerrando = false;
+            _abierto = false;
+            Modales.TerminarCierre();
+            if (!Modales.Abierta) return;
+            // Mientras salía se abrió otra: se vuelve a abrir.
+            _versionPintada = 0;
+        }
+
+        if (Modales.Abierta && !Modales.Cerrando && Modales.Version != _versionPintada)
+        {
+            _versionPintada = Modales.Version;
+            if (!_abierto)
+            {
+                _puente ??= DotNetObjectReference.Create(this);
+                await Js.LlamarAsync("abrirDialogo", _dialogo, _puente, ClaseHtml);
+                _abierto = true;
+            }
+            await Js.LlamarAsync("enfocarPrimero", _contenido);
+        }
+    }
+
+    /// <summary>Esc o clic en el velo.</summary>
+    [JSInvokable]
+    public void PedirCierre() => Modales.Cerrar();
+
+    public void Dispose()
+    {
+        Modales.Cambio -= AlCambiar;
+        _puente?.Dispose();
+    }
+}

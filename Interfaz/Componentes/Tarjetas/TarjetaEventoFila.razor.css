@@ -1,0 +1,24 @@
+.evento-fila {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  padding: 12px 24px 12px 12px;
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  transition: transform var(--duracion-media) var(--curva-salida), box-shadow var(--duracion-media);
+}
+.evento-fila:hover { transform: translateX(4px); box-shadow: var(--sombra-suave); }
+.evento-fila:hover .evento-fila__titulo { color: var(--color-cielo-texto); }
+
+.evento-fila__imagen {
+  flex: none;
+  width: 112px;
+  height: 112px;
+  overflow: hidden;
+  border-radius: 14px;
+}
+.evento-fila__textos { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.evento-fila__fecha { color: var(--color-cielo-texto); }
+.evento-fila__titulo { transition: color var(--duracion-rapida); }
+.evento-fila__precio { flex: none; }

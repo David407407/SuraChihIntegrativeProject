@@ -1,0 +1,14 @@
+@* Banda oscura "¿Organizas eventos en Chihuahua?" (landing). *@
+@inject Acciones Acciones
+
+<section class="contenedor banda-organizadores-envoltura" aria-label="@TextosLanding.Organizadores.Etiqueta">
+    <div class="banda-organizadores" data-revelar>
+        <img class="banda-organizadores__sol" src="@Recursos.Icono("banda-sol")" alt="" aria-hidden="true" />
+        <div class="banda-organizadores__mensaje">
+            <Chip Texto="@TextosLanding.Organizadores.Etiqueta" Variante="sol" Icono="tienda" />
+            <h2 class="t-h2">@TextosLanding.Organizadores.Titulo</h2>
+            <p class="t-body">@TextosLanding.Organizadores.Texto</p>
+        </div>
+        <Boton Texto="Publicar mi evento" Icono="subir" OnClick="Acciones.PublicarEvento" />
+    </div>
+</section>

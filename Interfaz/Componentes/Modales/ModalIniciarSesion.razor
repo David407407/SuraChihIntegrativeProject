@@ -1,0 +1,71 @@
+@* "Modal / Iniciar sesión" de Figma. Se abre con Modales.IniciarSesion(correo, aviso). *@
+@inject ServicioCuenta Cuenta
+@inject Modales Modales
+@inject Avisos Avisos
+
+<EncabezadoModal Titulo="Inicia sesión" Texto="Guarda eventos, inscríbete y deja reseñas." />
+<BotonesSociales Proveedores="@(["Google", "Apple"])" Errores="_errores" AlAvisar="StateHasChanged" />
+<EditForm Model="_datos" OnSubmit="EnviarAsync" class="modal__formulario" novalidate>
+    <AvisoModal Errores="_errores" />
+    <Campo Nombre="identificador" Etiqueta="Correo electrónico" Icono="correo" @bind-Valor="_datos.Identificador"
+           Requerido Autocompletar="username" Errores="_errores" />
+    <Campo Nombre="contrasena" Etiqueta="Contraseña" Tipo="password" Icono="candado" @bind-Valor="_datos.Contrasena"
+           Requerido Autocompletar="current-password" Errores="_errores" />
+    <div><button type="button" class="modal__enlace t-small-fuerte" @onclick="() => Modales.RecuperarContrasena(CorreoEscrito)">¿Olvidaste tu contraseña?</button></div>
+    <Boton Texto="Iniciar sesión" Variante="oscuro" Tipo="submit" Clase="modal__ancho" Ocupado="_enviando" />
+</EditForm>
+<p class="modal__pie t-small texto-2">
+    ¿No tienes cuenta?
+    <button type="button" class="modal__enlace t-small-fuerte" @onclick="() => Modales.CrearCuenta(CorreoEscrito)">Crear cuenta</button>
+</p>
+
+@code {
+    /// <summary>Correo para rellenar (p. ej. al volver de "Contraseña nueva"); el foco va directo a la contraseña.</summary>
+    [Parameter] public string? Correo { get; set; }
+    /// <summary>Aviso informativo arriba del formulario.</summary>
+    [Parameter] public string? Aviso { get; set; }
+
+    private readonly Datos _datos = new();
+    private readonly ErroresFormulario _errores = new();
+    private bool _enviando;
+
+    private sealed class Datos
+    {
+        public string? Identificador { get; set; }
+        public string? Contrasena { get; set; }
+    }
+
+    private string? CorreoEscrito => _datos.Identificador?.Trim();
+
+    protected override void OnInitialized()
+    {
+        _datos.Identificador = Correo;
+        if (Aviso != null) _errores.PonerAviso(Aviso, informativo: true);
+        if (!string.IsNullOrEmpty(Correo)) _errores.PedirFoco("contrasena");
+    }
+
+    private async Task EnviarAsync()
+    {
+        _errores.Limpiar();
+        if (string.IsNullOrWhiteSpace(_datos.Identificador)) { _errores.Poner("identificador", "Escribe tu correo."); return; }
+        if (string.IsNullOrEmpty(_datos.Contrasena)) { _errores.Poner("contrasena", "Escribe tu contraseña."); return; }
+
+        _enviando = true;
+        try
+        {
+            Usuario usuario = await Cuenta.IniciarSesionAsync(_datos.Identificador, _datos.Contrasena);
+            Modales.Cerrar();
+            Avisos.Mostrar($"¡Hola de nuevo, {usuario.NombreUsuario}!");
+        }
+        catch (Exception ex)
+        {
+            string mensaje = MensajesError.Para(ex);
+            if (ErroresCuenta.CampoDe(mensaje, "identificador", "contrasena") is { } campo) _errores.Poner(campo, mensaje);
+            else _errores.PonerAviso(mensaje);
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+}

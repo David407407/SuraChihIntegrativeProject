@@ -1,0 +1,32 @@
+/* Contenido: 48px arriba, 80px abajo y 24px entre el título y lo demás, como en Figma */
+.pantalla-cuenta {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-block: 48px 80px;
+}
+
+.favoritos__segmentos { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Cuadrícula de Figma: 40px entre filas y 24px entre columnas */
+.favoritos__rejilla { row-gap: 40px; }
+.favoritos__esqueleto { aspect-ratio: 1; border-radius: var(--radio-m); }
+
+/* "Estado vacío": círculo de 88px con el corazón, título, texto y "Explorar eventos" */
+.favoritos__vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-top: 80px;
+  text-align: center;
+}
+.favoritos__vacio-icono {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--color-sol-suave);
+}
+.favoritos__vacio-boton { padding-top: 8px; }

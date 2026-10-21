@@ -1,0 +1,69 @@
+/* El collage conserva la composición de 600×560 de Figma y se escala al ancho disponible.
+   La escala se calcula con CSS: tan(atan2(ancho, 600px)) es "ancho ÷ 600px" sin unidades. */
+.collage-hero {
+  display: block;
+  aspect-ratio: 600 / 560;
+  container-type: inline-size;
+}
+
+.collage {
+  position: relative;
+  width: 600px;
+  height: 560px;
+  transform: scale(min(1, tan(atan2(100cqw, 600px))));
+  transform-origin: top left;
+}
+
+.collage__tarjeta {
+  position: absolute;
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--radio-xl);
+  box-shadow: var(--sombra-tarjeta-flotante);
+  transition: left 900ms var(--curva-salida), top 900ms var(--curva-salida),
+              width 900ms var(--curva-salida), height 900ms var(--curva-salida),
+              transform 900ms var(--curva-salida), opacity 900ms ease;
+}
+
+/* Posiciones de Paso=1 (Tarjeta 1, 2 y 3 en Figma) */
+.collage__tarjeta[data-pos="centro"] { left: 150px; top: 70px; width: 300px; height: 390px; z-index: 3; }
+.collage__tarjeta[data-pos="izq"] { left: 31px; top: 101px; width: 250px; height: 320px; transform: rotate(-8deg); opacity: 0.92; z-index: 1; }
+.collage__tarjeta[data-pos="der"] { left: 310px; top: 154px; width: 250px; height: 320px; transform: rotate(7deg); opacity: 0.92; z-index: 2; }
+
+.collage__sombra {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(23, 20, 59, 0) 45%, var(--color-velo-tarjeta));
+}
+
+.collage__texto {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--color-superficie);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.collage__texto span { overflow: hidden; text-overflow: ellipsis; }
+
+/* Chips flotantes "Ya vas a ir" y "Guardado en favoritos" */
+.collage__chip {
+  position: absolute;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 8px 12px;
+  border-radius: var(--radio-pildora);
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+  box-shadow: var(--sombra-chip);
+  animation: chip-flota 3.6s ease-in-out infinite alternate;
+}
+.collage__chip--inscrito { left: 400px; top: 40px; }
+.collage__chip--favorito { left: 60px; top: 470px; animation-delay: -1.8s; }
+@keyframes chip-flota { to { transform: translateY(-8px); } }

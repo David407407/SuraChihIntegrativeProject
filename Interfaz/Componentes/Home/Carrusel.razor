@@ -1,0 +1,144 @@
+@*
+  "Carrusel destacado" del Home (Figma, 5 slides): eventos destacados por los moderadores + un lugar.
+  - Avanza solo cada 6 s; se pausa con el mouse o el foco encima y con "reducir movimiento" del sistema.
+  - Puntos (el activo es una píldora de 28px) y flechas Anterior / Siguiente; también ← y → del teclado.
+  Null = cargando (esqueleto); lista vacía = no se muestra.
+*@
+@implements IDisposable
+@inject Acciones Acciones
+@inject InteropJs Js
+
+<div class="contenedor carrusel-envoltura">
+    @if (Elementos == null)
+    {
+        <div class="esqueleto carrusel__esqueleto" aria-hidden="true"></div>
+    }
+    else if (Elementos.Count > 0)
+    {
+        <section class="carrusel" aria-roledescription="carrusel" aria-label="Lo más destacado" @onkeydown="AlTeclado"
+                 @onmouseenter="() => _sobre = true" @onmouseleave="() => _sobre = false"
+                 @onfocusin="() => _foco = true" @onfocusout="() => _foco = false">
+            <div class="carrusel__pista" aria-live="off" style="transform: translateX(@(-100 * _actual)%)">
+                @for (int i = 0; i < Elementos.Count; i++)
+                {
+                    var s = Slide(Elementos[i]);
+                    bool visible = i == _actual;
+                    <article class="carrusel__slide" style="--fondo:@Fondos[i % Fondos.Length]" inert="@(!visible)" aria-hidden="@(visible ? "false" : "true")"
+                             aria-roledescription="slide" aria-label="@($"{i + 1} de {Elementos.Count}: {s.Titulo}")">
+                        <div class="carrusel__texto">
+                            @if (s.Etiqueta != null)
+                            {
+                                <span class="carrusel__etiqueta t-caption">@s.Etiqueta</span>
+                            }
+                            <h2 class="carrusel__titulo t-h1">@s.Titulo</h2>
+                            @if (!string.IsNullOrEmpty(s.Descripcion))
+                            {
+                                <p class="carrusel__descripcion t-body">@s.Descripcion</p>
+                            }
+                            @if (s.Meta.Length > 0)
+                            {
+                                <p class="carrusel__meta t-small-fuerte"><Icono Nombre="@s.Icono" Caja="14" /><span>@s.Meta</span></p>
+                            }
+                            <Boton Texto="Ver detalles" Variante="blanco" Icono="chevron-tinta-12" IconoAlFinal OnClick="s.Abrir" />
+                        </div>
+                        <button type="button" class="carrusel__imagen" tabindex="-1" aria-hidden="true" @onclick="s.Abrir">
+                            <Imagen Src="@s.Imagen" Ancho="540" Alto="300" Prioridad="i == 0" />
+                        </button>
+                    </article>
+                }
+            </div>
+            @if (Elementos.Count > 1)
+            {
+                <div class="carrusel__puntos" role="group" aria-label="Elegir slide">
+                    @for (int i = 0; i < Elementos.Count; i++)
+                    {
+                        int indice = i;
+                        <button type="button" class="carrusel__punto" aria-label="Slide @(i + 1) de @Elementos.Count"
+                                aria-current="@(i == _actual ? "true" : "false")" @onclick="() => Ir(indice)"></button>
+                    }
+                </div>
+                <div class="carrusel__flechas">
+                    <button type="button" class="carrusel__flecha" aria-label="Anterior" @onclick="() => Ir(_actual - 1)"><Icono Nombre="flecha-anterior-blanca" Caja="14" /></button>
+                    <button type="button" class="carrusel__flecha" aria-label="Siguiente" @onclick="() => Ir(_actual + 1)"><Icono Nombre="flecha-siguiente-blanca" Caja="14" /></button>
+                </div>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    /// <summary>Eventos y lugares del carrusel; null mientras cargan.</summary>
+    [Parameter] public IReadOnlyList<ElementoCollage>? Elementos { get; set; }
+
+    private const int IntervaloMs = 6000;
+    /// <summary>Fondos de los 5 slides de Figma; si hay más slides se repiten.</summary>
+    private static readonly string[] Fondos = ["#0a3b8c", "#9d174d", "#065f46", "#7f1d1d", "#2f7bff"];
+
+    private int _actual;
+    private bool _sobre, _foco;
+    private PeriodicTimer? _temporizador;
+    /// <summary>Cada vez que el usuario cambia de slide, el conteo de 6 s vuelve a empezar.</summary>
+    private int _ticksDesdeCambio;
+
+    private sealed record DatosSlide(string Titulo, string? Descripcion, string? Imagen, string? Etiqueta, string Icono, string Meta, Action Abrir);
+
+    private DatosSlide Slide(ElementoCollage elemento)
+    {
+        if (elemento.Lugar is { } l)
+        {
+            var horario = Formato.HorarioLugar(l.HorarioAhora);
+            string meta = string.Join(", ", new[] { l.Direccion, horario.Abierto ? horario.Texto.ToLowerInvariant() : null }.Where(t => !string.IsNullOrEmpty(t)));
+            return new(l.Nombre, l.Descripcion, l.ImagenUrl, l.Etiquetas.FirstOrDefault()?.Nombre, "ubicacion-14-blanco", meta, () => Acciones.VerLugar(l.Id));
+        }
+        var e = elemento.Evento!;
+        string metaEvento = string.Join(", ", new[] { Formato.FechaEvento(e), Formato.UbicacionEvento(e) }.Where(t => !string.IsNullOrEmpty(t)));
+        return new(e.Titulo, e.Descripcion, e.ImagenUrl, e.Etiquetas.FirstOrDefault()?.Nombre, "calendario-14-blanco", metaEvento, () => Acciones.VerEvento(e.Id));
+    }
+
+    /// <summary>Muestra el slide <paramref name="indice"/> (da la vuelta en los extremos).</summary>
+    private void Ir(int indice)
+    {
+        int total = Elementos?.Count ?? 0;
+        if (total == 0) return;
+        _actual = (indice % total + total) % total;
+        _ticksDesdeCambio = 0;
+    }
+
+    private void AlTeclado(KeyboardEventArgs e)
+    {
+        if (e.Key == "ArrowLeft") Ir(_actual - 1);
+        else if (e.Key == "ArrowRight") Ir(_actual + 1);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Elementos != null && _actual >= Elementos.Count) _actual = 0;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (primeraVez && !await Js.ReducirMovimientoAsync()) _ = AvanzarSoloAsync();
+    }
+
+    /// <summary>Revisa cada segundo; a los 6 sin que el usuario lo toque (ni esté encima), avanza.</summary>
+    private async Task AvanzarSoloAsync()
+    {
+        _temporizador = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        try
+        {
+            while (await _temporizador.WaitForNextTickAsync())
+            {
+                if (_sobre || _foco || (Elementos?.Count ?? 0) < 2) { _ticksDesdeCambio = 0; continue; }
+                if (++_ticksDesdeCambio * 1000 < IntervaloMs) continue;
+                Ir(_actual + 1);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            // Se cambió de pantalla.
+        }
+    }
+
+    public void Dispose() => _temporizador?.Dispose();
+}

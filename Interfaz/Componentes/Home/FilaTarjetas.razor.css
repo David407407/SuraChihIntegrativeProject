@@ -1,0 +1,42 @@
+.home-seccion { padding-top: 48px; }
+
+/* Al saltar a una fila desde un tile, que el navbar fijo no tape el título */
+.fila { padding-top: 40px; scroll-margin-top: var(--altura-navbar); }
+.fila__encabezado { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
+.fila__ver-todo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  color: var(--color-tinta);
+  transition: color var(--duracion-rapida);
+}
+.fila__ver-todo:hover { color: var(--color-cielo-texto); }
+
+/* Se sale por la derecha y se desliza */
+.fila__pista {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 282px;
+  align-items: start;
+  gap: 24px;
+  /* Hasta el borde derecho de la ventana, como en Figma */
+  margin-right: calc(-1 * var(--margen-lateral));
+  padding: 4px var(--margen-lateral) 16px 4px;
+  margin-left: -4px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scroll-padding-left: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-linea) transparent;
+}
+.fila__pista > *,
+.fila__pista ::deep .tarjeta { scroll-snap-align: start; }
+.home__esqueleto-tarjeta { height: 389px; border-radius: var(--radio-m); }
+
+.fila__vacio {
+  padding: 32px 24px;
+  border-radius: var(--radio-xl);
+  border: 1.5px dashed var(--color-linea);
+  text-align: center;
+}

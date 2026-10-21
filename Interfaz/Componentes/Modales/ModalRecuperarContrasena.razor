@@ -1,0 +1,56 @@
+@* "Modal / Recuperar contraseña" de Figma → sigue "Revisa tu correo" → "Contraseña nueva". *@
+@inject ServicioCuenta Cuenta
+@inject Modales Modales
+
+<EncabezadoModal Titulo="Recupera tu contraseña" Icono="llave-cielo"
+                 Texto="Escribe el correo con el que te registraste y te enviaremos un enlace." />
+<EditForm Model="_datos" OnSubmit="EnviarAsync" class="modal__formulario" novalidate>
+    <AvisoModal Errores="_errores" />
+    <Campo Nombre="correo" Etiqueta="Correo electrónico" Tipo="email" Icono="correo" @bind-Valor="_datos.Correo"
+           Requerido Autocompletar="email" Errores="_errores" />
+    <Boton Texto="Enviar enlace" Variante="oscuro" Tipo="submit" Clase="modal__ancho" Ocupado="_enviando" />
+</EditForm>
+<div><button type="button" class="modal__enlace t-small-fuerte" @onclick="() => Modales.IniciarSesion(_datos.Correo?.Trim())">Volver a iniciar sesión</button></div>
+
+@code {
+    [Parameter] public string? Correo { get; set; }
+
+    private readonly Datos _datos = new();
+    private readonly ErroresFormulario _errores = new();
+    private bool _enviando;
+
+    private sealed class Datos
+    {
+        public string? Correo { get; set; }
+    }
+
+    protected override void OnInitialized()
+    {
+        if (ReglasCuenta.EsCorreo(Correo)) _datos.Correo = Correo;
+    }
+
+    private async Task EnviarAsync()
+    {
+        _errores.Limpiar();
+        string correo = _datos.Correo?.Trim() ?? "";
+        if (ReglasCuenta.ErrorCorreo(correo) is { } error) { _errores.Poner("correo", error); return; }
+
+        _enviando = true;
+        try
+        {
+            // C# responde igual exista o no la cuenta (no revela qué correos están registrados).
+            await Cuenta.SolicitarRecuperacionAsync(correo);
+            Modales.RevisaTuCorreo(correo);
+        }
+        catch (Exception ex)
+        {
+            string mensaje = MensajesError.Para(ex);
+            if (ErroresCuenta.CampoDe(mensaje, "correo") is { } campo) _errores.Poner(campo, mensaje);
+            else _errores.PonerAviso(mensaje);
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+}

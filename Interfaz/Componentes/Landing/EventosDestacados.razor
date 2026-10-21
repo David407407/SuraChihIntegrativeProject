@@ -1,0 +1,51 @@
+@*
+  "No te los pierdas" (landing): el evento más guardado en grande y hasta cuatro más en lista.
+  Mientras cargan (Eventos = null) se ven esqueletos con brillo.
+*@
+@inject Acciones Acciones
+
+<section class="seccion seccion--fondo" aria-label="@TextosLanding.EventosDestacados.Titulo">
+    <div class="contenedor">
+        <EncabezadoSeccion Titulo="@TextosLanding.EventosDestacados.Titulo" Bajada="@TextosLanding.EventosDestacados.Bajada">
+            <Boton Texto="Ver todos los eventos" Variante="secundario" Icono="chevron-tinta-18" OnClick="Acciones.ExplorarEventos" />
+        </EncabezadoSeccion>
+        <div class="seccion__contenido" aria-busy="@(Eventos == null ? "true" : null)">
+            @if (Eventos == null)
+            {
+                <div class="destacados">
+                    <div class="esqueleto esqueleto--principal" aria-hidden="true"></div>
+                    <div class="destacados__lista">
+                        @for (int i = 0; i < 4; i++)
+                        {
+                            <div class="esqueleto esqueleto--fila" aria-hidden="true"></div>
+                        }
+                    </div>
+                </div>
+            }
+            else if (Eventos.Count == 0)
+            {
+                <p class="seccion__vacio t-body texto-2">@TextosLanding.EventosDestacados.Vacio</p>
+            }
+            else
+            {
+                <div class="destacados">
+                    <TarjetaEventoPrincipal Evento="Eventos[0]" />
+                    @if (Eventos.Count > 1)
+                    {
+                        <ul class="destacados__lista">
+                            @foreach (var (evento, i) in Eventos.Skip(1).Take(4).Select((e, i) => (e, i)))
+                            {
+                                <TarjetaEventoFila Evento="evento" Orden="i" />
+                            }
+                        </ul>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+@code {
+    /// <summary>Lo más guardado de las próximas semanas; null mientras carga.</summary>
+    [Parameter] public IReadOnlyList<EventoTarjeta>? Eventos { get; set; }
+}

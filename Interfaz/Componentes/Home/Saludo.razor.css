@@ -1,0 +1,10 @@
+.saludo { display: flex; align-items: center; gap: 8px; padding-top: 28px; }
+.saludo__iniciar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-cielo-texto);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.saludo__iniciar:hover { color: var(--color-cielo); }

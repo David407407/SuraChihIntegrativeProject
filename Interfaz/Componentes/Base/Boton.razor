@@ -1,0 +1,58 @@
+@*
+  Botón del sistema de diseño (componente "Botón" de Figma: 5 tipos × 2 tamaños).
+
+  <Boton Texto="Voy a ir" Icono="calendario-check" OnClick="..." />
+  <Boton Texto="Eliminar cuenta" Variante="peligro" Tamano="s" OnClick="..." />
+  <Boton Texto="Entrar" Tipo="submit" Ocupado="enviando" />          dentro de un <form>
+  <Boton Texto="Comprar boletos" Href="https://..." Externo />         enlace
+
+  Variantes: primario · oscuro · secundario · peligro · fantasma (las de Figma), contorno-claro (hero azul)
+  y blanco (carrusel del Home). Tamaños: m (48px) · s (36px).
+  Cualquier otro atributo (aria-*, data-*...) pasa tal cual al <button> o <a>.
+*@
+@if (Decorativo)
+{
+    <span class="@Clases" aria-hidden="true" @attributes="Atributos">@Contenido</span>
+}
+else if (Href != null)
+{
+    <a class="@Clases" href="@Href" target="@(Externo ? "_blank" : null)" rel="@(Externo ? "noopener noreferrer" : null)"
+       aria-disabled="@(Deshabilitado ? "true" : null)" @onclick="AlHacerClic" @attributes="Atributos">@Contenido</a>
+}
+else
+{
+    <button type="@Tipo" class="@Clases" disabled="@(Deshabilitado || Ocupado)" aria-busy="@(Ocupado ? "true" : null)"
+            @onclick="AlHacerClic" @attributes="Atributos">@Contenido</button>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Texto { get; set; } = "";
+    [Parameter] public string Variante { get; set; } = "primario";
+    [Parameter] public string Tamano { get; set; } = "m";
+    /// <summary>Nombre del icono (ver <see cref="Icono"/>). En oscuro y peligro se pinta blanco.</summary>
+    [Parameter] public string? Icono { get; set; }
+    /// <summary>El icono va después del texto ("Ver detalles  ›").</summary>
+    [Parameter] public bool IconoAlFinal { get; set; }
+    /// <summary>Con <c>Href</c> se pinta como enlace.</summary>
+    [Parameter] public string? Href { get; set; }
+    /// <summary>Con <c>Href</c>: abre la página fuera de la app (en la de escritorio, en el navegador del sistema).</summary>
+    [Parameter] public bool Externo { get; set; }
+    /// <summary>"button" o "submit" (enviar el formulario).</summary>
+    [Parameter] public string Tipo { get; set; } = "button";
+    [Parameter] public bool Deshabilitado { get; set; }
+    /// <summary>Mientras se espera la respuesta: mismo tamaño, con un indicador que gira, y no se puede volver a pulsar.</summary>
+    [Parameter] public bool Ocupado { get; set; }
+    /// <summary>Solo se ve como botón, pero no lo es (p. ej. "Ver detalles" dentro de una tarjeta que ya es clicable).</summary>
+    [Parameter] public bool Decorativo { get; set; }
+    /// <summary>Clases extra (las pone el componente padre para acomodarlo).</summary>
+    [Parameter] public string? Clase { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? Atributos { get; set; }
+
+    private string Clases =>
+        $"boton boton--{Variante} boton--{Tamano}{(IconoAlFinal ? " boton--icono-final" : "")}{(Ocupado ? " boton--ocupado" : "")} {Clase}".TrimEnd();
+
+    private RenderFragment Contenido => @<text>@if (Icono != null) {<Icono Nombre="@Icono" Caja="@(Tamano == "m" ? 18 : 16)" />}<span>@Texto</span></text>;
+
+    private Task AlHacerClic(MouseEventArgs e) => OnClick.InvokeAsync(e);
+}

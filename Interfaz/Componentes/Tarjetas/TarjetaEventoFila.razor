@@ -1,0 +1,23 @@
+@* Fila de la lista de "No te los pierdas" (landing). Va dentro de un <ul>. *@
+@inject Acciones Acciones
+
+<li data-revelar style="--orden:@Orden">
+    <button type="button" class="evento-fila" @onclick="() => Acciones.VerEvento(Evento.Id)">
+        <span class="evento-fila__imagen">
+            <Imagen Src="@Evento.ImagenUrl" Ancho="112" Alto="112" />
+        </span>
+        <span class="evento-fila__textos">
+            <span class="t-small-fuerte evento-fila__fecha">@Formato.FechaEvento(Evento)</span>
+            <span class="t-h3 evento-fila__titulo">@Evento.Titulo</span>
+            <span class="t-small texto-2">@Formato.UbicacionEvento(Evento)</span>
+        </span>
+        <span class="t-body-fuerte evento-fila__precio">@Formato.PrecioEvento(Evento)</span>
+        <Icono Nombre="chevron-gris-12" Caja="12" />
+    </button>
+</li>
+
+@code {
+    [Parameter, EditorRequired] public EventoTarjeta Evento { get; set; } = default!;
+    /// <summary>Para escalonar la animación de aparición.</summary>
+    [Parameter] public int Orden { get; set; }
+}

@@ -1,0 +1,14 @@
+@*
+  Lo que comparten todas las pantallas: el navbar arriba y, encima de todo, los avisos, la ventana
+  modal y la hoja de detalle (se abren desde cualquier pantalla con Avisos, Modales y Hojas).
+  El pie y el botón "Volver arriba" los pone cada página, porque no todas los llevan.
+*@
+@inherits LayoutComponentBase
+
+<Navbar />
+
+@Body
+
+<Toasts />
+<VentanaModal />
+<HojaDetalle />

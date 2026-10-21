@@ -1,0 +1,61 @@
+@* "Modal / Contraseña nueva" de Figma: se abre con el enlace del correo. *@
+@using BackendLogica.Datos
+@inject ServicioCuenta Cuenta
+@inject Modales Modales
+
+<EncabezadoModal Titulo="Crea una contraseña nueva" Texto="Usa al menos 8 caracteres, con letras y números." />
+<EditForm Model="_datos" OnSubmit="EnviarAsync" class="modal__formulario" novalidate>
+    <AvisoModal Errores="_errores" />
+    <Campo Nombre="contrasena" Etiqueta="Contraseña nueva" Tipo="password" Icono="candado" @bind-Valor="_datos.Contrasena"
+           Requerido Autocompletar="new-password" Errores="_errores" />
+    <Campo Nombre="confirmacion" Etiqueta="Confirma tu contraseña" Tipo="password" Icono="candado" @bind-Valor="_datos.Confirmacion"
+           Requerido Autocompletar="new-password" Errores="_errores" />
+    <Boton Texto="Guardar contraseña" Variante="oscuro" Tipo="submit" Clase="modal__ancho" Ocupado="_enviando" />
+</EditForm>
+
+@code {
+    /// <summary>Token de un solo uso del enlace (C# solo guarda su SHA-256 en password_reset).</summary>
+    [Parameter, EditorRequired] public string Token { get; set; } = "";
+    /// <summary>Para rellenar "Inicia sesión" al terminar.</summary>
+    [Parameter] public string? Correo { get; set; }
+
+    private readonly Datos _datos = new();
+    private readonly ErroresFormulario _errores = new();
+    private bool _enviando;
+
+    private sealed class Datos
+    {
+        public string? Contrasena { get; set; }
+        public string? Confirmacion { get; set; }
+    }
+
+    private async Task EnviarAsync()
+    {
+        _errores.Limpiar();
+        string contrasena = _datos.Contrasena ?? "";
+        if (ReglasCuenta.ErrorContrasena(contrasena) is { } debil) { _errores.Poner("contrasena", debil); return; }
+        if (contrasena != _datos.Confirmacion) { _errores.Poner("confirmacion", ReglasCuenta.NoCoinciden); return; }
+
+        _enviando = true;
+        try
+        {
+            await Cuenta.RestablecerAsync(Token, contrasena, _datos.Confirmacion);
+            Modales.IniciarSesion(Correo, "Listo, tu contraseña cambió. Ya puedes iniciar sesión.");
+        }
+        catch (ReglaNegocioException ex)
+        {
+            // Enlace vencido o ya usado: no es culpa de ningún campo, se avisa arriba.
+            _errores.PonerAviso(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            string mensaje = MensajesError.Para(ex);
+            if (ErroresCuenta.CampoDe(mensaje, "contrasena", "confirmacion") is { } campo) _errores.Poner(campo, mensaje);
+            else _errores.PonerAviso(mensaje);
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+}

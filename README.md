@@ -2,19 +2,19 @@
 
 Eventos y lugares de Chihuahua en un solo lugar. Proyecto integrador UTCH 2026.
 
-App de escritorio en C# (.NET 10, WinForms) cuya interfaz está hecha en HTML/CSS/JS y se muestra
-con **WebView2**. Los datos vienen de MySQL a través de la librería **BackendLogica**.
+App de escritorio en C# hecha con **.NET MAUI** (.NET 10, solo Windows) y **Blazor Hybrid**: componentes
+Razor (C# + HTML + CSS) que se muestran dentro de la ventana con **BlazorWebView**. Los componentes corren
+en el mismo proceso que la app y llaman directo a la librería **BackendLogica**, que habla con MySQL.
 
 ```
-┌──────────────────────── SuraChihIntegrativeProject (WinForms) ───────────────────────┐
-│  VentanaPrincipal ── WebView2 ── wwwroot/ (landing en componentes HTML/CSS/JS)       │
-│         │                              ▲  postMessage { id, accion, datos }          │
-│         ▼                              │                                             │
-│  Puente/PuenteWeb ── Controladores/ (Landing, Home, Mapa, Cuenta, Evento, Lugar)     │
-└───────────────────────────────┬──────────────────────────────────────────────────────┘
-                                ▼
-               BackendLogica (librería aparte, sin nada de interfaz)
-               SuraChihBD → EventoDB, LugarDB, UsuarioDB, ... → ConexionDB → MySQL
+┌───────────────────── SuraChihIntegrativeProject (.NET MAUI, Windows) ─────────────────┐
+│  MainPage ── BlazorWebView ── Interfaz (componentes .razor + CSS aislado)              │
+│                                            │                                          │
+│                                  Interfaz/Servicios (Sesion, ServicioHome, ...)        │
+└────────────────────────────────────────────┬──────────────────────────────────────────┘
+                                             ▼
+                BackendLogica (librería aparte, sin nada de interfaz)
+                SuraChihBD → EventoDB, LugarDB, UsuarioDB, ... → ConexionDB → MySQL
 ```
 
 ## Estructura
@@ -24,8 +24,9 @@ con **WebView2**. Los datos vienen de MySQL a través de la librería **BackendL
 | `BackendLogica/` | Librería de acceso a datos. Ver [BackendLogica/README.md](BackendLogica/README.md). |
 | `BackendLogica.Pruebas/` | Pruebas de humo de la librería contra la BD local. |
 | `BaseDeDatos/surachih_v1.sql` | Script de la BD (tablas, triggers, vistas y datos de prueba). |
-| `Ventanas/`, `Puente/`, `Controladores/`, `Servicios/` | Host de escritorio: ventana, canal JS ↔ C#, acciones y sesión. |
-| `wwwroot/` | Interfaz. Ver [wwwroot/README.md](wwwroot/README.md). |
+| `Interfaz/` | La interfaz: componentes Razor, páginas, estilos y recursos. Ver [Interfaz/README.md](Interfaz/README.md). |
+| `Interfaz.Navegador/` | Servidor de prueba para abrir la misma interfaz en un navegador (sin la app de escritorio). |
+| `MauiProgram.cs`, `App.xaml`, `MainPage.xaml`, `Platforms/Windows/`, `wwwroot/index.html` | App de escritorio (.NET MAUI): arranque, ventana con BlazorWebView y su página anfitriona. |
 | `Legacy/` | Pantallas y código de la versión anterior (no se compilan). |
 
 ## Cómo correrlo
@@ -39,17 +40,37 @@ con **WebView2**. Los datos vienen de MySQL a través de la librería **BackendL
    ```bash
    dotnet run --project BackendLogica.Pruebas
    ```
-4. Abre `SuraChihIntegrativeProject.sln` en Visual Studio (Windows) y ejecuta. Requiere
-   [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (ya viene con Edge).
-   En modo Debug, F12 abre las herramientas de desarrollo de la página.
+4. Abre `SuraChihIntegrativeProject.sln` en Visual Studio (Windows) con la carga de trabajo
+   **Desarrollo de interfaz de usuario de aplicaciones multiplataforma de .NET** (.NET MAUI) y ejecuta
+   `SuraChihIntegrativeProject` con el perfil **Windows Machine**. Desde la consola:
+   ```bash
+   dotnet workload install maui-windows
+   dotnet build SuraChihIntegrativeProject.csproj -t:Run
+   ```
+   Requiere [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (ya viene con Edge);
+   Windows App SDK va incluido junto al .exe.
+   En modo Debug, F12 abre las herramientas de desarrollo de la interfaz.
 
-> En macOS/Linux el proyecto compila (`EnableWindowsTargeting`), pero WinForms solo se ejecuta en
-> Windows. Para trabajar la interfaz sin Windows, abre `wwwroot` en un navegador (usa datos demo).
+### Probar la interfaz en el navegador
+
+El mismo proyecto `Interfaz` se puede abrir en un navegador normal, sin Python ni la app de escritorio:
+
+```bash
+dotnet run --project Interfaz.Navegador --DatosFalsos true
+```
+
+Abre <http://localhost:5180>. Con `--DatosFalsos true` usa los datos de prueba en memoria aunque tu
+`dbsettings.local.json` apunte a MySQL; sin esa opción usa tu configuración, igual que la app.
+Recargar la pestaña cierra la sesión.
+
+> La app de escritorio solo apunta a Windows. Para trabajar la interfaz en macOS o Linux, usa
+> `Interfaz.Navegador`.
 
 Usuarios de prueba (contraseña `Test1234!`): `mariana_r`, `diego_m`, `sofia_c` (normales),
 `cafe_dande` y `misiones_cuu` (organizadores), `mod_ana` y `mod_luis` (moderadores).
 
 ## Diseño
 
-Figma: *Surachih web*, página **Rediseño**, frame **Landing**. Los colores y tipografías están
-como variables en `wwwroot/css/tokens.css` con los mismos nombres que en Figma.
+Figma: *Surachih web*, página **Rediseño**. Los colores y tipografías están como variables en
+`Interfaz/wwwroot/css/tokens.css` con los mismos nombres que en Figma. La página `/componentes`
+muestra todos los componentes base con sus variantes.

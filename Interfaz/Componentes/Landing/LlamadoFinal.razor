@@ -1,0 +1,13 @@
+@* Bloque amarillo final "Tu próximo plan está a un clic" (landing). *@
+@inject Acciones Acciones
+
+<section class="contenedor llamado-final-envoltura" aria-label="@TextosLanding.LlamadoFinal.Titulo">
+    <div class="llamado-final" data-revelar>
+        <h2 class="t-display">@TextosLanding.LlamadoFinal.Titulo</h2>
+        <p class="t-body">@TextosLanding.LlamadoFinal.Texto</p>
+        <div class="llamado-final__acciones">
+            <Boton Texto="Explorar eventos" Variante="oscuro" OnClick="Acciones.ExplorarEventos" />
+            <Boton Texto="Crear cuenta" Variante="secundario" OnClick="Acciones.CrearCuenta" />
+        </div>
+    </div>
+</section>

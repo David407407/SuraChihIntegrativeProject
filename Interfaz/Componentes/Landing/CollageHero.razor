@@ -1,0 +1,83 @@
+@*
+  Tres tarjetas inclinadas que rotan solas (componente "Collage hero" de Figma, variantes Paso=1, 2 y 3).
+  En cada paso la tarjeta de la izquierda pasa al centro, la del centro a la derecha y la de la derecha
+  a la izquierda. Las posiciones están en CollageHero.razor.css y el cambio se anima con transiciones CSS.
+  Se pausa con el mouse encima o si el sistema pide reducir movimiento.
+  Sin datos se muestran tarjetas vacías con el relleno del sol, para no romper la composición.
+*@
+@implements IDisposable
+@inject InteropJs Js
+
+<div class="collage-hero @Clase" @onmouseenter="() => _pausado = true" @onmouseleave="() => _pausado = false">
+    <div class="collage" aria-roledescription="carrusel" aria-label="Eventos y lugares destacados">
+        @for (int i = 0; i < Tarjetas.Count; i++)
+        {
+            var t = Contenido(Tarjetas[i]);
+            string posicion = Posiciones[(i - _paso + Tarjetas.Count * 2) % Tarjetas.Count];
+            <figure class="collage__tarjeta" data-pos="@posicion" aria-hidden="@(posicion == "centro" ? "false" : "true")">
+                <Imagen Src="@t.Imagen" Alt="@t.Titulo" Ancho="300" Alto="390" Prioridad />
+                <span class="collage__sombra"></span>
+                @if (!string.IsNullOrEmpty(t.Titulo))
+                {
+                    <figcaption class="collage__texto">
+                        <span class="t-body-fuerte">@t.Titulo</span>
+                        <span class="t-caption">@t.Subtitulo</span>
+                    </figcaption>
+                }
+            </figure>
+        }
+        <span class="collage__chip collage__chip--inscrito t-small-fuerte"><Icono Nombre="check-exito" Caja="14" />@TextosLanding.Hero.ChipInscrito</span>
+        <span class="collage__chip collage__chip--favorito t-small-fuerte"><Icono Nombre="corazon-relleno-13" Caja="13" />@TextosLanding.Hero.ChipFavorito</span>
+    </div>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<ElementoCollage>? Elementos { get; set; }
+    [Parameter] public string? Clase { get; set; }
+
+    private static readonly string[] Posiciones = ["centro", "izq", "der"];
+    private const int IntervaloMs = 4000;
+
+    private int _paso;
+    private bool _pausado;
+    private PeriodicTimer? _temporizador;
+
+    private IReadOnlyList<ElementoCollage?> Tarjetas =>
+        Elementos is { Count: > 0 } lista ? lista.Take(3).ToList<ElementoCollage?>() : [null, null, null];
+
+    private static (string Titulo, string Subtitulo, string? Imagen) Contenido(ElementoCollage? item)
+    {
+        if (item?.Evento is { } e)
+        {
+            string subtitulo = string.Join(" · ", new[] { Formato.FechaEvento(e), Formato.UbicacionEvento(e) }.Where(t => !string.IsNullOrEmpty(t)));
+            return (e.Titulo, subtitulo, e.ImagenUrl);
+        }
+        if (item?.Lugar is { } l) return (l.Nombre, Formato.HorarioLugar(l.HorarioAhora).Texto, l.ImagenUrl);
+        return ("", "", null);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (primeraVez && !await Js.ReducirMovimientoAsync()) _ = RotarAsync();
+    }
+
+    private async Task RotarAsync()
+    {
+        _temporizador = new PeriodicTimer(TimeSpan.FromMilliseconds(IntervaloMs));
+        try
+        {
+            while (await _temporizador.WaitForNextTickAsync())
+            {
+                if (_pausado || Tarjetas.Count < 2) continue;
+                _paso = (_paso + 1) % Tarjetas.Count;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            // Se cambió de pantalla.
+        }
+    }
+
+    public void Dispose() => _temporizador?.Dispose();
+}

@@ -1,0 +1,18 @@
+@*
+  Cinta azul con categorías que se desplaza sin fin ("Cinta categorías" de Figma, posiciones A → B).
+  Dos copias idénticas: al recorrer exactamente una, el ciclo vuelve a empezar sin saltos.
+*@
+<div class="cinta" aria-label="Categorías">
+    <div class="cinta__pista">
+        @for (int copia = 0; copia < 2; copia++)
+        {
+            <ul class="cinta__fila" aria-hidden="@(copia == 1 ? "true" : "false")">
+                @foreach (var nombre in TextosLanding.CintaCategorias)
+                {
+                    <li class="t-h3">@nombre</li>
+                    <li class="cinta__punto" aria-hidden="true"><img src="@Recursos.Icono("punto-cinta")" alt="" width="8" height="8" /></li>
+                }
+            </ul>
+        }
+    </div>
+</div>

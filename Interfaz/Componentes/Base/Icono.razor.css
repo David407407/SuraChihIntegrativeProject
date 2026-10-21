@@ -1,0 +1,9 @@
+/* Caja cuadrada con el SVG centrado a su tamaño original */
+.icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--caja, 16px);
+  height: var(--caja, 16px);
+}

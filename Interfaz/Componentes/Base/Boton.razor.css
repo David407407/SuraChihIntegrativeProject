@@ -1,0 +1,75 @@
+/* "Botón" de Figma: 5 tipos × 2 tamaños */
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: none;
+  border-radius: var(--radio-control);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--duracion-rapida), border-color var(--duracion-rapida),
+              color var(--duracion-rapida), transform var(--duracion-rapida), box-shadow var(--duracion-rapida);
+}
+.boton:active { transform: scale(0.97); }
+
+.boton--m { height: 48px; padding: 0 20px; font-size: 16px; line-height: 20px; }
+.boton--s { height: 36px; padding: 0 14px; font-size: 14px; line-height: 20px; }
+
+.boton--icono-final { flex-direction: row-reverse; }
+
+.boton--primario { background: var(--color-sol); color: var(--color-tinta); }
+.boton--primario:hover { background: var(--color-sol-hover); box-shadow: 0 6px 16px rgba(255, 196, 0, 0.35); }
+
+.boton--oscuro { background: var(--color-tinta); color: var(--color-superficie); }
+.boton--oscuro:hover { background: var(--color-tinta-hover); }
+
+.boton--secundario {
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+  border: 1.5px solid var(--color-linea);
+}
+.boton--secundario:hover { border-color: var(--color-tinta); }
+
+.boton--peligro { background: var(--color-error); color: var(--color-superficie); }
+.boton--peligro:hover { background: var(--color-error-hover); }
+
+/* Los SVG de Figma vienen en tinta; sobre fondo oscuro o rojo se pintan blancos, como en el diseño. */
+.boton--oscuro ::deep .icono img,
+.boton--peligro ::deep .icono img { filter: brightness(0) invert(1); }
+
+.boton--fantasma { color: var(--color-tinta); }
+.boton--fantasma:hover { background: var(--color-fondo); }
+
+/* Sobre fondos de color (carrusel del Home, "Btn Ver detalles") */
+.boton--blanco { background: var(--color-superficie); color: var(--color-tinta); }
+.boton--blanco:hover { background: var(--color-sol-suave); }
+
+.boton:disabled,
+.boton[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+/* Sobre el azul del hero ("Btn Crear cuenta gratis") */
+.boton--contorno-claro {
+  color: var(--color-superficie);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+}
+.boton--contorno-claro:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.8); }
+
+/* Mientras se espera la respuesta: se queda del mismo tamaño y muestra un indicador */
+.boton--ocupado { position: relative; color: transparent !important; pointer-events: none; }
+.boton--ocupado ::deep .icono { visibility: hidden; }
+.boton--ocupado::after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid;
+  border-color: var(--color-superficie) var(--color-superficie) transparent transparent;
+  border-radius: 50%;
+  animation: girar 700ms linear infinite;
+}
+.boton--secundario.boton--ocupado::after,
+.boton--primario.boton--ocupado::after { border-color: var(--color-tinta) var(--color-tinta) transparent transparent; }
+.boton--ocupado:disabled { opacity: 1; }
+
+@keyframes girar { to { transform: rotate(360deg); } }

@@ -1,0 +1,62 @@
+@*
+  "Card recomendada" de Figma (Normal / Hover): tarjeta horizontal de 588 × 236 con foto cuadrada a la
+  izquierda, tipo, nombre, descripción en dos líneas, meta con pin, precio y "Ver detalles".
+  Sirve para eventos y para lugares (la cuadrícula "Recomendados para ti" del Home).
+
+  <div class="rejilla-recomendadas"><TarjetaRecomendada Elemento="elemento" Orden="i" /></div>
+*@
+@inject Acciones Acciones
+
+<article class="tarjeta-rec" data-revelar style="--orden:@Orden">
+    <div class="tarjeta-rec__imagen">
+        <Imagen Src="@ImagenUrl" Ancho="236" Alto="236" />
+    </div>
+    <div class="tarjeta-rec__info">
+        @if (Etiquetas.FirstOrDefault() is { } categoria)
+        {
+            <span class="tarjeta-rec__tipo"><Chip Texto="@categoria.Nombre" /></span>
+        }
+        <h3 class="t-h3 tarjeta-rec__titulo">
+            <button type="button" class="tarjeta-rec__enlace" @onclick="Abrir">@Nombre</button>
+        </h3>
+        @if (!string.IsNullOrEmpty(Descripcion))
+        {
+            <p class="t-small texto-2 tarjeta-rec__descripcion">@Descripcion</p>
+        }
+        @if (!string.IsNullOrEmpty(Meta))
+        {
+            <p class="t-small texto-2 tarjeta-rec__meta"><Icono Nombre="ubicacion-12" Caja="12" /><span>@Meta</span></p>
+        }
+        <div class="tarjeta-rec__abajo">
+            <span class="t-body-fuerte">@Costo</span>
+            <Boton Texto="Ver detalles" Variante="secundario" Tamano="s" Decorativo Clase="tarjeta-rec__ver" />
+        </div>
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public ElementoCollage Elemento { get; set; } = default!;
+    [Parameter] public int Orden { get; set; }
+
+    private EventoTarjeta? Evento => Elemento.Evento;
+    private LugarTarjeta? Lugar => Elemento.Lugar;
+
+    private string Nombre => Evento?.Titulo ?? Lugar!.Nombre;
+    private string? ImagenUrl => Evento != null ? Evento.ImagenUrl : Lugar!.ImagenUrl;
+    private string? Descripcion => Evento != null ? Evento.Descripcion : Lugar!.Descripcion;
+    private IReadOnlyList<Etiqueta> Etiquetas => Evento?.Etiquetas ?? Lugar!.Etiquetas;
+
+    private string Meta => Evento is { } e
+        ? string.Join(" · ", new[] { Formato.FechaEvento(e), Formato.UbicacionEvento(e) }.Where(t => !string.IsNullOrEmpty(t)))
+        : Lugar!.Direccion;
+
+    private string Costo => Evento is { } e
+        ? Formato.PrecioEvento(e, Formato.EstiloPrecio.Desde)
+        : Formato.PrecioLugar(Lugar!, Formato.EstiloPrecio.Desde);
+
+    private void Abrir()
+    {
+        if (Evento != null) Acciones.VerEvento(Evento.Id);
+        else Acciones.VerLugar(Lugar!.Id);
+    }
+}

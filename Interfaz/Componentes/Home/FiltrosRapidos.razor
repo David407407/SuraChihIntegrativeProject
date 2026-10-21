@@ -1,0 +1,41 @@
+@*
+  Filtros rápidos del Home: Todo / Eventos / Lugares · Hoy · Este fin de semana · Gratis · Fecha · Filtros.
+  Avisa con AlCambiar; el Home filtra lo que ya cargó (sin volver a consultar).
+  "Fecha" y "Filtros" aún muestran "llega en la siguiente versión".
+*@
+@inject Acciones Acciones
+
+<div class="filtros-rapidos contenedor" role="toolbar" aria-label="Filtros rápidos">
+    <div class="segmentos" role="group" aria-label="Mostrar">
+        @foreach (var (valor, texto) in Tipos)
+        {
+            <button type="button" class="segmentos__opcion t-small-fuerte" aria-pressed="@(Filtro.Tipo == valor ? "true" : "false")"
+                    @onclick="() => CambiarAsync(Filtro with { Tipo = valor })">@texto</button>
+        }
+    </div>
+    <span class="filtros-rapidos__divisor" aria-hidden="true"></span>
+    @* "Hoy" y "Este fin de semana" se excluyen entre sí; tocar el activo lo quita. *@
+    <Pildora Texto="Hoy" Activa="Filtro.Cuando == CuandoFiltro.Hoy" OnClick="() => AlternarCuandoAsync(CuandoFiltro.Hoy)" />
+    <Pildora Texto="Este fin de semana" Activa="Filtro.Cuando == CuandoFiltro.FinDeSemana" OnClick="() => AlternarCuandoAsync(CuandoFiltro.FinDeSemana)" />
+    <Pildora Texto="Gratis" Activa="Filtro.Gratis" OnClick="() => CambiarAsync(Filtro with { Gratis = !Filtro.Gratis })" />
+    <span class="filtros-rapidos__espacio"></span>
+    <Boton Texto="Fecha" Variante="secundario" Tamano="s" Icono="calendario-16-tinta" OnClick='() => Acciones.Proximamente("El calendario")' />
+    <Boton Texto="Filtros" Variante="secundario" Tamano="s" Icono="filtros" OnClick='() => Acciones.Proximamente("Los filtros avanzados")' />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public FiltroHome Filtro { get; set; } = FiltroHome.Ninguno;
+    [Parameter] public EventCallback<FiltroHome> AlCambiar { get; set; }
+
+    private static readonly (TipoFiltro, string)[] Tipos =
+    [
+        (TipoFiltro.Todo, "Todo"),
+        (TipoFiltro.Eventos, "Eventos"),
+        (TipoFiltro.Lugares, "Lugares"),
+    ];
+
+    private Task AlternarCuandoAsync(CuandoFiltro cuando) =>
+        CambiarAsync(Filtro with { Cuando = Filtro.Cuando == cuando ? null : cuando });
+
+    private Task CambiarAsync(FiltroHome nuevo) => AlCambiar.InvokeAsync(nuevo);
+}

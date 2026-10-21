@@ -1,0 +1,23 @@
+@*
+  Botones "Continuar con Google / Apple" del diseño. Todavía no hay acceso con cuentas externas: ponen un
+  aviso en Errores. AlAvisar es para que la modal que los contiene se vuelva a pintar y lo muestre.
+*@
+<div class="modal__sociales">
+    @foreach (var proveedor in Proveedores)
+    {
+        <Boton Texto="@($"Continuar con {proveedor}")" Variante="secundario" Clase="modal__ancho" OnClick="() => AvisarAsync(proveedor)" />
+    }
+</div>
+<p class="modal__separador t-caption">o con tu correo</p>
+
+@code {
+    [Parameter, EditorRequired] public string[] Proveedores { get; set; } = [];
+    [Parameter, EditorRequired] public ErroresFormulario Errores { get; set; } = default!;
+    [Parameter] public EventCallback AlAvisar { get; set; }
+
+    private Task AvisarAsync(string proveedor)
+    {
+        Errores.PonerAviso($"El acceso con {proveedor} llega en la siguiente versión. Por ahora usa tu correo.", informativo: true);
+        return AlAvisar.InvokeAsync();
+    }
+}

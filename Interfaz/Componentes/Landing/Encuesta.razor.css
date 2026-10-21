@@ -1,0 +1,10 @@
+.encuesta { background: var(--color-sol-suave); }
+.encuesta__titulo { max-width: 760px; margin-bottom: 40px; }
+.encuesta__datos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin: 0 0 40px; }
+.encuesta__dato { display: flex; flex-direction: column; gap: 8px; padding-top: 24px; border-top: 2px solid var(--color-tinta); }
+.encuesta__dato dd { margin: 0; }
+.encuesta__fuente { color: var(--color-cielo-texto); }
+
+@media (max-width: 760px) {
+  .encuesta__datos { grid-template-columns: minmax(0, 1fr); }
+}

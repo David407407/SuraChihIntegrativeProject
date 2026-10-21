@@ -1,0 +1,48 @@
+.evento-principal {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radio-2xl);
+  background: var(--color-superficie);
+  transition: box-shadow var(--duracion-media);
+}
+.evento-principal:hover { box-shadow: var(--sombra-suave); }
+
+.evento-principal__imagen {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 330px;
+  overflow: hidden;
+}
+.evento-principal__imagen ::deep .imagen { transition: transform 700ms var(--curva-salida); }
+.evento-principal__imagen:hover ::deep .imagen { transform: scale(1.04); }
+
+.evento-principal__fecha {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+}
+.evento-principal__fecha .t-small-fuerte { color: var(--color-cielo-texto); }
+
+.evento-principal__info { display: flex; flex-direction: column; gap: 12px; padding: 24px 28px 28px; }
+
+/* En Figma el título se corta; aquí se permiten 2 líneas para no perder el nombre. */
+.evento-principal__titulo,
+.evento-principal__descripcion {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.evento-principal__meta { display: flex; flex-wrap: wrap; gap: 16px; }
+.evento-principal__meta > span { display: inline-flex; align-items: center; gap: 6px; }
+.evento-principal__acciones { display: flex; gap: 12px; padding-top: 4px; }

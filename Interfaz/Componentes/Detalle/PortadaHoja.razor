@@ -1,0 +1,20 @@
+@* Portada de la hoja de detalle: foto + Compartir, favorito y Cerrar ("Acciones" en Figma). *@
+@inject Hojas Hojas
+
+<header class="hoja__portada">
+    <Imagen Src="@ImagenUrl" Alt="@Titulo" Ancho="1040" Alto="440" Prioridad />
+    <div class="hoja__acciones">
+        <button type="button" class="hoja__accion" aria-label="Compartir" @onclick="AlCompartir"><Icono Nombre="compartir" /></button>
+        <BotonFavorito Tipo="Tipo" Id="Id" Tamano="m" Etiqueta="@Titulo" Activo="Favorito" />
+        <button type="button" class="hoja__accion" aria-label="Cerrar" @onclick="Hojas.Cerrar"><Icono Nombre="cerrar-16" /></button>
+    </div>
+</header>
+
+@code {
+    [Parameter, EditorRequired] public TipoFavorito Tipo { get; set; }
+    [Parameter, EditorRequired] public int Id { get; set; }
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    [Parameter] public string? ImagenUrl { get; set; }
+    [Parameter] public bool Favorito { get; set; }
+    [Parameter] public EventCallback AlCompartir { get; set; }
+}

@@ -1,0 +1,11 @@
+@* Renglón del boleto: icono de 16px en caja gris + etiqueta y valor ("Dato Fecha", "Dato Horario"...). *@
+<div class="boleto__dato">
+    <span class="boleto__icono"><Icono Nombre="@Icono" /></span>
+    <p class="boleto__textos"><span class="t-caption texto-2">@Etiqueta</span><span class="t-body-fuerte">@Valor</span></p>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Icono { get; set; } = "";
+    [Parameter, EditorRequired] public string Etiqueta { get; set; } = "";
+    [Parameter, EditorRequired] public string Valor { get; set; } = "";
+}
