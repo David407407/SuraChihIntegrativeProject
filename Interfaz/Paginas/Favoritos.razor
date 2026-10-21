@@ -1,0 +1,157 @@
+@*
+  Mis favoritos (frames "Mis favoritos" y "Mis favoritos (vacío)" de Figma).
+  - Pide los eventos y lugares guardados (ServicioFavoritos) y los pinta con las Card evento y Card lugar
+    de siempre, con el corazón lleno (primero los eventos, como en el diseño).
+  - Las píldoras Todos / Eventos / Lugares filtran aquí, sin volver a consultar.
+  - Al vaciar un corazón (y que BackendLogica lo guarde) la tarjeta se va; sin nada guardado se muestra
+    el estado vacío con "Explorar eventos".
+*@
+@page "/favoritos"
+@implements IDisposable
+@inject Sesion Sesion
+@inject ServicioFavoritos Servicio
+@inject Modales Modales
+@inject Avisos Avisos
+@inject Acciones Acciones
+@inject ILogger<Favoritos> Registro
+
+<PageTitle>SuraChih · Mis favoritos</PageTitle>
+
+<main class="pantalla-cuenta contenedor">
+    <h1 class="t-h1">Mis favoritos</h1>
+    @if (_datos != null && Total > 0)
+    {
+        <div class="favoritos__segmentos" role="group" aria-label="Qué mostrar">
+            @foreach (var (valor, texto) in Opciones)
+            {
+                <Pildora Texto="@texto" Activa="_filtro == valor" OnClick="() => _filtro = valor" />
+            }
+        </div>
+    }
+    <div class="favoritos" aria-live="polite">
+        @if (!Sesion.Iniciada)
+        {
+            @Vacio("Inicia sesión para ver tus favoritos", "Guarda eventos y lugares con el corazón y encuéntralos aquí después.", "Iniciar sesión", Acciones.IniciarSesion)
+        }
+        else if (_datos == null)
+        {
+            <div class="rejilla-tarjetas favoritos__rejilla">
+                @for (int i = 0; i < 4; i++)
+                {
+                    <div class="esqueleto favoritos__esqueleto" aria-hidden="true"></div>
+                }
+            </div>
+        }
+        else if (Visibles.Count == 0)
+        {
+            @Vacio(Titulos[_filtro], "Toca el corazón en un evento o lugar para encontrarlo aquí después.", "Explorar eventos", Acciones.ExplorarEventos)
+        }
+        else
+        {
+            <div class="rejilla-tarjetas favoritos__rejilla">
+                @foreach (var (item, i) in Visibles.Select((x, i) => (x, i)))
+                {
+                    @if (item.Evento != null)
+                    {
+                        <Tarjeta @key="item" Evento="item.Evento" Orden="i % 4" Favorito />
+                    }
+                    else
+                    {
+                        <Tarjeta @key="item" Lugar="item.Lugar" Orden="i % 4" Favorito />
+                    }
+                }
+            </div>
+        }
+    </div>
+</main>
+
+<VolverArriba />
+
+@code {
+    private enum Filtro { Todos, Eventos, Lugares }
+
+    private static readonly (Filtro, string)[] Opciones = [(Filtro.Todos, "Todos"), (Filtro.Eventos, "Eventos"), (Filtro.Lugares, "Lugares")];
+
+    private static readonly Dictionary<Filtro, string> Titulos = new()
+    {
+        [Filtro.Todos] = "Aún no guardas nada",
+        [Filtro.Eventos] = "Aún no guardas eventos",
+        [Filtro.Lugares] = "Aún no guardas lugares",
+    };
+
+    /// <summary>Eventos y lugares guardados, o null mientras carga.</summary>
+    private (List<EventoTarjeta> Eventos, List<LugarTarjeta> Lugares)? _datos;
+    private Filtro _filtro = Filtro.Todos;
+    /// <summary>Usuario cuyos favoritos se muestran, para no volver a pedir lo mismo.</summary>
+    private int? _usuarioId;
+
+    private int Total => _datos is { } d ? d.Eventos.Count + d.Lugares.Count : 0;
+
+    private List<ElementoCollage> Visibles => _datos is not { } d ? [] :
+    [
+        .. _filtro == Filtro.Lugares ? [] : d.Eventos.Select(ElementoCollage.DeEvento),
+        .. _filtro == Filtro.Eventos ? [] : d.Lugares.Select(ElementoCollage.DeLugar),
+    ];
+
+    /// <summary>"Estado vacío" de Figma: círculo de 88px con el corazón, título, texto y un botón.</summary>
+    private RenderFragment Vacio(string titulo, string texto, string boton, Action accion) =>
+        @<div class="favoritos__vacio">
+            <span class="favoritos__vacio-icono"><Icono Nombre="corazon-cielo-32" Caja="32" /></span>
+            <h2 class="t-h2">@titulo</h2>
+            <p class="t-body texto-2">@texto</p>
+            <div class="favoritos__vacio-boton"><Boton Texto="@boton" Variante="oscuro" OnClick="accion" /></div>
+        </div>;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Sesion.Cambio += AlCambiarSesion;
+        Servicio.Guardado += AlGuardarFavorito;
+        if (Sesion.Iniciada) await CargarAsync();
+        else Modales.RequiereSesion("Inicia sesión para ver los eventos y lugares que guardaste.");
+    }
+
+    private async Task CargarAsync()
+    {
+        _usuarioId = Sesion.Usuario?.Id;
+        _datos = null;
+        try
+        {
+            var datos = await Servicio.ListarAsync();
+            _datos = ([.. datos.Eventos], [.. datos.Lugares]);
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            Registro.LogError(ex, "No se pudieron cargar los favoritos");
+            Avisos.Mostrar(ex is BackendLogica.Datos.SuraChihException ? ex.Message : "No se pudieron cargar tus favoritos.", TipoAviso.Error);
+            _datos = ([], []);
+        }
+    }
+
+    private void AlCambiarSesion() => InvokeAsync(async () =>
+    {
+        int? id = Sesion.Usuario?.Id;
+        if (id == _usuarioId) return;
+        if (_usuarioId != null && id == null) { Acciones.IrA(Acciones.Rutas.Home); return; }   // cerró sesión aquí
+        await CargarAsync();
+        StateHasChanged();
+    });
+
+    /// <summary>El corazón se vació y BackendLogica ya lo guardó: la tarjeta sale de la lista.</summary>
+    private void AlGuardarFavorito(TipoFavorito tipo, int id, bool activo) => InvokeAsync(() =>
+    {
+        if (_datos is not { } d || activo) return;
+        if (tipo == TipoFavorito.Evento) d.Eventos.RemoveAll(e => e.Id == id);
+        else d.Lugares.RemoveAll(l => l.Id == id);
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        Sesion.Cambio -= AlCambiarSesion;
+        Servicio.Guardado -= AlGuardarFavorito;
+    }
+}

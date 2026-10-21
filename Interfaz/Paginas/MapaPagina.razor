@@ -1,0 +1,178 @@
+@*
+  Pantalla Mapa (frames "Mapa (visitante)" y "Mapa" de Figma): lista de lugares a la izquierda y el
+  mapa a la derecha, sincronizados.
+
+  1. Pide los lugares aprobados (ServicioLugar.ListarParaMapaAsync).
+  2. El buscador y las píldoras de tipo deciden qué lugares van al mapa.
+  3. La lista muestra solo los que se ven en el mapa ("N lugares en esta zona"): al moverlo o
+     acercarlo, el mapa avisa (AlCambiarZona) y la lista se vuelve a pintar.
+  4. Elegir una fila resalta su pin y elegir un pin resalta su fila; los dos abren el detalle del lugar.
+     Un clic en el mapa fuera de los pines quita la selección.
+*@
+@page "/mapa"
+@implements IDisposable
+@inject ServicioLugar Servicio
+@inject Hojas Hojas
+@inject Avisos Avisos
+@inject ILogger<MapaPagina> Registro
+
+<PageTitle>SuraChih · Mapa</PageTitle>
+
+<main class="explorar-mapa">
+    <aside class="panel-mapa" aria-label="Lugares en el mapa">
+        <form class="panel-mapa__buscador" role="search" @onsubmit="() => { }">
+            <Campo Nombre="buscar" Etiqueta="Buscar en el mapa" Tipo="search" Icono="buscar-gris" Autocompletar="off"
+                   Valor="@_texto" ValorChanged="AlEscribir" />
+        </form>
+        <div class="panel-mapa__segmentos" role="group" aria-label="Tipo de lugar">
+            @if (_lugares != null)
+            {
+                <Pildora Texto="Todo" Activa="_tipo == null" OnClick="() => ElegirTipoAsync(null)" />
+                @foreach (var (valor, texto) in Lugares.TiposPresentes(_lugares))
+                {
+                    <Pildora Texto="@texto" Activa="_tipo == valor" OnClick="() => ElegirTipoAsync(valor)" />
+                }
+            }
+        </div>
+        <p class="panel-mapa__conteo t-small-fuerte texto-2" aria-live="polite">@Conteo</p>
+        <ul class="panel-mapa__lista">
+            @if (_lugares == null)
+            {
+                @for (int i = 0; i < 4; i++)
+                {
+                    <li><div class="esqueleto item-lugar-esqueleto" aria-hidden="true"></div></li>
+                }
+            }
+            else if (EnZona.Count == 0)
+            {
+                <li class="panel-mapa__vacio t-small texto-2">@MensajeVacio</li>
+            }
+            else
+            {
+                @foreach (var lugar in EnZona)
+                {
+                    <ItemLugar @key="lugar.Id" Lugar="lugar" Activo="lugar.Id == _seleccionado" Desplazar="_desdeElMapa"
+                               OnClick="() => ElegirFilaAsync(lugar.Id)" />
+                }
+            }
+        </ul>
+    </aside>
+    <Mapa @ref="_mapa" Clase="explorar-mapa__mapa" AriaLabel="Mapa de lugares"
+          AlElegirPin="AlElegirPinAsync" AlDeseleccionar="() => _seleccionado = null" AlCambiarZona="AlCambiarZona" />
+</main>
+
+@code {
+    private const int EsperaBuscadorMs = 200;
+
+    private Mapa _mapa = default!;
+    /// <summary>Todos los lugares aprobados, tal como llegan de BackendLogica (null mientras carga).</summary>
+    private List<LugarTarjeta>? _lugares;
+    private string _texto = "";
+    private string? _tipo;
+    private int? _seleccionado;
+    /// <summary>La selección vino de un pin: la lista se desplaza hasta su fila.</summary>
+    private bool _desdeElMapa;
+    /// <summary>Ids de los lugares que se ven ahora en el mapa (null hasta que el mapa avise).</summary>
+    private HashSet<int>? _visibles;
+    private CancellationTokenSource? _espera;
+
+    private List<LugarTarjeta> Filtrados => _lugares?.Where(Coincide).ToList() ?? [];
+
+    private List<LugarTarjeta> EnZona => _visibles == null ? [] : Filtrados.Where(l => _visibles.Contains(l.Id)).ToList();
+
+    private string Conteo => _lugares == null ? "Buscando lugares…"
+        : EnZona.Count == 0 ? "Sin lugares en esta zona"
+        : $"{EnZona.Count} {(EnZona.Count == 1 ? "lugar" : "lugares")} en esta zona";
+
+    private string MensajeVacio =>
+        _lugares!.Count == 0 ? "Todavía no hay lugares publicados."
+        : Filtrados.Count == 0 ? "Ningún lugar coincide con tu búsqueda."
+        : "No hay lugares en esta parte del mapa. Aléjalo o muévelo para ver más.";
+
+    /// <summary>Minúsculas y sin acentos, para que "cafe" encuentre "Café".</summary>
+    private static string Normalizar(string? texto) =>
+        new string((texto ?? "").Normalize(System.Text.NormalizationForm.FormD)
+            .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)
+            .ToArray()).ToLowerInvariant();
+
+    private bool Coincide(LugarTarjeta lugar)
+    {
+        if (_tipo != null && Lugares.TipoLugar(lugar) != _tipo) return false;
+        string buscado = Normalizar(_texto.Trim());
+        if (buscado.Length == 0) return true;
+        return new[] { lugar.Nombre, lugar.Direccion }.Concat(lugar.Etiquetas.Select(t => t.Nombre))
+            .Any(t => Normalizar(t).Contains(buscado));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (!primeraVez) return;
+        try
+        {
+            _lugares = await Servicio.ListarParaMapaAsync();
+        }
+        catch (Exception ex)
+        {
+            Registro.LogError(ex, "No se pudieron cargar los lugares del mapa");
+            Avisos.Mostrar(ex is BackendLogica.Datos.SuraChihException ? ex.Message : "No se pudieron cargar los lugares.", TipoAviso.Error);
+            _lugares = [];
+        }
+        if (_lugares.Count == 0) _visibles = [];   // sin pines el mapa no se mueve y no avisaría
+        StateHasChanged();
+        await AplicarFiltroAsync();
+    }
+
+    /// <summary>Manda al mapa los lugares que pasan el filtro y lo encuadra para verlos todos.</summary>
+    private async Task AplicarFiltroAsync()
+    {
+        var visibles = Filtrados;
+        if (!visibles.Any(l => l.Id == _seleccionado)) _seleccionado = null;
+        await _mapa.MostrarAsync(visibles.Select(Lugares.Punto), ajustar: true);
+    }
+
+    private async Task ElegirTipoAsync(string? tipo)
+    {
+        if (tipo == _tipo) return;
+        _tipo = tipo;
+        await AplicarFiltroAsync();
+    }
+
+    /// <summary>Espera a que el usuario deje de escribir un momento antes de mover el mapa.</summary>
+    private async Task AlEscribir(string texto)
+    {
+        _texto = texto;
+        _espera?.Cancel();
+        _espera = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(EsperaBuscadorMs, _espera.Token);
+            await AplicarFiltroAsync();
+        }
+        catch (TaskCanceledException)
+        {
+            // Siguió escribiendo.
+        }
+    }
+
+    private void AlCambiarZona(int[] visibles) => _visibles = [.. visibles];
+
+    private async Task ElegirFilaAsync(int id)
+    {
+        _seleccionado = id;
+        _desdeElMapa = false;
+        await _mapa.SeleccionarAsync(Punto(id), mover: true);
+        Hojas.AbrirLugar(id);
+    }
+
+    private Task AlElegirPinAsync((int Id, string Tipo) pin)
+    {
+        _seleccionado = pin.Id;
+        _desdeElMapa = true;
+        if (pin.Tipo == "lugar") Hojas.AbrirLugar(pin.Id);
+        return Task.CompletedTask;
+    }
+
+    private PuntoMapa? Punto(int id) => _lugares?.FirstOrDefault(l => l.Id == id) is { } lugar ? Lugares.Punto(lugar) : null;
+
+    public void Dispose() => _espera?.Cancel();
+}

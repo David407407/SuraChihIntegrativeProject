@@ -1,0 +1,203 @@
+@*
+  Mi perfil (frame "Mi perfil" de Figma, con "Modal / Eliminar cuenta" y "Toast / Cambios guardados").
+  - Columna izquierda: avatar (foto o inicial), nombre, correo y "Cambiar foto".
+  - "Datos de la cuenta": nombre de usuario y correo → ServicioPerfil.ActualizarAsync y "Cambios guardados".
+  - "Contraseña": actual y nueva → ServicioPerfil.CambiarContrasenaAsync.
+  - "Eliminar cuenta": abre la modal (ModalEliminarCuenta) → desactiva la cuenta y cierra la sesión.
+  Sin sesión pide iniciarla; si la cierra estando aquí, vuelve al Home.
+*@
+@page "/perfil"
+@implements IDisposable
+@inject Sesion Sesion
+@inject ServicioPerfil Servicio
+@inject Modales Modales
+@inject Avisos Avisos
+@inject Acciones Acciones
+
+<PageTitle>SuraChih · Mi perfil</PageTitle>
+
+<main class="pantalla-cuenta contenedor">
+    <h1 class="t-h1">Mi perfil</h1>
+    <div class="perfil" aria-live="polite">
+        @if (Sesion.Usuario is { } usuario)
+        {
+            <section class="perfil__foto" aria-label="Foto de perfil">
+                <span class="perfil__avatar" aria-hidden="true">
+                    @if (usuario.AvatarUrl != null)
+                    {
+                        <img src="@usuario.AvatarUrl" alt="" width="112" height="112" />
+                    }
+                    else
+                    {
+                        @Navbar.Inicial(usuario)
+                    }
+                </span>
+                <p class="t-h2 perfil__nombre">@usuario.NombreUsuario</p>
+                <p class="t-small texto-2 perfil__correo">@usuario.Correo</p>
+                <Boton Texto="Cambiar foto" Variante="secundario" Tamano="s" Icono="camara" OnClick='() => Acciones.Proximamente("Cambiar la foto")' />
+            </section>
+
+            <div class="perfil__formulario">
+                <EditForm Model="_datos" OnSubmit="GuardarDatosAsync" class="perfil__bloque" novalidate>
+                    <h2 class="t-h3">Datos de la cuenta</h2>
+                    <Campo Nombre="nombreUsuario" Etiqueta="Nombre de usuario" EtiquetaVisible Icono="persona" @bind-Valor="_datos.NombreUsuario"
+                           Requerido Autocompletar="username" Maximo="30" Errores="_erroresDatos" />
+                    <Campo Nombre="correo" Etiqueta="Correo electrónico" EtiquetaVisible Tipo="email" Icono="correo" @bind-Valor="_datos.Correo"
+                           Requerido Autocompletar="email" Maximo="254" Errores="_erroresDatos" />
+                    <Boton Texto="Guardar cambios" Variante="oscuro" Tipo="submit" Ocupado="_guardandoDatos" />
+                </EditForm>
+
+                <hr class="perfil__divisor" />
+
+                <EditForm Model="_contrasena" OnSubmit="CambiarContrasenaAsync" class="perfil__bloque" novalidate>
+                    <h2 class="t-h3">Contraseña</h2>
+                    @* Para que el gestor de contraseñas del navegador sepa de qué cuenta es *@
+                    <input type="text" name="usuario" value="@usuario.NombreUsuario" autocomplete="username" hidden />
+                    <Campo Nombre="actual" Etiqueta="Contraseña actual" EtiquetaVisible Tipo="password" Icono="candado-16" Placeholder="••••••••"
+                           @bind-Valor="_contrasena.Actual" Requerido Autocompletar="current-password" Errores="_erroresContrasena" />
+                    <Campo Nombre="nueva" Etiqueta="Contraseña nueva" EtiquetaVisible Tipo="password" Icono="llave" Placeholder="Mínimo 8 caracteres"
+                           @bind-Valor="_contrasena.Nueva" Requerido Autocompletar="new-password" Errores="_erroresContrasena" />
+                    <Boton Texto="Actualizar contraseña" Variante="secundario" Tipo="submit" Ocupado="_guardandoContrasena" />
+                </EditForm>
+
+                <hr class="perfil__divisor" />
+
+                <section class="perfil__bloque" aria-labelledby="titulo-eliminar">
+                    <h2 class="t-h3" id="titulo-eliminar">Eliminar cuenta</h2>
+                    <p class="t-small texto-2">Se borrarán tu perfil, tus planes, favoritos y reseñas.</p>
+                    <Boton Texto="Eliminar mi cuenta" Variante="peligro" Icono="bote-blanco" OnClick="EliminarCuentaAsync" />
+                </section>
+            </div>
+        }
+        else if (!_cuentaEliminada)
+        {
+            <div class="perfil__sin-sesion">
+                <p class="t-body texto-2">Inicia sesión para ver y editar tu perfil.</p>
+                <Boton Texto="Iniciar sesión" Variante="oscuro" OnClick="Acciones.IniciarSesion" />
+            </div>
+        }
+    </div>
+</main>
+
+@code {
+    private readonly DatosCuenta _datos = new();
+    private readonly DatosContrasena _contrasena = new();
+    private readonly ErroresFormulario _erroresDatos = new();
+    private readonly ErroresFormulario _erroresContrasena = new();
+    private bool _guardandoDatos, _guardandoContrasena;
+    /// <summary>true después de mostrar a un usuario: si luego se cierra la sesión es que la cerró aquí.</summary>
+    private bool _huboSesion;
+    /// <summary>Al eliminar la cuenta se espera a que se lea el aviso antes de ir al Home.</summary>
+    private bool _cuentaEliminada;
+
+    private sealed class DatosCuenta
+    {
+        public string? NombreUsuario { get; set; }
+        public string? Correo { get; set; }
+    }
+
+    private sealed class DatosContrasena
+    {
+        public string? Actual { get; set; }
+        public string? Nueva { get; set; }
+    }
+
+    protected override void OnInitialized()
+    {
+        Sesion.Cambio += AlCambiarSesion;
+        LlenarDatos();
+        if (!Sesion.Iniciada) Modales.RequiereSesion("Inicia sesión para ver y editar tu perfil.");
+    }
+
+    private void LlenarDatos()
+    {
+        if (Sesion.Usuario is not { } usuario) return;
+        _huboSesion = true;
+        _datos.NombreUsuario = usuario.NombreUsuario;
+        _datos.Correo = usuario.Correo;
+    }
+
+    private void AlCambiarSesion() => InvokeAsync(() =>
+    {
+        if (Sesion.Iniciada) LlenarDatos();
+        else if (_huboSesion && !_cuentaEliminada) Acciones.IrA(Acciones.Rutas.Home);   // cerró sesión estando en su perfil
+        StateHasChanged();
+    });
+
+    // Mismas reglas que BackendLogica (Utilidades/ReglasCuenta.cs); C# las vuelve a revisar.
+
+    private async Task GuardarDatosAsync()
+    {
+        _erroresDatos.Limpiar();
+        string nombre = _datos.NombreUsuario?.Trim() ?? "";
+        string correo = _datos.Correo?.Trim() ?? "";
+        if (ReglasCuenta.ErrorNombreUsuario(nombre) is { } errorNombre) { _erroresDatos.Poner("nombreUsuario", errorNombre); return; }
+        if (ReglasCuenta.ErrorCorreo(correo) is { } errorCorreo) { _erroresDatos.Poner("correo", errorCorreo); return; }
+
+        _guardandoDatos = true;
+        try
+        {
+            await Servicio.ActualizarAsync(nombre, correo);   // la sesión cambia: navbar, menú y esta pantalla
+            Avisos.Mostrar("Cambios guardados");
+        }
+        catch (Exception ex)
+        {
+            MostrarError(_erroresDatos, ex);
+        }
+        finally
+        {
+            _guardandoDatos = false;
+        }
+    }
+
+    private async Task CambiarContrasenaAsync()
+    {
+        _erroresContrasena.Limpiar();
+        if (string.IsNullOrEmpty(_contrasena.Actual)) { _erroresContrasena.Poner("actual", "Escribe tu contraseña actual."); return; }
+        if (ReglasCuenta.ErrorContrasena(_contrasena.Nueva ?? "") is { } debil) { _erroresContrasena.Poner("nueva", debil); return; }
+
+        _guardandoContrasena = true;
+        try
+        {
+            await Servicio.CambiarContrasenaAsync(_contrasena.Actual, _contrasena.Nueva);
+            _contrasena.Actual = _contrasena.Nueva = null;
+            Avisos.Mostrar("Contraseña actualizada");
+        }
+        catch (Exception ex)
+        {
+            MostrarError(_erroresContrasena, ex);
+        }
+        finally
+        {
+            _guardandoContrasena = false;
+        }
+    }
+
+    /// <summary>El mensaje de C# no dice el campo: se deduce del texto (mensajes de BackendLogica y ServicioPerfil).</summary>
+    private void MostrarError(ErroresFormulario errores, Exception ex)
+    {
+        if (ex is RequiereSesionException) { Modales.RequiereSesion(); return; }
+        string mensaje = MensajesError.Para(ex);
+        string? campo =
+            mensaje.Contains("actual", StringComparison.OrdinalIgnoreCase) ? "actual"
+            : mensaje.Contains("contraseña", StringComparison.OrdinalIgnoreCase) ? "nueva"
+            : mensaje.Contains("nombre de usuario", StringComparison.OrdinalIgnoreCase) ? "nombreUsuario"
+            : mensaje.Contains("correo", StringComparison.OrdinalIgnoreCase) ? "correo"
+            : null;
+        bool esDeEsteFormulario = campo != null && (errores == _erroresDatos ? campo is "nombreUsuario" or "correo" : campo is "actual" or "nueva");
+        if (esDeEsteFormulario) errores.Poner(campo!, mensaje);   // texto de C# tal cual
+        else Avisos.Mostrar(mensaje, TipoAviso.Error);
+    }
+
+    private async Task EliminarCuentaAsync()
+    {
+        if (!await Modales.ConfirmarEliminarCuentaAsync()) return;
+        _cuentaEliminada = true;
+        Sesion.Cerrar();
+        Avisos.Mostrar("Tu cuenta se eliminó. ¡Gracias por usar SuraChih!");
+        await Task.Delay(1600);   // que alcance a leerse el aviso
+        Acciones.IrA(Acciones.Rutas.Home);
+    }
+
+    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
+}

@@ -1,0 +1,39 @@
+/* Pantalla "Mapa" (visitante y logueado): navbar + panel de 440px + mapa, sin scroll de página */
+.explorar-mapa {
+  display: flex;
+  height: calc(100vh - var(--altura-navbar));
+  overflow: hidden;
+}
+.explorar-mapa ::deep .explorar-mapa__mapa { flex: 1; min-width: 0; }
+
+.panel-mapa {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  gap: 16px;
+  width: min(440px, 42vw);
+  padding: 24px;
+  overflow: hidden;
+  background: var(--color-superficie);
+  border-right: 1px solid var(--color-linea);
+}
+
+.panel-mapa__segmentos { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.panel-mapa__lista {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 16px;
+  min-height: 0;
+  /* La barra de scroll queda en el margen del panel, sin encoger las filas */
+  margin-right: -16px;
+  padding-right: 16px;
+  overflow: hidden auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-linea) transparent;
+}
+
+.panel-mapa__vacio { padding: 8px; }
+
+.item-lugar-esqueleto { flex: none; height: 88px; border-radius: var(--radio-m); }
