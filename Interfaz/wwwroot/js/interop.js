@@ -153,8 +153,10 @@ export function enfocarPrimero(contenedor) {
 /** Pone #evento-3 en la dirección. `reemplazar`: de una recomendación a otra, un solo Atrás. */
 export function ponerDireccion(hash, reemplazar) {
   if (location.hash === hash) return;
-  if (reemplazar) history.replaceState(history.state, '', hash);
-  else history.pushState(history.state, '', hash);
+  // Con la ruta completa: con <base href="/"> un "#evento-3" suelto apuntaría a la raíz y no a esta pantalla.
+  const destino = location.pathname + location.search + hash;
+  if (reemplazar) history.replaceState(history.state, '', destino);
+  else history.pushState(history.state, '', destino);
 }
 
 /** Quita el #... al cerrar la hoja: con Atrás si la hoja lo agregó; si no, reemplazándolo. */

@@ -1,0 +1,61 @@
+@*
+  "Explora por categoría" del Home ("Tile categoría" de Figma, Normal / Hover). Cada tile baja a su
+  fila del Home (la pantalla "Explorar" con filtros aún no existe). Null = cargando; vacía = no se muestra.
+*@
+@inject InteropJs Js
+@inject Avisos Avisos
+
+@if (Etiquetas is not { Count: 0 })
+{
+    <section class="home-seccion" aria-labelledby="titulo-categorias">
+        <div class="contenedor">
+            <h2 class="t-h2 home-seccion__titulo" id="titulo-categorias">Explora por categoría</h2>
+            <div class="tiles">
+                @if (Etiquetas == null)
+                {
+                    @foreach (var _ in Tiles)
+                    {
+                        <div class="esqueleto home__esqueleto-tile" aria-hidden="true"></div>
+                    }
+                }
+                else
+                {
+                    @foreach (var etiqueta in Etiquetas)
+                    {
+                        if (!Tiles.TryGetValue(etiqueta.Icono, out var tile)) continue;
+                        <button type="button" class="tile-categoria" style="--fondo-tile:@tile.Fondo" @onclick="() => IrAAsync(tile)">
+                            <span class="tile-categoria__circulo"><Icono Nombre="@tile.Icono" Caja="18" /></span>
+                            <span class="tile-categoria__nombre t-h3">@tile.Texto</span>
+                            <span class="tile-categoria__flecha"><Icono Nombre="chevron-tinta-12" Caja="12" /></span>
+                        </button>
+                    }
+                }
+            </div>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<Etiqueta>? Etiquetas { get; set; }
+
+    /// <param name="Destino">Id de la fila del Home a la que lleva el tile.</param>
+    private sealed record Tile(string Texto, string Icono, string Fondo, string Destino);
+
+    /// <summary>Tile de cada categoría, por tag.icon.</summary>
+    private static readonly Dictionary<string, Tile> Tiles = new()
+    {
+        ["music"] = new("Música", "tile-musica", "var(--categoria-musica)", "fila-musica"),
+        ["family"] = new("Familiar", "tile-familiar", "var(--categoria-familiar)", "fila-actividades"),
+        ["run"] = new("Aire libre", "tile-aire-libre", "var(--categoria-deportes)", "fila-actividades"),
+        ["robot"] = new("Tecnología", "tile-tecnologia", "var(--categoria-tecnologia)", "fila-actividades"),
+        ["food"] = new("Gastronomía", "tile-gastronomia", "var(--categoria-gastronomia)", "fila-actividades"),
+        ["coffee"] = new("Cafés", "tile-cafes", "var(--categoria-cafes)", "fila-cafes"),
+        ["museum"] = new("Museos", "tile-museos", "var(--categoria-museos)", "fila-tarde"),
+    };
+
+    private async Task IrAAsync(Tile tile)
+    {
+        if (!await Js.DesplazarAAsync(tile.Destino))
+            Avisos.Mostrar($"Todavía no hay nada de {tile.Texto} por aquí.", TipoAviso.Info);
+    }
+}

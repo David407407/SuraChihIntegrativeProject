@@ -1,0 +1,184 @@
+@*
+  Página de referencia (/componentes): todas las variantes de los componentes base con datos de ejemplo.
+  Sirve para ver que coinciden con Figma y como ejemplo de uso. Ábrela en el servidor del navegador
+  (http://localhost:5180/componentes) o escribe la ruta en la app con F12 → consola: location = "/componentes".
+*@
+@page "/componentes"
+@inject Avisos Avisos
+@inject Modales Modales
+@inject Hojas Hojas
+
+<PageTitle>SuraChih · Componentes base</PageTitle>
+
+<main class="contenedor catalogo">
+    <header>
+        <h1 class="t-h1">Componentes base</h1>
+        <p class="t-lead texto-2">Página "Rediseño" de Figma. Cada bloque dice cómo usar el componente en Razor.</p>
+    </header>
+
+    @Muestra("Botón · 5 tipos × 2 tamaños", "<Boton Texto=\"...\" Variante=\"primario|oscuro|secundario|peligro|fantasma\" Tamano=\"m|s\" Icono=\"...\" OnClick=\"...\" />", true,
+        @<text>
+            @foreach (var tamano in new[] { "m", "s" })
+            {
+                <div class="muestra__fila">
+                    @foreach (var variante in Variantes) { <Boton Texto="Botón" Variante="@variante" Tamano="@tamano" /> }
+                </div>
+                <div class="muestra__fila">
+                    @foreach (var variante in Variantes) { <Boton Texto="Con icono" Variante="@variante" Tamano="@tamano" Icono="subir" /> }
+                </div>
+            }
+            <div class="muestra__fila">
+                <Boton Texto="Deshabilitado" Deshabilitado />
+                <Boton Texto="Deshabilitado" Variante="secundario" Deshabilitado />
+                <Boton Texto="Ocupado" Variante="oscuro" Ocupado />
+            </div>
+        </text>)
+
+    @Muestra("Campo", "<Campo Nombre=\"correo\" Etiqueta=\"Correo electrónico\" Tipo=\"email\" Icono=\"correo\" @bind-Valor=\"correo\" Errores=\"errores\" />", true,
+        @<EditForm Model="_formulario" OnSubmit="ProbarValidacion" class="muestra__campos" novalidate>
+            <Campo Nombre="correo" Etiqueta="Correo electrónico" Tipo="email" Icono="correo" Autocompletar="email" @bind-Valor="_formulario.Correo" Errores="_errores" />
+            <Campo Nombre="usuario" Etiqueta="Nombre de usuario" EtiquetaVisible Ayuda="De 3 a 30 letras, números, punto o guion bajo." />
+            <Campo Nombre="contrasena" Etiqueta="Contraseña" EtiquetaVisible Tipo="password" Autocompletar="current-password" />
+            <Campo Nombre="correo2" Etiqueta="Correo con error" EtiquetaVisible Tipo="email" Icono="correo" Valor="@("ana@")" Error="Escribe un correo válido." />
+            <Campo Nombre="fijo" Etiqueta="Deshabilitado" EtiquetaVisible Valor="mariana_r" Deshabilitado />
+            <div class="muestra__fila"><Boton Texto="Probar validación" Tipo="submit" Tamano="s" Variante="oscuro" /></div>
+        </EditForm>)
+
+    @Muestra("Chip categoría · Normal / Activo", "<ChipCategoria Etiqueta=\"etiqueta\" @bind-Activo=\"activo\" />  ·  Interactivo=\"false\" para solo mostrarlo", true,
+        @<text>
+            <div class="muestra__fila">@foreach (var t in Etiquetas) { <ChipCategoria Etiqueta="t" ActivoChanged='a => Avisos.Mostrar($"{t.Nombre}: {(a ? "filtro activado" : "filtro quitado")}")' /> }</div>
+            <div class="muestra__fila">@foreach (var t in Etiquetas) { <ChipCategoria Etiqueta="t" Activo /> }</div>
+            <div class="muestra__fila">
+                @foreach (var t in Etiquetas.Take(2)) { <ChipCategoria Etiqueta="t" Interactivo="false" /> }
+                <ChipCategoria Etiqueta="Cafeteria" Interactivo="false" />
+            </div>
+        </text>)
+
+    @Muestra("Botón favorito · Vacío / Hover / Lleno", "<BotonFavorito Tipo=\"TipoFavorito.Evento\" Id=\"1\" Tamano=\"s|m\" Activo=\"...\" />  (guarda de verdad: sin sesión pide iniciarla)", false,
+        @<div class="muestra__fila">
+            <BotonFavorito Tipo="TipoFavorito.Evento" Id="1" Etiqueta="Demo" />
+            <BotonFavorito Tipo="TipoFavorito.Evento" Id="1" Etiqueta="Demo" Activo />
+            <BotonFavorito Tipo="TipoFavorito.Evento" Id="1" Etiqueta="Demo" Tamano="m" />
+            <BotonFavorito Tipo="TipoFavorito.Evento" Id="1" Etiqueta="Demo" Tamano="m" Activo />
+        </div>)
+
+    @Muestra("Modales de cuenta (WBS 4.2) · cuentas de prueba: mariana_r / Test1234!", "Modales.IniciarSesion() · CrearCuenta() · RecuperarContrasena() · ContrasenaNueva(token) · RequiereSesion()", false,
+        @<div class="muestra__fila">
+            <Boton Texto="Iniciar sesión" Variante="secundario" Tamano="s" OnClick="() => Modales.IniciarSesion()" />
+            <Boton Texto="Crear cuenta" Variante="secundario" Tamano="s" OnClick="() => Modales.CrearCuenta()" />
+            <Boton Texto="Recuperar contraseña" Variante="secundario" Tamano="s" OnClick="() => Modales.RecuperarContrasena()" />
+            <Boton Texto="Contraseña nueva" Variante="secundario" Tamano="s" OnClick='() => Modales.ContrasenaNueva("token-de-ejemplo")' />
+            <Boton Texto="Inicia sesión para continuar" Variante="secundario" Tamano="s" OnClick="() => Modales.RequiereSesion()" />
+        </div>)
+
+    @Muestra("Card evento · Normal / Hover (pasa el mouse)", "<Tarjeta Evento=\"evento\" Orden=\"i\" Favorito=\"...\" />  dentro de .rejilla-tarjetas", true,
+        @<div class="rejilla-tarjetas">@foreach (var (e, i) in Eventos.Select((e, i) => (e, i))) { <Tarjeta Evento="e" Orden="i" Favorito="i == 1" /> }</div>)
+
+    @Muestra("Card lugar · Normal / Hover (pasa el mouse)", "<Tarjeta Lugar=\"lugar\" Orden=\"i\" Favorito=\"...\" />", true,
+        @<div class="rejilla-tarjetas">@foreach (var (l, i) in LugaresDemo.Select((l, i) => (l, i))) { <Tarjeta Lugar="l" Orden="i" Favorito="i == 0" /> }</div>)
+
+    @Muestra("Card recomendada · Normal / Hover (pasa el mouse)", "<TarjetaRecomendada Elemento=\"ElementoCollage.DeEvento(e)\" />  dentro de .rejilla-recomendadas", false,
+        @<div class="rejilla-recomendadas">
+            <TarjetaRecomendada Elemento="ElementoCollage.DeEvento(Eventos[0] with { Descripcion = DescripcionMinecraft, Etiquetas = [Etiquetas[0]] })" />
+            <TarjetaRecomendada Elemento="ElementoCollage.DeLugar(LugaresDemo[0] with { Descripcion = DescripcionCafe })" Orden="1" />
+        </div>)
+
+    @Muestra("Detalle de evento y de lugar (hoja \"Evento / ...\" y \"Lugar / ...\")", "Hojas.AbrirEvento(id, inscribir)  ·  Hojas.AbrirLugar(id)  (ids de la BD)", false,
+        @<div class="muestra__fila">
+            <Boton Texto="Evento 1" Variante="secundario" Tamano="s" OnClick="() => Hojas.AbrirEvento(1)" />
+            <Boton Texto="Evento 2" Variante="secundario" Tamano="s" OnClick="() => Hojas.AbrirEvento(2)" />
+            <Boton Texto="Lugar 1" Variante="secundario" Tamano="s" OnClick="() => Hojas.AbrirLugar(1)" />
+        </div>)
+
+    @Muestra("Píldora · Normal / Activa", "<Pildora Texto=\"Cafés\" Activa=\"tipo == valor\" OnClick=\"...\" />  (una activa por grupo)", true,
+        @<div class="muestra__fila" role="group" aria-label="Tipo de lugar">
+            @foreach (var (valor, texto) in TiposDemo) { <Pildora Texto="@texto" Activa="_tipo == valor" OnClick="() => { _tipo = valor; }" /> }
+        </div>)
+
+    @Muestra("Item lugar (lista del mapa) · Normal / Activo", "<ItemLugar Lugar=\"lugar\" Activo=\"...\" OnClick=\"...\" />", true,
+        @<ul class="muestra__lista">@foreach (var l in LugaresDemo) { <ItemLugar Lugar="l" Activo="l.Id == _itemActivo" OnClick="() => { _itemActivo = l.Id; }" /> }</ul>)
+
+    @Muestra("Mapa · Detalle de evento o lugar (un pin fijo)", "<Mapa Lat=\"28.6353m\" Lng=\"-106.0756m\" Titulo=\"Plaza de Armas\" />", false,
+        @<Mapa Clase="muestra__mapa" Lat="28.6353m" Lng="-106.0756m" Titulo="Plaza de Armas" AriaLabel="Mapa de ejemplo con un lugar" />)
+
+    @Muestra("Mapa · Elegir ubicación (pin arrastrable de \"Publicar evento\")", "<Mapa Arrastrable Lat=\"...\" Lng=\"...\" AlMoverUbicacion=\"...\" />", false,
+        @<text>
+            <Mapa Clase="muestra__mapa" Arrastrable Lat="28.6353m" Lng="-106.0756m" AriaLabel="Mapa de ejemplo para elegir una ubicación"
+                  AlMoverUbicacion="u => { _ubicacion = u; }" />
+            <p class="t-small texto-2">@(_ubicacion is { } u ? $"latitud: {u.Lat} · longitud: {u.Lng}" : "Arrastra el pin o haz clic en el mapa.")</p>
+        </text>)
+</main>
+
+@code {
+    private static readonly string[] Variantes = ["primario", "oscuro", "secundario", "peligro", "fantasma"];
+
+    // Mismas etiquetas que BaseDeDatos/surachih_v1.sql (tag.icon decide color e icono del chip).
+    private static readonly Etiqueta[] Etiquetas =
+    [
+        new(1, "Familiar", "family", "#E11D48", AlcanceEtiqueta.Evento, 1),
+        new(2, "Música", "music", "#7C3AED", AlcanceEtiqueta.Evento, 2),
+        new(3, "Deportes y aire libre", "run", "#059669", AlcanceEtiqueta.Evento, 3),
+        new(4, "Tecnología y conferencias", "robot", "#0284C7", AlcanceEtiqueta.Evento, 4),
+        new(5, "Gastronomía", "food", "#D97706", AlcanceEtiqueta.Evento, 5),
+    ];
+    private static readonly Etiqueta Cafeteria = new(6, "Cafetería", "coffee", "#7C3AED", AlcanceEtiqueta.Lugar, 6);
+    private static readonly Etiqueta Museo = new(10, "Museo", "museum", "#4F46E5", AlcanceEtiqueta.Lugar, 10);
+
+    private const string DescripcionMinecraft = "Embárcate en una misión inmersiva e interactiva de Minecraft junto a tus amigos y familia.";
+    private const string DescripcionCafe = "Café de especialidad y terraza en el centro.";
+
+    private static readonly EventoTarjeta[] Eventos =
+    [
+        new() { Id = 2, Titulo = "Minecraft Experience: Villager Rescue", Descripcion = "", Inicio = new(2026, 10, 23, 14, 0, 0), Fin = new(2026, 10, 25, 21, 0, 0),
+            LugarNombre = "Forum Buenavista", PrecioMin = 600, PrecioMax = 850, ImagenUrl = Recursos.Demo("minecraft.jpg") },
+        new() { Id = 4, Titulo = "Mac DeMarco", Descripcion = "", Inicio = new(2026, 11, 6, 21, 0, 0), Fin = new(2026, 11, 6, 23, 59, 0),
+            LugarNombre = "Quarry Studios", PrecioMin = 1450, PrecioMax = 2600, ImagenUrl = Recursos.Demo("mac-demarco.jpg") },
+        new() { Id = 7, Titulo = "Harry Potter™: La Experiencia del Bosque Prohibido", Descripcion = "", FechaPorConfirmar = true, PrecioPorConfirmar = true,
+            Inicio = new(2026, 12, 1), Fin = new(2026, 12, 1), Direccion = "Chihuahua", ImagenUrl = Recursos.Demo("harry-potter.jpg") },
+        new() { Id = 8, Titulo = "Nombre del evento con dos líneas como máximo aunque el título sea mucho más largo", Descripcion = "",
+            Inicio = new(2026, 11, 26, 20, 0, 0), Fin = new(2026, 11, 26, 23, 0, 0), LugarNombre = "Foro Indie Rocks!", PrecioMin = 0, PrecioMax = 0 },
+    ];
+
+    private static readonly LugarTarjeta[] LugaresDemo =
+    [
+        new() { Id = 2, Nombre = "Café de la Tercera", Direccion = "C. Tercera 805, Zona Centro", Calificacion = 4.5m, PrecioMin = 200, PrecioMax = 300,
+            Latitud = 28.6355m, Longitud = -106.077m, ImagenUrl = Recursos.Demo("cafe-tercera.jpg"), Etiquetas = [Cafeteria],
+            HorarioAhora = new EstadoHorario(true, new TimeSpan(21, 0, 0), null) },
+        new() { Id = 10, Nombre = "Centro Cultural Quinta Gameros", Direccion = "Av. Paseo Bolívar 401", Calificacion = 4.8m, PrecioMin = 37, PrecioMax = 37,
+            Latitud = 28.6361m, Longitud = -106.0722m, ImagenUrl = Recursos.Demo("quinta-gameros.jpg"), Etiquetas = [Museo],
+            HorarioAhora = new EstadoHorario(false, null, new TimeSpan(10, 0, 0)) },
+        new() { Id = 11, Nombre = "Catedral Metropolitana de Chihuahua", Direccion = "Calle Guadalupe Victoria", Calificacion = 4.8m, PrecioMin = 0, PrecioMax = 0,
+            Latitud = 28.6359m, Longitud = -106.0762m, ImagenUrl = Recursos.Demo("catedral.jpg"),
+            Etiquetas = [new(12, "Templo", "church", "#64748B", AlcanceEtiqueta.Lugar, 12)],
+            HorarioAhora = new EstadoHorario(true, new TimeSpan(20, 0, 0), null) },
+        new() { Id = 1, Nombre = "Dandelion Coffee", Direccion = "C. Monte Bello 4334", PrecioMin = 100, PrecioMax = 200,
+            Latitud = 28.652m, Longitud = -106.119m, Etiquetas = [Cafeteria] },
+    ];
+
+    private static readonly (string?, string)[] TiposDemo = [(null, "Todo"), ("coffee", "Cafés"), ("museum", "Museos"), ("tree", "Parques")];
+
+    private readonly Formulario _formulario = new();
+    private readonly ErroresFormulario _errores = new();
+    private string? _tipo;
+    private int _itemActivo = 2;
+    private (decimal Lat, decimal Lng)? _ubicacion;
+
+    private sealed class Formulario
+    {
+        public string? Correo { get; set; }
+    }
+
+    private static RenderFragment Muestra(string titulo, string uso, bool blanco, RenderFragment contenido) =>
+        @<section class="muestra">
+            <h2 class="t-h2">@titulo</h2>
+            <code>@uso</code>
+            <div class="muestra__panel@(blanco ? " muestra__panel--blanco" : "")">@contenido</div>
+        </section>;
+
+    private void ProbarValidacion()
+    {
+        _errores.Limpiar();
+        if (ReglasCuenta.ErrorCorreo(_formulario.Correo?.Trim() ?? "") is { } error) _errores.Poner("correo", error);
+        else Avisos.Mostrar("Correo válido");
+    }
+}

@@ -1,0 +1,84 @@
+@*
+  Home (frames "Home (visitante)" y "Home (logueado)" de Figma): es la misma pantalla; cambian el navbar,
+  el saludo y el orden de "Te podrían interesar" (con sesión, favoritos primero).
+
+  1. Pide todas las secciones en una sola llamada (ServicioHome).
+  2. Los filtros rápidos filtran aquí, sobre lo que ya llegó, sin volver a consultar: ocultan secciones
+     o quitan tarjetas.
+  3. Al iniciar o cerrar sesión se vuelve a pedir (corazones y orden de ese usuario).
+*@
+@page "/home"
+@implements IDisposable
+@inject ServicioHome Servicio
+@inject Sesion Sesion
+@inject Avisos Avisos
+@inject Acciones Acciones
+@inject ILogger<Home> Registro
+
+<PageTitle>SuraChih · Inicio</PageTitle>
+
+<main class="home">
+    <Saludo Usuario="Sesion.Usuario" />
+    <Carrusel Elementos="_datos?.Carrusel" />
+    <FiltrosRapidos Filtro="_filtro" AlCambiar="f => _filtro = f" />
+    <Recomendados Elementos="RecomendadosFiltrados" />
+    <ExploraCategorias Etiquetas="_datos?.Categorias" />
+    @FilaEventos("fila-te-podrian", "Te podrían interesar", _datos?.TePodrianInteresar)
+    @FilaEventos("fila-musica", "Música en vivo", _datos?.Musica)
+    @FilaEventos("fila-actividades", "Actividades y talleres", _datos?.Actividades)
+    @FilaLugares("fila-cafes", "Cafés para trabajar o platicar", _datos?.Cafes)
+    @FilaLugares("fila-tarde", "Para pasar la tarde", _datos?.ParaLaTarde)
+</main>
+
+<Pie />
+<VolverArriba />
+
+@code {
+    /// <summary>Última respuesta de ServicioHome (null mientras carga).</summary>
+    private DatosHome? _datos;
+    private FiltroHome _filtro = FiltroHome.Ninguno;
+
+    private IReadOnlyList<ElementoCollage>? RecomendadosFiltrados => _datos?.Recomendados
+        .Where(el => el.Evento is { } e ? _filtro.MuestraEventos && _filtro.Pasa(e, DateTime.Now) : _filtro.MuestraLugares && _filtro.Pasa(el.Lugar!))
+        .ToList();
+
+    /// <summary>Sin datos en la BD la fila no aparece; con filtros que la vacían, avisa.</summary>
+    private RenderFragment FilaEventos(string id, string titulo, IReadOnlyList<EventoTarjeta>? todos) =>
+        @<FilaTarjetas Id="@id" Titulo="@titulo" Visible="todos is not { Count: 0 } && _filtro.MuestraEventos"
+                       Eventos="todos?.Where(e => _filtro.Pasa(e, DateTime.Now)).ToList()" Favoritos="_datos?.FavoritosEventos"
+                       AlVerTodo="Acciones.VerTodosEventos" />;
+
+    private RenderFragment FilaLugares(string id, string titulo, IReadOnlyList<LugarTarjeta>? todos) =>
+        @<FilaTarjetas Id="@id" Titulo="@titulo" Visible="todos is not { Count: 0 } && _filtro.MuestraLugares"
+                       Lugares="todos?.Where(_filtro.Pasa).ToList()" Favoritos="_datos?.FavoritosLugares"
+                       AlVerTodo="Acciones.Mapa" />;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Sesion.Cambio += AlCambiarSesion;
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        try
+        {
+            _datos = await Servicio.ObtenerAsync();
+        }
+        catch (Exception ex)
+        {
+            Registro.LogError(ex, "No se pudo cargar el Home");
+            Avisos.Mostrar(ex is BackendLogica.Datos.SuraChihException ? ex.Message : "No se pudo cargar el inicio.", TipoAviso.Error);
+            _datos = DatosHome.Vacio;
+        }
+    }
+
+    /// <summary>Al entrar o salir de la cuenta: si los datos se armaron para otro usuario, se vuelven a pedir.</summary>
+    private void AlCambiarSesion() => InvokeAsync(async () =>
+    {
+        if (_datos != null && Sesion.Usuario?.Id != _datos.UsuarioId) await CargarAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
+}

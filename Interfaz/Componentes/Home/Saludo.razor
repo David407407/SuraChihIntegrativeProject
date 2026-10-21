@@ -1,0 +1,18 @@
+@* "Inicia sesión · ..." o "Hola, Andy · ..." arriba del Home. *@
+@inject Acciones Acciones
+
+<div class="saludo contenedor">
+    @if (Usuario != null)
+    {
+        <span class="t-small-fuerte">Hola, @Usuario.NombreUsuario</span>
+    }
+    else
+    {
+        <button type="button" class="saludo__iniciar t-small-fuerte" @onclick="Acciones.IniciarSesion"><Icono Nombre="usuario-cielo-14" Caja="14" />Inicia sesión</button>
+    }
+    <span class="t-small texto-2">· Lo más destacado de esta semana en Chihuahua</span>
+</div>
+
+@code {
+    [Parameter] public Usuario? Usuario { get; set; }
+}

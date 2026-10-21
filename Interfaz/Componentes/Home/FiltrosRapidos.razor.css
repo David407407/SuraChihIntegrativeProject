@@ -1,0 +1,27 @@
+.filtros-rapidos { display: flex; align-items: center; gap: 8px; padding-block: 36px 8px; }
+
+.segmentos {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--radio-control);
+  background: var(--color-fondo);
+}
+.segmentos__opcion {
+  padding: 8px 18px;
+  border-radius: var(--radio-control);
+  color: var(--color-tinta);
+  transition: background-color var(--duracion-rapida), box-shadow var(--duracion-rapida);
+}
+.segmentos__opcion:hover { background: var(--color-superficie); }
+.segmentos__opcion[aria-pressed="true"] {
+  background: var(--color-sol-suave);
+  box-shadow: inset 0 0 0 1.5px var(--color-sol);
+}
+
+.filtros-rapidos__divisor { width: 1px; height: 24px; margin-inline: 4px; background: var(--color-linea); }
+.filtros-rapidos__espacio { flex: 1; }
+
+@media (max-width: 1100px) {
+  .filtros-rapidos { flex-wrap: wrap; }
+}

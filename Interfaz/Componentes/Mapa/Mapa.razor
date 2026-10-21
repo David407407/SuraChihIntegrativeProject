@@ -47,20 +47,31 @@
 
     private ElementReference _elemento;
     private DotNetObjectReference<Mapa>? _puente;
+    private Task? _conexion;
 
     private static string? Coordenada(decimal? valor) => valor?.ToString(CultureInfo.InvariantCulture);
 
-    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    protected override Task OnAfterRenderAsync(bool primeraVez) => primeraVez ? ConectarAsync() : Task.CompletedTask;
+
+    /// <summary>
+    /// Escucha los eventos del mapa una sola vez. La página puede mandar pines antes de que corra el
+    /// OnAfterRender de este componente; se conecta primero para no perder el primer aviso de zona.
+    /// </summary>
+    private Task ConectarAsync() => _conexion ??= ConectarUnaVezAsync();
+
+    private async Task ConectarUnaVezAsync()
     {
-        if (!primeraVez) return;
         _puente = DotNetObjectReference.Create(this);
         await Js.LlamarAsync("mapaConectar", _elemento, _puente);
     }
 
     /// <summary>Pinta estos pines (los que no tienen coordenadas se ignoran).</summary>
     /// <param name="ajustar">Encuadra el mapa para verlos todos.</param>
-    public ValueTask MostrarAsync(IEnumerable<PuntoMapa> puntos, bool ajustar = false) =>
-        Js.LlamarAsync("mapaMostrar", _elemento, puntos.Select(ParaJs).ToArray(), ajustar);
+    public async Task MostrarAsync(IEnumerable<PuntoMapa> puntos, bool ajustar = false)
+    {
+        await ConectarAsync();
+        await Js.LlamarAsync("mapaMostrar", _elemento, puntos.Select(ParaJs).ToArray(), ajustar);
+    }
 
     /// <summary>Marca un pin como activo (null = ninguno). Con <paramref name="mover"/> desplaza el mapa lo justo para que se vea.</summary>
     public ValueTask SeleccionarAsync(PuntoMapa? punto, bool mover = false) =>
