@@ -3,7 +3,7 @@
   <!--
     Interfaz de SuraChih en Blazor (componentes .razor, estilos y recursos de wwwroot).
     La usan dos anfitriones:
-      - SuraChihIntegrativeProject: la app de escritorio (WinForms + BlazorWebView).
+      - SuraChihIntegrativeProject: la app de escritorio (.NET MAUI para Windows + BlazorWebView).
       - Interfaz.Navegador: un servidor de prueba para abrir la misma interfaz en el navegador.
     Los archivos de wwwroot se sirven como _content/Interfaz/... (ver Utilidades/Recursos.cs).
   -->

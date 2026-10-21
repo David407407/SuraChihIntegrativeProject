@@ -2,13 +2,13 @@
 
 Eventos y lugares de Chihuahua en un solo lugar. Proyecto integrador UTCH 2026.
 
-App de escritorio en C# (.NET 10, WinForms) cuya interfaz está hecha con **Blazor Hybrid**: componentes
+App de escritorio en C# hecha con **.NET MAUI** (.NET 10, solo Windows) y **Blazor Hybrid**: componentes
 Razor (C# + HTML + CSS) que se muestran dentro de la ventana con **BlazorWebView**. Los componentes corren
 en el mismo proceso que la app y llaman directo a la librería **BackendLogica**, que habla con MySQL.
 
 ```
-┌──────────────────────── SuraChihIntegrativeProject (WinForms) ────────────────────────┐
-│  VentanaPrincipal ── BlazorWebView ── Interfaz (componentes .razor + CSS aislado)      │
+┌───────────────────── SuraChihIntegrativeProject (.NET MAUI, Windows) ─────────────────┐
+│  MainPage ── BlazorWebView ── Interfaz (componentes .razor + CSS aislado)              │
 │                                            │                                          │
 │                                  Interfaz/Servicios (Sesion, ServicioHome, ...)        │
 └────────────────────────────────────────────┬──────────────────────────────────────────┘
@@ -26,7 +26,7 @@ en el mismo proceso que la app y llaman directo a la librería **BackendLogica**
 | `BaseDeDatos/surachih_v1.sql` | Script de la BD (tablas, triggers, vistas y datos de prueba). |
 | `Interfaz/` | La interfaz: componentes Razor, páginas, estilos y recursos. Ver [Interfaz/README.md](Interfaz/README.md). |
 | `Interfaz.Navegador/` | Servidor de prueba para abrir la misma interfaz en un navegador (sin la app de escritorio). |
-| `Ventanas/`, `wwwroot/index.html` | Host de escritorio: la ventana con BlazorWebView y su página anfitriona. |
+| `MauiProgram.cs`, `App.xaml`, `MainPage.xaml`, `Platforms/Windows/`, `wwwroot/index.html` | App de escritorio (.NET MAUI): arranque, ventana con BlazorWebView y su página anfitriona. |
 | `Legacy/` | Pantallas y código de la versión anterior (no se compilan). |
 
 ## Cómo correrlo
@@ -40,8 +40,15 @@ en el mismo proceso que la app y llaman directo a la librería **BackendLogica**
    ```bash
    dotnet run --project BackendLogica.Pruebas
    ```
-4. Abre `SuraChihIntegrativeProject.sln` en Visual Studio (Windows) y ejecuta `SuraChihIntegrativeProject`.
-   Requiere [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (ya viene con Edge).
+4. Abre `SuraChihIntegrativeProject.sln` en Visual Studio (Windows) con la carga de trabajo
+   **Desarrollo de interfaz de usuario de aplicaciones multiplataforma de .NET** (.NET MAUI) y ejecuta
+   `SuraChihIntegrativeProject` con el perfil **Windows Machine**. Desde la consola:
+   ```bash
+   dotnet workload install maui-windows
+   dotnet build SuraChihIntegrativeProject.csproj -t:Run
+   ```
+   Requiere [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (ya viene con Edge);
+   Windows App SDK va incluido junto al .exe.
    En modo Debug, F12 abre las herramientas de desarrollo de la interfaz.
 
 ### Probar la interfaz en el navegador
@@ -56,8 +63,8 @@ Abre <http://localhost:5180>. Con `--DatosFalsos true` usa los datos de prueba e
 `dbsettings.local.json` apunte a MySQL; sin esa opción usa tu configuración, igual que la app.
 Recargar la pestaña cierra la sesión.
 
-> En macOS/Linux el proyecto de escritorio compila (`EnableWindowsTargeting`), pero WinForms solo se
-> ejecuta en Windows. Para trabajar la interfaz sin Windows, usa `Interfaz.Navegador`.
+> La app de escritorio solo apunta a Windows. Para trabajar la interfaz en macOS o Linux, usa
+> `Interfaz.Navegador`.
 
 Usuarios de prueba (contraseña `Test1234!`): `mariana_r`, `diego_m`, `sofia_c` (normales),
 `cafe_dande` y `misiones_cuu` (organizadores), `mod_ana` y `mod_luis` (moderadores).

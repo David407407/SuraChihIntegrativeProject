@@ -2,7 +2,7 @@
 
 Componentes Razor de SuraChih. Es una **biblioteca Razor** que usan dos anfitriones:
 
-- `SuraChihIntegrativeProject` (la app de escritorio): la ventana WinForms la muestra con BlazorWebView.
+- `SuraChihIntegrativeProject` (la app de escritorio): la app .NET MAUI (solo Windows) la muestra con BlazorWebView.
 - `Interfaz.Navegador`: un servidor de prueba para abrirla en el navegador
   (`dotnet run --project Interfaz.Navegador --DatosFalsos true` → <http://localhost:5180>).
 
