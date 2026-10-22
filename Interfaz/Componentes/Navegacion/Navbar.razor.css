@@ -31,11 +31,16 @@
 }
 
 .navbar__buscador {
+  margin-left: 16px;   /* separado de "Inicio" para que no se lean como un solo bloque */
+  width: min(440px, 32vw);
+}
+/* FluentTextInput (Fluent lo envuelve en un <fluent-field>) */
+.navbar__buscador ::deep fluent-field { display: block; width: 100%; }
+.navbar__buscador ::deep fluent-text-input { width: 100%; }
+.navbar__buscador ::deep fluent-text-input::part(root) {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: 16px;   /* separado de "Inicio" para que no se lean como un solo bloque */
-  width: min(440px, 32vw);
   height: 44px;
   padding: 0 16px;
   border-radius: var(--radio-control);
@@ -43,16 +48,15 @@
   border: 1.5px solid transparent;
   transition: border-color var(--duracion-rapida), background-color var(--duracion-rapida);
 }
-.navbar__buscador:focus-within { border-color: var(--color-cielo); background: var(--color-superficie); }
-.navbar__buscador input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
+.navbar__buscador ::deep fluent-text-input::part(root)::after { display: none; }
+.navbar__buscador ::deep fluent-text-input:focus-within::part(root) { border-color: var(--color-cielo); background: var(--color-superficie); }
+.navbar__buscador ::deep fluent-text-input::part(control) {
+  padding: 0;
   color: var(--color-tinta);
+  font: 400 14px/20px var(--fuente-cuerpo);
 }
-.navbar__buscador input::placeholder { color: var(--color-texto-2); }
+.navbar__buscador ::deep fluent-text-input::part(control)::placeholder { color: var(--color-texto-2); }
+.navbar__buscador ::deep [slot="start"] { display: flex; }
 
 .navbar__acciones {
   display: flex;
@@ -61,22 +65,28 @@
   margin-left: auto;
 }
 
-.navbar__enlace {
+/* FluentButton transparente */
+.navbar ::deep .navbar__enlace {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   flex: none;
+  min-width: 0;
+  height: auto;
   padding: 8px 12px;
+  border: 0;
+  font-family: var(--fuente-cuerpo);
   margin-inline: -8px;   /* el relleno es para el fondo de hover / activo; el texto queda donde estaba */
   border-radius: var(--radio-control);
   color: var(--color-tinta);
   white-space: nowrap;
   transition: color var(--duracion-rapida), background-color var(--duracion-rapida), box-shadow var(--duracion-rapida);
 }
-.navbar__enlace:hover { color: var(--color-cielo-texto); background: var(--color-fondo); }
+.navbar ::deep .navbar__icono { display: flex; }
+.navbar ::deep .navbar__enlace:hover { color: var(--color-cielo-texto); background: var(--color-fondo); }
 
 /* Pantalla actual: mismo estilo que el segmento activo de los filtros del Home */
-.navbar__enlace[aria-current="page"] {
+.navbar ::deep .navbar__enlace[aria-current="page"] {
   color: var(--color-tinta);
   background: var(--color-sol-suave);
   box-shadow: inset 0 0 0 1.5px var(--color-sol);
@@ -85,22 +95,26 @@
 /* Logueado: Mapa · Mis planes · Favoritos · Avatar, con 32px entre ellos */
 .navbar--logueado .navbar__acciones { gap: 32px; }
 
-.navbar__circulo {
+.navbar__circulo,
+.navbar ::deep .navbar__circulo {
   display: grid;
   place-items: center;
   flex: none;
   width: 40px;
+  min-width: 0;
   height: 40px;
+  padding: 0;
   overflow: hidden;
   border-radius: var(--radio-control);
   transition: border-color var(--duracion-rapida), background-color var(--duracion-rapida), transform var(--duracion-rapida);
 }
-.navbar__circulo:active { transform: scale(0.94); }
+.navbar__circulo:active,
+.navbar ::deep .navbar__circulo:active { transform: scale(0.94); }
 
-.navbar__favoritos { border: 1.5px solid var(--color-linea); }
-.navbar__favoritos:hover { border-color: var(--color-favorito); background: var(--color-favorito-suave); }
+.navbar ::deep .navbar__favoritos { border: 1.5px solid var(--color-linea); background: transparent; }
+.navbar ::deep .navbar__favoritos:hover { border-color: var(--color-favorito); background: var(--color-favorito-suave); }
 /* En Mis favoritos: marcado como los enlaces de la pantalla actual */
-.navbar__favoritos[aria-current="page"] { border-color: var(--color-sol); background: var(--color-sol-suave); }
+.navbar ::deep .navbar__favoritos[aria-current="page"] { border-color: var(--color-sol); background: var(--color-sol-suave); }
 
 .navbar__avatar {
   anchor-name: --avatar-cuenta;   /* el menú de cuenta se coloca debajo (MenuCuenta.razor.css) */

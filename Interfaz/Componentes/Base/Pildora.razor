@@ -6,8 +6,10 @@
     <Pildora Texto="Todo" Activa="tipo == null" OnClick="() => tipo = null" />
     <Pildora Texto="Cafés" Activa='tipo == "coffee"' OnClick='() => tipo = "coffee"' />
   </div>
+
+  Por dentro es un FluentToggleButton (Pressed = Activa). Estilos en css/controles.css.
 *@
-<button type="button" class="pildora t-small-fuerte" aria-pressed="@(Activa ? "true" : "false")" @onclick="OnClick">@Texto</button>
+<FluentToggleButton Class="pildora t-small-fuerte" Shape="ButtonShape.Circular" Pressed="Activa" OnClick="() => OnClick.InvokeAsync()">@Texto</FluentToggleButton>
 
 @code {
     [Parameter, EditorRequired] public string Texto { get; set; } = "";

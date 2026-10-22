@@ -2,6 +2,7 @@
   Filtros rápidos del Home: Todo / Eventos / Lugares · Hoy · Este fin de semana · Gratis · Fecha · Filtros.
   Avisa con AlCambiar; el Home filtra lo que ya cargó (sin volver a consultar).
   "Fecha" y "Filtros" aún muestran "llega en la siguiente versión".
+  Todo / Eventos / Lugares son FluentToggleButton (sus estilos van con ::deep porque son de Fluent).
 *@
 @inject Acciones Acciones
 
@@ -9,8 +10,8 @@
     <div class="segmentos" role="group" aria-label="Mostrar">
         @foreach (var (valor, texto) in Tipos)
         {
-            <button type="button" class="segmentos__opcion t-small-fuerte" aria-pressed="@(Filtro.Tipo == valor ? "true" : "false")"
-                    @onclick="() => CambiarAsync(Filtro with { Tipo = valor })">@texto</button>
+            <FluentToggleButton Class="segmentos__opcion t-small-fuerte" Shape="ButtonShape.Circular" Pressed="Filtro.Tipo == valor"
+                                OnClick="() => CambiarAsync(Filtro with { Tipo = valor })">@texto</FluentToggleButton>
         }
     </div>
     <span class="filtros-rapidos__divisor" aria-hidden="true"></span>

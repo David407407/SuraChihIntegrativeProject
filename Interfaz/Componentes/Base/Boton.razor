@@ -8,7 +8,10 @@
 
   Variantes: primario · oscuro · secundario · peligro · fantasma (las de Figma), contorno-claro (hero azul)
   y blanco (carrusel del Home). Tamaños: m (48px) · s (36px).
-  Cualquier otro atributo (aria-*, data-*...) pasa tal cual al <button> o <a>.
+  Cualquier otro atributo (aria-*, data-*...) pasa tal cual al botón.
+
+  Por dentro es un FluentButton (o FluentAnchorButton con Href) de Fluent UI. Los colores, tamaños y la
+  forma de Figma están en css/controles.css: el CSS aislado de este archivo no llega a los componentes de Fluent.
 *@
 @if (Decorativo)
 {
@@ -16,13 +19,16 @@
 }
 else if (Href != null)
 {
-    <a class="@Clases" href="@Href" target="@(Externo ? "_blank" : null)" rel="@(Externo ? "noopener noreferrer" : null)"
-       aria-disabled="@(Deshabilitado ? "true" : null)" @onclick="AlHacerClic" @attributes="Atributos">@Contenido</a>
+    <FluentAnchorButton Class="@Clases" Href="@Href" Target="@(Externo ? LinkTarget.Blank : null)" Rel="@(Externo ? "noopener noreferrer" : null)"
+                        Appearance="Apariencia" Shape="ButtonShape.Circular" Size="Medida"
+                        AdditionalAttributes="@Con("aria-disabled", Deshabilitado)">@Contenido</FluentAnchorButton>
 }
 else
 {
-    <button type="@Tipo" class="@Clases" disabled="@(Deshabilitado || Ocupado)" aria-busy="@(Ocupado ? "true" : null)"
-            @onclick="AlHacerClic" @attributes="Atributos">@Contenido</button>
+    <FluentButton Class="@Clases" Type="@(Tipo == "submit" ? ButtonType.Submit : ButtonType.Button)"
+                  Appearance="Apariencia" Shape="ButtonShape.Circular" Size="Medida"
+                  Disabled="@(Deshabilitado || Ocupado)"
+                  OnClick="AlHacerClic" AdditionalAttributes="@Con("aria-busy", Ocupado)">@Contenido</FluentButton>
 }
 
 @code {
@@ -52,7 +58,27 @@ else
     private string Clases =>
         $"boton boton--{Variante} boton--{Tamano}{(IconoAlFinal ? " boton--icono-final" : "")}{(Ocupado ? " boton--ocupado" : "")} {Clase}".TrimEnd();
 
-    private RenderFragment Contenido => @<text>@if (Icono != null) {<Icono Nombre="@Icono" Caja="@(Tamano == "m" ? 18 : 16)" />}<span>@Texto</span></text>;
+    /// <summary>La apariencia de Fluent más cercana a la variante (los colores exactos los pone controles.css).</summary>
+    private ButtonAppearance Apariencia => Variante switch
+    {
+        "primario" or "oscuro" or "peligro" => ButtonAppearance.Primary,
+        "secundario" or "contorno-claro" => ButtonAppearance.Outline,
+        "fantasma" => ButtonAppearance.Transparent,
+        _ => ButtonAppearance.Default,
+    };
+
+    private ButtonSize Medida => Tamano == "s" ? ButtonSize.Medium : ButtonSize.Large;
+
+    /// <summary>El icono va en la ranura start / end de Fluent (así toma la separación del botón) y el texto en la principal.</summary>
+    private RenderFragment Contenido => @<text>@if (Icono != null) {<span class="boton__icono" slot="@(IconoAlFinal ? "end" : "start")"><Icono Nombre="@Icono" Caja="@(Tamano == "m" ? 18 : 16)" /></span>}<span>@Texto</span>@if (Ocupado) {<FluentSpinner Class="boton__espera" Size="SpinnerSize.Tiny" />}</text>;
+
+    /// <summary>Los atributos extra más uno de estado (aria-busy, aria-disabled) cuando aplica.</summary>
+    private Dictionary<string, object> Con(string atributo, bool activo)
+    {
+        var todos = Atributos?.ToDictionary(a => a.Key, a => a.Value) ?? [];
+        if (activo) todos[atributo] = "true";
+        return todos;
+    }
 
     private Task AlHacerClic(MouseEventArgs e) => OnClick.InvokeAsync(e);
 }

@@ -6,20 +6,21 @@
 
   Al hacer clic cambia de inmediato (respuesta optimista) y lo guarda ServicioFavoritos. Si falla
   regresa al estado anterior; sin sesión abre "Inicia sesión para continuar".
+  El botón es un FluentToggleButton (su forma y colores están en css/controles.css).
 *@
 @inject ServicioFavoritos Favoritos
 @inject Avisos Avisos
 @inject Modales Modales
 
 <div class="@Clases">
-    <button type="button" class="boton-favorito__boton" aria-pressed="@(_activo ? "true" : "false")"
-            aria-label="@($"{(_activo ? "Quitar de" : "Guardar en")} favoritos {Etiqueta}".Trim())"
-            @onclick="AlternarAsync" @onclick:stopPropagation>
+    <FluentToggleButton Class="boton-favorito__boton" Shape="ButtonShape.Circular" IconOnly Pressed="_activo"
+                        aria-label="@($"{(_activo ? "Quitar de" : "Guardar en")} favoritos {Etiqueta}".Trim())"
+                        OnClick="AlternarAsync" StopPropagation>
         <img class="boton-favorito__vacio" src="@Recursos.Icono("corazon-vacio")" alt="" />
         <img class="boton-favorito__hover" src="@Recursos.Icono("corazon-hover")" alt="" />
         @* Cambiar la llave crea otra imagen: así el latido se repite cada vez que se guarda. *@
         <img @key="_latidos" class="boton-favorito__lleno @(_latidos > 0 ? " boton-favorito__lleno--latido" : "")" src="@Recursos.Icono("corazon-lleno")" alt="" />
-    </button>
+    </FluentToggleButton>
 </div>
 
 @code {

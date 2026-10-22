@@ -1,0 +1,42 @@
+/* =====================================================================
+   Tema de Fluent UI con los tokens de SuraChih (tokens.css).
+   Fluent lee sus variables (--colorBrandBackground, --fontFamilyBase...) por herencia; definirlas en
+   body les gana a las que pone Fluent en :root, y así todos sus componentes usan la marca de Figma.
+   ===================================================================== */
+
+body {
+  /* Marca: azul cielo (foco, enlaces, casillas y lo que Fluent pinta con su color de acento) */
+  --colorBrandBackground: var(--color-cielo);
+  --colorBrandBackgroundHover: var(--color-cielo-texto);
+  --colorBrandBackgroundPressed: #1a56d6;
+  --colorBrandForeground1: var(--color-cielo-texto);
+  --colorBrandForegroundLink: var(--color-cielo-texto);
+  --colorBrandStroke1: var(--color-cielo);
+  --colorCompoundBrandStroke: var(--color-cielo);
+  --colorCompoundBrandStrokePressed: var(--color-cielo-texto);
+  --colorStrokeFocus2: var(--color-cielo);
+
+  /* Neutros: tinta, texto secundario, líneas y superficies de Figma */
+  --colorNeutralForeground1: var(--color-tinta);
+  --colorNeutralForeground2: var(--color-tinta);
+  --colorNeutralForeground3: var(--color-texto-2);
+  --colorNeutralForeground4: var(--color-texto-2);
+  --colorNeutralStroke1: var(--color-linea);
+  --colorNeutralStroke1Hover: #c9d3e3;
+  --colorNeutralStrokeAccessible: var(--color-linea);
+  --colorNeutralStrokeAccessibleHover: #c9d3e3;
+  --colorNeutralBackground1: var(--color-superficie);
+  --colorNeutralBackground3: var(--color-fondo);
+
+  /* Error */
+  --colorPaletteRedForeground1: var(--color-error);
+  --colorPaletteRedBorder2: var(--color-error);
+  --colorStatusDangerForeground1: var(--color-error);
+  --colorStatusDangerBorder2: var(--color-error);
+
+  /* Tipografía */
+  --fontFamilyBase: var(--fuente-cuerpo);
+
+  /* Bordes redondeados: los controles van en forma de píldora (--radio-control) */
+  --borderRadiusCircular: var(--radio-control);
+}

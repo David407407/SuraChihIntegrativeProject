@@ -2,6 +2,7 @@
   Barra superior fija (componente "Navbar" de Figma, estados Visitante y Logueado). Va en la plantilla
   de todas las pantallas. El enlace de la pantalla actual sale marcado para que siempre se vea dónde
   estás y cómo volver. El logo y "Inicio" llevan al Home.
+  Los enlaces y el corazón son FluentButton y el buscador un FluentTextInput: sus estilos van con ::deep.
 *@
 @implements IDisposable
 @inject Sesion Sesion
@@ -17,20 +18,21 @@
             </a>
             @Enlace(Acciones.Rutas.Home, "inicio", "Inicio", Acciones.Inicio)
             <form class="navbar__buscador" role="search" @onsubmit="Buscar">
-                <Icono Nombre="buscar-gris" />
-                <label class="solo-lectores" for="navbar-buscar">Buscar</label>
-                <input id="navbar-buscar" type="search" class="t-small" placeholder="Busca eventos, cafés o museos" autocomplete="off"
-                       @bind="_busqueda" @bind:event="oninput" />
+                <FluentTextInput Id="navbar-buscar" TextInputType="TextInputType.Search" Class="t-small" aria-label="Buscar"
+                                 Placeholder="Busca eventos, cafés o museos" AutoComplete="off" @bind-Value="_busqueda" Immediate ImmediateDelay="0">
+                    <StartTemplate><Icono Nombre="buscar-gris" /></StartTemplate>
+                </FluentTextInput>
             </form>
             <div class="navbar__acciones">
                 @Enlace(Acciones.Rutas.Mapa, "mapa", "Mapa", Acciones.Mapa)
                 @if (Usuario is { } usuario)
                 {
-                    <button type="button" class="navbar__enlace t-small-fuerte" @onclick="Acciones.MisPlanes"><Icono Nombre="mis-planes" />Mis planes</button>
-                    <button type="button" class="navbar__circulo navbar__favoritos" aria-label="Mis favoritos"
-                            aria-current="@(EsActual(Acciones.Rutas.Favoritos) ? "page" : null)" @onclick="Acciones.Favoritos">
+                    <FluentButton Class="navbar__enlace t-small-fuerte" Appearance="ButtonAppearance.Transparent" Shape="ButtonShape.Circular"
+                                  OnClick="Acciones.MisPlanes"><span class="navbar__icono" slot="start"><Icono Nombre="mis-planes" /></span>Mis planes</FluentButton>
+                    <FluentButton Class="navbar__circulo navbar__favoritos" Shape="ButtonShape.Circular" IconOnly aria-label="Mis favoritos"
+                                  aria-current="@(EsActual(Acciones.Rutas.Favoritos) ? "page" : null)" OnClick="Acciones.Favoritos">
                         <Icono Nombre="corazon-vacio" />
-                    </button>
+                    </FluentButton>
                     <button type="button" class="navbar__circulo navbar__avatar" popovertarget="menu-cuenta"
                             aria-label="Cuenta de @usuario.NombreUsuario" aria-haspopup="menu">
                         @if (usuario.AvatarUrl != null)
@@ -61,11 +63,12 @@
 
     private bool EsActual(string ruta) => Acciones.RutaActual == ruta;
 
-    /// <summary>Enlace de texto con icono; el de la pantalla actual sale activo.</summary>
+    /// <summary>Enlace de texto con icono (FluentButton transparente); el de la pantalla actual sale activo.</summary>
     private RenderFragment Enlace(string ruta, string icono, string texto, Action accion) =>
-        @<button type="button" class="navbar__enlace t-small-fuerte" aria-current="@(EsActual(ruta) ? "page" : null)" @onclick="accion">
-            <Icono Nombre="@icono" />@texto
-        </button>;
+        @<FluentButton Class="navbar__enlace t-small-fuerte" Appearance="ButtonAppearance.Transparent" Shape="ButtonShape.Circular"
+                       aria-current="@(EsActual(ruta) ? "page" : null)" OnClick="accion">
+            <span class="navbar__icono" slot="start"><Icono Nombre="@icono" /></span>@texto
+        </FluentButton>;
 
     public static string Inicial(Usuario usuario) =>
         usuario.NombreUsuario.Length > 0 ? usuario.NombreUsuario[..1].ToUpperInvariant() : "";

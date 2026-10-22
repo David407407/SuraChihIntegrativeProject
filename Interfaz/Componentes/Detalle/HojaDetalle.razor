@@ -3,7 +3,7 @@
   1040 × 440, cuerpo con Info + Boleto y una fila de recomendaciones). Va una sola vez en la plantilla y
   se abre encima de cualquier pantalla con el servicio Hojas.
 
-  Aquí vive lo que comparten las dos: el <dialog>, el esqueleto de carga, cerrar (Esc, "Fondo cerrar",
+  Aquí vive lo que comparten las dos: el FluentDialog, el esqueleto de carga, cerrar (Esc, "Fondo cerrar",
   botón), el foco y la dirección #evento-N / #lugar-N (Atrás la cierra; Adelante la vuelve a abrir).
   Lo de dentro lo pintan DetalleEvento.razor y DetalleLugar.razor; sus estilos están en
   HojaDetalle.razor.css porque se pintan aquí dentro.
@@ -17,8 +17,11 @@
 @inject InteropJs Js
 @inject NavigationManager Nav
 
-<dialog @ref="_dialogo" class="hoja" aria-labelledby="hoja-titulo" aria-busy="@(_cargando ? "true" : null)">
-    <article class="hoja__caja">
+@* FluentDialog de Fluent UI. Esc (js/interop.js) y el clic fuera de la hoja ("Fondo cerrar", .hoja__velo)
+   cierran con Hojas.Cerrar(), para que la dirección #evento-N se quite también. *@
+<FluentDialog @ref="_dialogo" Id="@Id" Class="hoja" PreventDismissOnEscape aria-labelledby="hoja-titulo" aria-busy="@(_cargando ? "true" : null)">
+  <div class="hoja__velo" @onclick="Hojas.Cerrar">
+    <article class="hoja__caja" @onclick:stopPropagation>
         @if (_cargando)
         {
             <div class="esqueleto hoja__portada hoja__esqueleto-portada" aria-hidden="true"></div>
@@ -43,12 +46,14 @@
             <DetalleLugar @key="_lugar" Datos="_lugar" />
         }
     </article>
-</dialog>
+  </div>
+</FluentDialog>
 
 @code {
     private const string ClaseHtml = "con-hoja";
+    private const string Id = "hoja-detalle";
 
-    private ElementReference _dialogo;
+    private FluentDialog? _dialogo;
     private DotNetObjectReference<HojaDetalle>? _puente;
     private bool _abierto;
     /// <summary>Esta hoja agregó #evento-N al historial (cerrar hace Atrás).</summary>
@@ -127,11 +132,13 @@
         {
             _abierto = true;
             _puente ??= DotNetObjectReference.Create(this);
-            await Js.LlamarAsync("abrirDialogo", _dialogo, _puente, ClaseHtml);
+            await Js.LlamarAsync("escucharEsc", Id, _puente);
+            await Js.LlamarAsync("claseHtml", ClaseHtml, true);
+            if (_dialogo != null) await _dialogo.ShowAsync();
         }
         else
         {
-            await Js.LlamarAsync("abrirDialogo", _dialogo, _puente, ClaseHtml);   // de una recomendación a otra: vuelve arriba
+            await Js.LlamarAsync("subirDialogo", Id);   // de una recomendación a otra: vuelve arriba
         }
         if (historial)
         {
@@ -186,7 +193,8 @@
         if (!desdeHistorial) await Js.LlamarAsync("quitarDireccion", _conHistorial);
         _conHistorial = false;
 
-        await Js.LlamarAsync("cerrarDialogo", _dialogo, ClaseHtml);
+        if (_dialogo != null) await _dialogo.HideAsync();
+        await Js.LlamarAsync("claseHtml", ClaseHtml, false);
         if (_abierto) return;   // se volvió a abrir mientras salía
         _evento = null;
         _lugar = null;

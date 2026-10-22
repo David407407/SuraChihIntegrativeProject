@@ -78,70 +78,46 @@ new MutationObserver((cambios) => {
 observar(document.documentElement);
 
 // ---------------------------------------------------------------------
-// Ventanas <dialog>
+// Ventanas (FluentDialog): la modal y la hoja de detalle
 // ---------------------------------------------------------------------
 
 /**
- * Abre el <dialog> (si no está abierto ya) y avisa a C# cuando el usuario pide cerrarlo.
- * @param {HTMLDialogElement} dialogo
+ * Esc dentro de un FluentDialog (con PreventDismissOnEscape): avisa a C# para cerrar con animación.
+ * @param {string} id Id del <fluent-dialog>.
  * @param {any} puente DotNetObjectReference con el método `PedirCierre`.
- * @param {string} claseHtml Clase de <html> que bloquea el scroll de atrás ('con-modal' o 'con-hoja').
  */
-export function abrirDialogo(dialogo, puente, claseHtml) {
+export function escucharEsc(id, puente) {
+  const dialogo = document.getElementById(id);
+  if (!dialogo) return;
   dialogo.puente = puente;
-  if (!dialogo.dataset.enlazado) {
-    dialogo.dataset.enlazado = 'si';
-    // Esc: cerrar con animación en vez del cierre instantáneo del navegador.
-    dialogo.addEventListener('cancel', (e) => {
-      e.preventDefault();
-      dialogo.puente?.invokeMethodAsync('PedirCierre');
-    });
-    // Clic en el velo (fuera de la caja): el <dialog> ocupa toda la ventana y la caja va dentro.
-    dialogo.addEventListener('click', (e) => {
-      if (e.target === dialogo) dialogo.puente?.invokeMethodAsync('PedirCierre');
-    });
-  }
-  dialogo.classList.remove(`${dialogo.classList[0]}--cerrando`);
-  if (!dialogo.open) {
-    dialogo.focoAnterior = document.activeElement;
-    dialogo.showModal();
-  }
-  document.documentElement.classList.add(claseHtml);
-  dialogo.scrollTo({ top: 0 });
+  if (dialogo.dataset.enlazado) return;
+  dialogo.dataset.enlazado = 'si';
+  // En captura: FluentDialog atiende Esc dentro de su shadow DOM y no deja que el evento suba.
+  dialogo.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') dialogo.puente?.invokeMethodAsync('PedirCierre');
+  }, true);
 }
 
-/**
- * Cierra con la animación de salida (clase "<bloque>--cerrando") y devuelve el foco.
- * @returns {Promise<void>} Se resuelve ya cerrado, para que C# quite el contenido.
- */
-export function cerrarDialogo(dialogo, claseHtml) {
-  return new Promise((resolver) => {
-    if (!dialogo?.open) { resolver(); return; }
-    const cerrando = `${dialogo.classList[0]}--cerrando`;
-    let terminado = false;
-    const terminar = () => {
-      if (terminado) return;
-      terminado = true;
-      dialogo.classList.remove(cerrando);
-      dialogo.close();
-      document.documentElement.classList.remove(claseHtml);
-      dialogo.focoAnterior?.focus?.({ preventScroll: true });
-      dialogo.focoAnterior = null;
-      resolver();
-    };
-    if (reducido()) { terminar(); return; }
-    dialogo.classList.add(cerrando);
-    dialogo.firstElementChild?.addEventListener('animationend', terminar, { once: true });
-    setTimeout(terminar, 400);   // por si la animación no llega a correr
-  });
+/** Regresa al principio un FluentDialog que se desplaza por dentro (la hoja de detalle). */
+export function subirDialogo(id) {
+  document.getElementById(id)?.shadowRoot?.querySelector('[part="dialog"]')?.scrollTo({ top: 0 });
+}
+
+/** Pone o quita una clase de <html> (p. ej. 'con-modal' bloquea el scroll de atrás mientras hay un FluentDialog). */
+export function claseHtml(clase, activa) {
+  document.documentElement.classList.toggle(clase, activa);
 }
 
 /** Foco al primer campo (o al primer botón si no hay campos), como un formulario normal. */
 export function enfocarPrimero(contenedor) {
-  if (!contenedor || contenedor.contains(document.activeElement)) return;   // un campo ya pidió el foco
-  const primero = contenedor.querySelector('[autofocus], input:not([type=hidden]):not([disabled])')
-    ?? contenedor.querySelector('button:not([data-cerrar-modal])');
-  primero?.focus({ preventScroll: true });
+  // Un cuadro después: FluentDialog pone el foco en sí mismo al abrirse, y esto debe ir después.
+  requestAnimationFrame(() => {
+    if (!contenedor || contenedor.contains(document.activeElement)) return;   // un campo ya pidió el foco
+    // Los campos y botones de Fluent (fluent-text-input, fluent-button) pasan el foco a su control interno.
+    const primero = contenedor.querySelector('[autofocus], input:not([type=hidden]):not([disabled]), fluent-text-input:not([disabled])')
+      ?? contenedor.querySelector('button:not([data-cerrar-modal]), fluent-button:not([data-cerrar-modal])');
+    primero?.focus({ preventScroll: true });
+  });
 }
 
 // ---------------------------------------------------------------------

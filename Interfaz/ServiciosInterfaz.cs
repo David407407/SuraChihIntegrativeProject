@@ -2,6 +2,7 @@ using BackendLogica.Contratos;
 using Interfaz.Estado;
 using Interfaz.Servicios;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.FluentUI.AspNetCore.Components;
 
 namespace Interfaz
 {
@@ -19,6 +20,7 @@ namespace Interfaz
         public static IServiceCollection AgregarInterfaz(this IServiceCollection servicios, ISuraChihBD bd)
         {
             servicios.AddSingleton(bd);
+            servicios.AddFluentUIComponents();
 
             servicios.AddScoped<Sesion>();
             servicios.AddScoped<CorreoSimulado>();

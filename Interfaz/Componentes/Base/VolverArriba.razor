@@ -5,6 +5,7 @@
 *@
 @inject InteropJs Js
 
-<button type="button" class="volver-arriba" aria-label="Volver arriba" title="Volver arriba" @onclick="() => Js.SubirAsync()">
+<FluentButton Class="volver-arriba" Shape="ButtonShape.Circular" IconOnly Title="Volver arriba" aria-label="Volver arriba"
+              OnClick="() => Js.SubirAsync().AsTask()">
     <Icono Nombre="flecha-siguiente-blanca" Caja="14" />
-</button>
+</FluentButton>

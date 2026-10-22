@@ -2,12 +2,15 @@
 
 Componentes Razor de SuraChih. Es una **biblioteca Razor** que usan dos anfitriones:
 
-- `SuraChihIntegrativeProject` (la app de escritorio): la app .NET MAUI (solo Windows) la muestra con BlazorWebView.
+- `SuraChihIntegrativeProject` (la app de escritorio): la app WPF (Windows, un .exe) la muestra con BlazorWebView.
 - `Interfaz.Navegador`: un servidor de prueba para abrirla en el navegador
   (`dotnet run --project Interfaz.Navegador --DatosFalsos true` → <http://localhost:5180>).
 
 Los componentes corren en el mismo proceso que .NET: llaman directo a `ISuraChihBD` (BackendLogica) a
 través de los servicios de `Servicios/`. No hay puente de mensajes ni controladores.
+
+Los controles son de **Fluent UI Blazor** (`Microsoft.FluentUI.AspNetCore.Components` v5) con la forma y
+los colores de Figma: ver [Fluent UI](#fluent-ui).
 
 ## Estructura
 
@@ -15,7 +18,7 @@ través de los servicios de `Servicios/`. No hay puente de mensajes ni controlad
 Rutas.razor                  raíz: el Router elige la página según la dirección
 _Imports.razor               usings comunes de todos los .razor
 ServiciosInterfaz.cs         AgregarInterfaz(bd): registra todos los servicios (lo llaman los dos anfitriones)
-Diseno/PlantillaPrincipal    navbar arriba + avisos, ventana modal y hoja de detalle (encima de todo)
+Diseno/PlantillaPrincipal    navbar arriba + ventana modal, hoja de detalle y FluentProviders (avisos)
 Paginas/                     una página por pantalla, con su @page
   Landing.razor  /           Home.razor  /home        MapaPagina.razor  /mapa
   Perfil.razor   /perfil     Favoritos.razor  /favoritos                 Catalogo.razor  /componentes
@@ -25,9 +28,8 @@ Componentes/
   Tarjetas/                  Tarjeta (Card evento / Card lugar), TarjetaRecomendada, ItemLugar,
                              TarjetaEventoPrincipal, TarjetaEventoFila
   Navegacion/                Navbar, MenuCuenta, Pie
-  Avisos/Toasts.razor        avisos flotantes
-  Modales/                   VentanaModal (el <dialog>) y cada modal: ModalIniciarSesion, ModalCrearCuenta...
-  Detalle/                   HojaDetalle (el <dialog> grande), DetalleEvento, DetalleLugar
+  Modales/                   VentanaModal (un FluentDialog) y cada modal: ModalIniciarSesion, ModalCrearCuenta...
+  Detalle/                   HojaDetalle (el FluentDialog grande), DetalleEvento, DetalleLugar
   Mapa/Mapa.razor            el mapa (Leaflet) conectado con C#
   Landing/, Home/            secciones de esas pantallas
 Servicios/                   qué datos pedir a BackendLogica para cada pantalla (antes, los controladores)
@@ -40,8 +42,11 @@ wwwroot/
   css/tokens.css             colores, tipografías, radios y sombras (variables de Figma)
   css/base.css               reset, clases de texto (.t-h1, .t-body...), .contenedor, .esqueleto,
                              cuadrículas de tarjetas y animación de aparición
+  css/fluent.css             tema de Fluent UI con los tokens de SuraChih (marca, neutros, fuente)
+  css/controles.css          los controles de Fluent con la forma de Figma (botón, campo, píldora, chips,
+                             favorito, modal, hoja, avisos)
   css/mapa.css               el mapa de Leaflet (lo pinta JavaScript, por eso es global)
-  css/estilos.css            junta los tres anteriores
+  css/estilos.css            junta los anteriores
   js/interop.js              lo poco que Blazor no hace solo (ver "JavaScript que queda")
   js/sc-mapa.js              Web Component del mapa sobre Leaflet
   js/claves.js               llave compartida de CARTO para el estilo del mapa
@@ -56,12 +61,16 @@ Todo lo de `wwwroot` se sirve como `_content/Interfaz/...`. En C# usa `Recursos.
 
 Cada componente trae su `Componente.razor.css`. Blazor agrega un atributo propio a cada elemento del
 componente (`b-xxxx`) y reescribe sus reglas, así que **un componente solo ve sus estilos**: puedes usar
-nombres cortos sin chocar con otros. Solo `tokens.css`, `base.css` y `mapa.css` son globales.
+nombres cortos sin chocar con otros. Solo `tokens.css`, `base.css`, `fluent.css`, `controles.css` y
+`mapa.css` son globales.
 
 - Usa siempre las variables de `tokens.css`, no colores sueltos.
 - Para dar estilo a un **componente hijo** desde el padre, pásale una clase (`Clase="tarjeta__favorito"`)
   y escribe la regla con `::deep`: `.tarjeta__imagen ::deep .tarjeta__favorito { ... }`. Sin `::deep` la
   regla no le llega, porque el hijo tiene otro atributo.
+- Los componentes de Fluent (`FluentButton`, `FluentTextInput`...) son como un componente hijo: su regla
+  necesita `::deep` desde un elemento del padre (`.navbar ::deep .navbar__enlace`), o ir en
+  `css/controles.css` si el componente de Fluent es la raíz (como en `Boton` o `Campo`).
 - La ventana modal y la hoja de detalle pintan a otros componentes dentro: por eso las clases comunes de
   los modales (`modal__formulario`, `modal__ancho`, `modal__aviso`...) están en `VentanaModal.razor.css`
   y las del detalle (`boleto`, `hoja__info`...) en `HojaDetalle.razor.css`, con `::deep`.
@@ -69,6 +78,33 @@ nombres cortos sin chocar con otros. Solo `tokens.css`, `base.css` y `mapa.css` 
   `border-radius: var(--radio-control)`; las cajas que contienen cosas (tarjetas, modales, menús) usan
   `--radio-s` a `--radio-3xl`.
 - Para animar la aparición al hacer scroll, pon `data-revelar` (y `style="--orden:N"` para escalonar).
+
+## Fluent UI
+
+La interfaz usa **Fluent UI Blazor** (`Microsoft.FluentUI.AspNetCore.Components` 5.0.1). Lo registra
+`AgregarInterfaz` (`AddFluentUIComponents()`) y `<FluentProviders />` va en la plantilla.
+
+| Nuestro componente | De Fluent |
+|---|---|
+| `Boton` | `FluentButton` (con `Href`: `FluentAnchorButton`); `Ocupado` muestra un `FluentSpinner` |
+| `Campo` | `FluentTextInput` (etiqueta, ayuda y error con el mensaje de Fluent) |
+| `Pildora`, `ChipCategoria`, segmentos del Home | `FluentToggleButton` (`Pressed`) |
+| `Chip`, `ChipCategoria` estático | `FluentBadge` |
+| `BotonFavorito`, `VolverArriba`, flechas del carrusel, cerrar | `FluentButton` / `FluentToggleButton` de solo icono |
+| Navbar | enlaces `FluentButton` transparentes y buscador `FluentTextInput` |
+| `VentanaModal`, `HojaDetalle` | `FluentDialog` (`ShowAsync` / `HideAsync`) |
+| `Avisos.Mostrar(...)` | `FluentToast` (`INotificationService.ShowToastAsync`) |
+
+Para que se vea como en Figma:
+
+- `css/fluent.css` cambia los tokens de Fluent (`--colorBrandBackground`, `--fontFamilyBase`,
+  `--borderRadiusCircular`...) por los de `tokens.css`. Se definen en `body` para ganarle a los de Fluent.
+- `css/controles.css` da la forma de Figma a cada control. Los de Fluent pintan su interior en un
+  shadow DOM: una regla sobre el elemento (`.boton`) le gana a sus estilos internos, y lo de dentro se
+  alcanza con `::part(...)` (`fluent-text-input::part(root)`, `fluent-dialog::part(dialog)`).
+- El CSS de Fluent llega después del nuestro (`<App>.styles.css`): si una regla suya empata con la nuestra,
+  sube la especificidad (por eso `fluent-dialog.modal[fuib]::part(dialog)`).
+- `<body no-fuib-style>` apaga el CSS base de Fluent, que fija el alto de la página y quita el scroll.
 
 ## Componentes base (WBS 4.1)
 
@@ -135,8 +171,8 @@ Botones que todavía no tienen pantalla muestran "llega en la siguiente versión
 | Detalle de evento / de lugar | `Hojas.AbrirEvento(id)` · `Hojas.AbrirEvento(id, inscribir: true)` · `Hojas.AbrirLugar(id)` |
 
 - Solo hay una modal a la vez: abrir otra cambia el contenido sin cerrar la ventana.
-- La modal (`<dialog>`) queda por encima de los avisos: para avisar algo con ella abierta usa
-  `ErroresFormulario.PonerAviso(...)` y `<AvisoModal>`.
+- Los avisos (FluentToast) salen encima de todo, incluso de la modal. Para un error de un formulario de la
+  modal usa mejor `ErroresFormulario.PonerAviso(...)` y `<AvisoModal>`, que queda junto a los campos.
 - La hoja de detalle pone `#evento-N` / `#lugar-N` en la dirección: Atrás la cierra y Adelante la vuelve a
   abrir. Al iniciar sesión con la hoja abierta se recarga (inscripción y corazón de ese usuario).
 - **Correo:** el proyecto aún no tiene servidor de correo. `Servicios/CorreoSimulado.cs` guarda el enlace y el
@@ -188,7 +224,7 @@ tamaño exacto. Cuando suban las fotos reales solo hay que guardar la URL en la 
 
 Casi todo es C#. `wwwroot/js/interop.js` (lo llama `Estado/InteropJs.cs`) solo hace:
 
-- abrir y cerrar los `<dialog>` con animación (Esc, clic en el velo y devolver el foco);
+- cerrar los FluentDialog con Esc pasando por C# (para que `Modales` y `Hojas` sepan) y enfocar el primer campo;
 - poner `#evento-N` en la dirección sin que la página suba hasta arriba;
 - desplazar la página (volver arriba, saltar a una fila del Home);
 - la aparición al hacer scroll (`data-revelar`);
