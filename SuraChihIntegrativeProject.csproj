@@ -1,11 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <!--
-    App de escritorio: .NET MAUI (solo Windows) con BlazorWebView. La ventana pinta los componentes
+    App de escritorio: .NET MAUI (Windows y macOS vía Mac Catalyst) con BlazorWebView. La ventana pinta los componentes
     Razor del proyecto Interfaz, que llaman directo a BackendLogica.
   -->
   <PropertyGroup>
-    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <!-- Cada quien compila solo para su sistema: Windows en Windows, Mac Catalyst en macOS -->
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('windows'))">net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('osx'))">net10.0-maccatalyst</TargetFramework>
     <OutputType>Exe</OutputType>
     <RootNamespace>SuraChihIntegrativeProject</RootNamespace>
     <UseMaui>true</UseMaui>
@@ -20,15 +22,22 @@
     <ApplicationDisplayVersion>0.2</ApplicationDisplayVersion>
     <ApplicationVersion>2</ApplicationVersion>
 
+    <!-- Otros proyectos y código viejo viven en subcarpetas: no compilarlos dentro de este -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);BackendLogica\**;BackendLogica.Pruebas\**;Interfaz\**;Interfaz.Navegador\**;Legacy\**;Prototipo\**;BaseDeDatos\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
     <!-- Sin paquete MSIX: se ejecuta como un .exe normal. Windows App SDK va incluido junto al .exe,
          así nadie del equipo tiene que instalarlo aparte. -->
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+  </PropertyGroup>
 
-    <!-- Otros proyectos y código viejo viven en subcarpetas: no compilarlos dentro de este -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);BackendLogica\**;BackendLogica.Pruebas\**;Interfaz\**;Interfaz.Navegador\**;Legacy\**;Prototipo\**;BaseDeDatos\**</DefaultItemExcludes>
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+    <!-- Mac Catalyst 17 = macOS 14 (Sonoma) o más nuevo, el mínimo de este SDK -->
+    <SupportedOSPlatformVersion>17.0</SupportedOSPlatformVersion>
   </PropertyGroup>
 
   <ItemGroup>

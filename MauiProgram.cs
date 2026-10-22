@@ -5,13 +5,15 @@ using Microsoft.Extensions.Logging;
 namespace SuraChihIntegrativeProject
 {
     /// <summary>
-    /// Arranque de la app (.NET MAUI, solo Windows). Registra BlazorWebView y los servicios de la interfaz.
+    /// Arranque de la app (.NET MAUI, Windows y macOS). Registra BlazorWebView y los servicios de la interfaz.
     /// </summary>
     public static class MauiProgram
     {
         public static MauiApp CreateMauiApp()
         {
+#if WINDOWS
             ConfigurarWebView2();
+#endif
 
             var builder = MauiApp.CreateBuilder();
             builder.UseMauiApp<App>();
@@ -27,6 +29,7 @@ namespace SuraChihIntegrativeProject
             return builder.Build();
         }
 
+#if WINDOWS
         /// <summary>
         /// WebView2 lee estas variables al crear el navegador de la ventana.
         /// </summary>
@@ -48,5 +51,6 @@ namespace SuraChihIntegrativeProject
                 Environment.SetEnvironmentVariable(CarpetaDatos, Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SuraChih", "WebView2"));
         }
+#endif
     }
 }

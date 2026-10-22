@@ -2,7 +2,7 @@
 
 Eventos y lugares de Chihuahua en un solo lugar. Proyecto integrador UTCH 2026.
 
-App de escritorio en C# hecha con **.NET MAUI** (.NET 10, solo Windows) y **Blazor Hybrid**: componentes
+App de escritorio en C# hecha con **.NET MAUI** (.NET 10, Windows y macOS) y **Blazor Hybrid**: componentes
 Razor (C# + HTML + CSS) que se muestran dentro de la ventana con **BlazorWebView**. Los componentes corren
 en el mismo proceso que la app y llaman directo a la librería **BackendLogica**, que habla con MySQL.
 
@@ -53,6 +53,15 @@ en el mismo proceso que la app y llaman directo a la librería **BackendLogica**
    Windows App SDK va incluido junto al .exe.
    En modo Debug, F12 abre las herramientas de desarrollo de la interfaz.
 
+   **En macOS** (Mac Catalyst, macOS 14 o más nuevo) se necesita Xcode completo desde la App Store,
+   no solo las Command Line Tools:
+   ```bash
+   sudo xcode-select -s /Applications/Xcode.app
+   sudo dotnet workload install maui-maccatalyst
+   dotnet build SuraChihIntegrativeProject.csproj -t:Run
+   ```
+   Cada sistema compila solo su destino: en Windows sale el .exe y en macOS la app `SuraChih.app`.
+
 ### Probar la interfaz en el navegador
 
 El mismo proyecto `Interfaz` se puede abrir en un navegador normal, sin Python ni la app de escritorio:
@@ -65,8 +74,7 @@ Abre <http://localhost:5180>. Con `--DatosFalsos true` usa los datos de prueba e
 `dbsettings.local.json` apunte a MySQL; sin esa opción usa tu configuración, igual que la app.
 Recargar la pestaña cierra la sesión.
 
-> La app de escritorio solo apunta a Windows. Para trabajar la interfaz en macOS o Linux, usa
-> `Interfaz.Navegador`.
+> En Linux la app de escritorio no corre; para trabajar la interfaz ahí usa `Interfaz.Navegador`.
 
 Usuarios de prueba (contraseña `Test1234!`): `mariana_r`, `diego_m`, `sofia_c` (normales),
 `cafe_dande` y `misiones_cuu` (organizadores), `mod_ana` y `mod_luis` (moderadores).

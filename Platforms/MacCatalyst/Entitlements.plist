@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Sin sandbox (igual que el .exe de Windows): así la app puede leer dbsettings.local.json
+	     subiendo carpetas desde el ejecutable y conectarse a MySQL sin permisos extra. -->
+</dict>
+</plist>
