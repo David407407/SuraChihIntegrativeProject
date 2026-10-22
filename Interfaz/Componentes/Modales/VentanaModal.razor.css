@@ -3,24 +3,14 @@
    (se pintan dentro de esta ventana, por eso van con ::deep).
    ===================================================================== */
 
-.modal {
+/* El FluentDialog (fluent-dialog.modal) y su velo están en css/controles.css. Dentro va .modal__velo, que
+   ocupa toda la ventana y centra la caja: un clic en él (fuera de la caja) cierra la modal. */
+.modal__velo {
+  display: grid;
+  place-items: center;
   width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  margin: 0;
+  min-height: 100%;
   padding: 24px 16px;
-  border: 0;
-  background: transparent;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-/* Solo cuando está abierta: un display propio en .modal le ganaría al display:none del <dialog> cerrado. */
-.modal[open] { display: grid; place-items: center; }
-
-.modal::backdrop {
-  background: var(--color-velo-modal);
-  animation: velo-entra var(--duracion-media) ease;
 }
 
 .modal__caja {
@@ -39,25 +29,6 @@
   gap: 20px;
 }
 .modal__contenido--cambio { animation: contenido-cambia var(--duracion-media) var(--curva-salida); }
-
-.modal__cerrar {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radio-control);
-  background: var(--color-fondo);
-  transition: background-color var(--duracion-rapida), transform var(--duracion-rapida);
-}
-.modal__cerrar:hover { background: var(--color-linea); }
-.modal__cerrar:active { transform: scale(0.94); }
-
-/* Cerrar (la clase la pone js/interop.js mientras dura la animación) */
-.modal.modal--cerrando::backdrop { animation: velo-sale var(--duracion-rapida) ease forwards; }
-.modal--cerrando .modal__caja { animation: modal-sale var(--duracion-rapida) ease forwards; }
 
 /* ---- Piezas comunes de los modales ---- */
 
@@ -131,7 +102,7 @@
 
 .modal__contenido ::deep .modal__pie { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin-top: -4px; }
 
-/* Avisos dentro de la modal (los toasts quedan detrás del <dialog>) */
+/* Avisos dentro de la modal, junto al formulario */
 .modal__contenido ::deep .modal__aviso {
   padding: 12px 14px;
   border-radius: var(--radio-s);
@@ -142,12 +113,8 @@
 .modal__contenido ::deep .modal__aviso--info { background: var(--color-fondo); color: var(--color-tinta); }
 
 @keyframes modal-entra { from { opacity: 0; transform: translateY(16px) scale(0.97); } }
-@keyframes modal-sale { to { opacity: 0; transform: translateY(8px) scale(0.98); } }
-@keyframes velo-entra { from { opacity: 0; } }
-@keyframes velo-sale { to { opacity: 0; } }
 @keyframes contenido-cambia { from { opacity: 0; transform: translateX(12px); } }
 
 @media (max-width: 480px) {
   .modal__caja { padding: 24px 20px; }
-  .modal__cerrar { top: 14px; right: 14px; }
 }

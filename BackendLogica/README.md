@@ -1,7 +1,7 @@
 # BackendLogica
 
 Librería de acceso a la BD `surachih` (MySQL). No sabe nada de la interfaz: la puede usar la app
-la app de escritorio (.NET MAUI), una consola de pruebas o, en el futuro, una API.
+la app de escritorio (WPF), una consola de pruebas o, en el futuro, una API.
 
 ## Uso
 

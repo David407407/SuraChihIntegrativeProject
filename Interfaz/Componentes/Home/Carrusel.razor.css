@@ -77,17 +77,21 @@
 .carrusel__punto[aria-current="true"] { width: 28px; background: var(--color-superficie); }
 
 .carrusel__flechas { position: absolute; right: 48px; bottom: 24px; display: flex; gap: 8px; }
-.carrusel__flecha {
+/* FluentButton de solo icono */
+.carrusel__flechas ::deep .carrusel__flecha {
   display: grid;
   place-items: center;
   width: 40px;
+  min-width: 0;
   height: 40px;
+  padding: 0;
+  border: 0;
   border-radius: var(--radio-control);
   background: rgba(255, 255, 255, 0.2);
   transition: background-color var(--duracion-rapida), transform var(--duracion-rapida);
 }
-.carrusel__flecha:hover { background: rgba(255, 255, 255, 0.32); }
-.carrusel__flecha:active { transform: scale(0.94); }
+.carrusel__flechas ::deep .carrusel__flecha:hover { background: rgba(255, 255, 255, 0.32); }
+.carrusel__flechas ::deep .carrusel__flecha:active { transform: scale(0.94); }
 .carrusel :focus-visible,
 .carrusel ::deep :focus-visible { outline-color: var(--color-sol); }
 

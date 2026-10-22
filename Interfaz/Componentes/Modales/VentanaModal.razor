@@ -1,7 +1,8 @@
 @*
   Ventana modal base (los "Modal / ..." de Figma): caja blanca centrada sobre un velo, con botón de
   cerrar. Va una sola vez en la plantilla; lo que lleva dentro lo decide el servicio Modales.
-  Usa <dialog> nativo (showModal desde js/interop.js): foco atrapado, Esc cierra y lo de atrás no se toca.
+  Es un FluentDialog de Fluent UI (modal: foco atrapado y lo de atrás no se toca); Esc y el clic en el velo
+  cierran con animación.
 
   Las clases comunes de los modales (modal__encabezado, modal__formulario, modal__ancho, modal__aviso...)
   están en VentanaModal.razor.css, porque todos se pintan aquí dentro.
@@ -10,26 +11,31 @@
 @inject Modales Modales
 @inject InteropJs Js
 
-<dialog @ref="_dialogo" class="modal" aria-labelledby="modal-titulo">
-    <div class="modal__caja">
-        <button type="button" class="modal__cerrar" data-cerrar-modal aria-label="Cerrar" @onclick="() => Modales.Cerrar()">
-            <Icono Nombre="cerrar" Caja="14" />
-        </button>
-        @if (Modales.Componente is { } tipo)
-        {
-            <div @key="Modales.Version" @ref="_contenido" class="modal__contenido @(_cambio ? " modal__contenido--cambio" : "")">
-                <DynamicComponent Type="tipo" Parameters="Parametros" />
-            </div>
-        }
+@* Esc y el clic en el velo los atiende este componente (no FluentDialog) para cerrar con Modales.Cerrar(),
+   igual que el botón: así la tarea de Modales.Abrir siempre termina. *@
+<FluentDialog @ref="_dialogo" Id="@Id" Class="modal" PreventDismissOnEscape aria-labelledby="modal-titulo">
+    <div class="modal__velo" @onclick="AlTocarVelo">
+        <div class="modal__caja" @onclick:stopPropagation>
+            <FluentButton Class="modal__cerrar" Shape="ButtonShape.Circular" IconOnly data-cerrar-modal aria-label="Cerrar" OnClick="() => Modales.Cerrar()">
+                <Icono Nombre="cerrar" Caja="14" />
+            </FluentButton>
+            @if (Modales.Componente is { } tipo)
+            {
+                <div @key="Modales.Version" @ref="_contenido" class="modal__contenido @(_cambio ? " modal__contenido--cambio" : "")">
+                    <DynamicComponent Type="tipo" Parameters="Parametros" />
+                </div>
+            }
+        </div>
     </div>
-</dialog>
+</FluentDialog>
 
 @code {
     private const string ClaseHtml = "con-modal";
+    private const string Id = "ventana-modal";
 
-    private ElementReference _dialogo;
-    private ElementReference _contenido;
+    private FluentDialog? _dialogo;
     private DotNetObjectReference<VentanaModal>? _puente;
+    private ElementReference _contenido;
     private bool _abierto;
     /// <summary>Se cambió el contenido con la modal ya abierta: pequeño desvanecido en vez de abrir de nuevo.</summary>
     private bool _cambio;
@@ -48,10 +54,13 @@
 
     protected override async Task OnAfterRenderAsync(bool primeraVez)
     {
+        if (_dialogo == null) return;
+
         if (Modales.Cerrando && !_cerrando)
         {
             _cerrando = true;
-            await Js.LlamarAsync("cerrarDialogo", _dialogo, ClaseHtml);
+            if (_abierto) await _dialogo.HideAsync();
+            await Js.LlamarAsync("claseHtml", ClaseHtml, false);
             _cerrando = false;
             _abierto = false;
             Modales.TerminarCierre();
@@ -65,15 +74,19 @@
             _versionPintada = Modales.Version;
             if (!_abierto)
             {
-                _puente ??= DotNetObjectReference.Create(this);
-                await Js.LlamarAsync("abrirDialogo", _dialogo, _puente, ClaseHtml);
                 _abierto = true;
+                _puente ??= DotNetObjectReference.Create(this);
+                await Js.LlamarAsync("escucharEsc", Id, _puente);
+                await Js.LlamarAsync("claseHtml", ClaseHtml, true);
+                await _dialogo.ShowAsync();
             }
             await Js.LlamarAsync("enfocarPrimero", _contenido);
         }
     }
 
-    /// <summary>Esc o clic en el velo.</summary>
+    private void AlTocarVelo() => Modales.Cerrar();
+
+    /// <summary>Esc (lo avisa js/interop.js).</summary>
     [JSInvokable]
     public void PedirCierre() => Modales.Cerrar();
 

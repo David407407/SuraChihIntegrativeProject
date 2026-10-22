@@ -6,24 +6,11 @@
    por eso sus reglas van con ::deep.
    ===================================================================== */
 
-.hoja {
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  margin: 0;
+/* El FluentDialog (fluent-dialog.hoja) y su velo están en css/controles.css. Dentro va .hoja__velo, que
+   ocupa toda la ventana: un clic en él (fuera de la hoja, "Fondo cerrar" en Figma) la cierra. */
+.hoja__velo {
+  min-height: 100%;
   padding: 40px 24px;
-  border: 0;
-  background: transparent;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-/* Solo abierta: un display propio le ganaría al display:none del <dialog> cerrado. */
-.hoja[open] { display: block; }
-
-.hoja::backdrop {
-  background: var(--color-velo-modal);
-  animation: velo-entra var(--duracion-media) ease;
 }
 
 .hoja__caja {
@@ -38,13 +25,8 @@
 }
 
 /* Cerrar (la clase la pone js/interop.js mientras dura la animación) */
-.hoja.hoja--cerrando::backdrop { animation: velo-sale var(--duracion-rapida) ease forwards; }
-.hoja--cerrando .hoja__caja { animation: hoja-sale var(--duracion-rapida) ease forwards; }
 
 @keyframes hoja-entra { from { opacity: 0; transform: translateY(24px); } }
-@keyframes hoja-sale { to { opacity: 0; transform: translateY(12px); } }
-@keyframes velo-entra { from { opacity: 0; } }
-@keyframes velo-sale { to { opacity: 0; } }
 
 /* ---- Portada: foto + Compartir / favorito / Cerrar ---- */
 .hoja__caja ::deep .hoja__portada {
@@ -61,11 +43,15 @@
   gap: 8px;
 }
 
+/* FluentButton de solo icono */
 .hoja__caja ::deep .hoja__accion {
   display: grid;
   place-items: center;
   width: 40px;
+  min-width: 0;
   height: 40px;
+  padding: 0;
+  border: 0;
   border-radius: var(--radio-pildora);
   background: var(--color-superficie);
   transition: background-color var(--duracion-rapida), transform var(--duracion-rapida);
@@ -228,7 +214,7 @@
 
 /* ---- Ventanas angostas (la app permite hasta 1024px; aquí también se ve bien en un navegador) ---- */
 @media (max-width: 900px) {
-  .hoja { padding: 16px 12px; }
+  .hoja__velo { padding: 16px 12px; }
   .hoja__cuerpo,
   .hoja__caja ::deep .hoja__cuerpo { flex-direction: column; align-items: stretch; gap: 32px; padding: 24px 24px 32px; }
   .boleto,

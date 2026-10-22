@@ -8,14 +8,16 @@
 
   El color y el icono salen de Etiqueta.Icono (tag.icon: family, music, run, robot, food); las demás
   etiquetas (coffee, museum...) se pintan con fondo neutro y sin icono.
+
+  Interactivo es un FluentToggleButton; estático, un FluentBadge. Estilos en css/controles.css.
 *@
 @if (Interactivo)
 {
-    <button type="button" class="@Clases" aria-pressed="@(Activo ? "true" : "false")" @onclick="Alternar">@Contenido</button>
+    <FluentToggleButton Class="@Clases" Shape="ButtonShape.Circular" Pressed="Activo" OnClick="Alternar">@Contenido</FluentToggleButton>
 }
 else
 {
-    <span class="@Clases">@Contenido</span>
+    <FluentBadge Class="@Clases" Shape="BadgeShape.Circular">@Contenido</FluentBadge>
 }
 
 @code {
@@ -26,7 +28,8 @@ else
 
     private string Clases => Categorias.Tipo(Etiqueta.Icono) is { } tipo ? $"chip-categoria chip-categoria--{tipo}" : "chip-categoria";
 
-    private RenderFragment Contenido => @<text>@if (Categorias.Icono(Etiqueta.Icono) is { } icono) {<Icono Nombre="@icono" />}@Etiqueta.Nombre</text>;
+    /// <summary>En el FluentToggleButton el icono va en la ranura start (toma la separación del botón).</summary>
+    private RenderFragment Contenido => @<text>@if (Categorias.Icono(Etiqueta.Icono) is { } icono) {<span slot="start"><Icono Nombre="@icono" /></span>}<span>@Etiqueta.Nombre</span></text>;
 
     private async Task Alternar()
     {

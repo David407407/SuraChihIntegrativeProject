@@ -7,14 +7,20 @@
   border-radius: var(--radio-control);
   background: var(--color-fondo);
 }
-.segmentos__opcion {
+/* FluentToggleButton */
+.segmentos ::deep .segmentos__opcion {
+  min-width: 0;
+  height: auto;
   padding: 8px 18px;
+  border: 0;
   border-radius: var(--radio-control);
+  background: transparent;
   color: var(--color-tinta);
+  font-family: var(--fuente-cuerpo);
   transition: background-color var(--duracion-rapida), box-shadow var(--duracion-rapida);
 }
-.segmentos__opcion:hover { background: var(--color-superficie); }
-.segmentos__opcion[aria-pressed="true"] {
+.segmentos ::deep .segmentos__opcion:hover { background: var(--color-superficie); }
+.segmentos ::deep .segmentos__opcion[pressed] {
   background: var(--color-sol-suave);
   box-shadow: inset 0 0 0 1.5px var(--color-sol);
 }

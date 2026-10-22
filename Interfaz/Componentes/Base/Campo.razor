@@ -3,38 +3,37 @@
   traen un botón "Mostrar" / "Ocultar". El error sale de Errores[Nombre] (o del parámetro Error) y se
   quita al volver a escribir.
 
+  Por dentro es un FluentTextInput de Fluent UI (etiqueta, mensaje de error y ayuda incluidos). La forma de
+  Figma (48px, píldora, borde azul al enfocar) está en css/controles.css.
+
   <Campo Nombre="correo" Etiqueta="Correo electrónico" Tipo="email" Icono="correo" @bind-Valor="correo" Errores="errores" />
   <Campo Nombre="contrasena" Etiqueta="Contraseña" Tipo="password" Ayuda="Mínimo 8 caracteres" @bind-Valor="contrasena" />
 *@
-<div class="@Clases">
-    <label class="campo__etiqueta t-small-fuerte @(EtiquetaVisible ? "" : " solo-lectores")" for="@_id">@Etiqueta</label>
-    <div class="campo__caja">
+<FluentTextInput @ref="_entrada" Id="@_id" Class="@Clases" Value="@Valor" ValueChanged="AlEscribir" Immediate ImmediateDelay="0"
+                 TextInputType="TipoFluent" Appearance="TextInputAppearance.Outline"
+                 Label="@(EtiquetaVisible ? Etiqueta : null)" Placeholder="@(Placeholder ?? Etiqueta)"
+                 Required="Requerido" Disabled="Deshabilitado" AutoComplete="@Autocompletar" MaxLength="Maximo"
+                 Message="@(MensajeError ?? Ayuda)" MessageState="@(MensajeError != null ? MessageState.Error : null)"
+                 AdditionalAttributes="Atributos">
+    <StartTemplate>
         @if (Icono != null)
         {
             <Icono Nombre="@Icono" />
         }
-        <input @ref="_entrada" class="campo__entrada" id="@_id" name="@Nombre" type="@(_mostrar ? "text" : Tipo)"
-               value="@Valor" @oninput="AlEscribir" placeholder="@(Placeholder ?? Etiqueta)"
-               aria-describedby="@($"{_id}-error{(Ayuda != null ? $" {_id}-ayuda" : "")}")"
-               required="@Requerido" disabled="@Deshabilitado" aria-invalid="@(MensajeError != null ? "true" : null)"
-               autocomplete="@Autocompletar" maxlength="@Maximo" />
+    </StartTemplate>
+    <EndTemplate>
         @if (Tipo == "password")
         {
             <button type="button" class="campo__ver" aria-controls="@_id" aria-pressed="@(_mostrar ? "true" : "false")"
                     @onclick="() => _mostrar = !_mostrar">@(_mostrar ? "Ocultar" : "Mostrar")</button>
         }
-    </div>
-    @if (Ayuda != null)
-    {
-        <p class="campo__ayuda t-caption" id="@_id-ayuda">@Ayuda</p>
-    }
-    <p class="campo__error t-caption" id="@_id-error" role="alert">@MensajeError</p>
-</div>
+    </EndTemplate>
+</FluentTextInput>
 
 @code {
     private static int _siguiente;
     private readonly string _id = $"campo-{Interlocked.Increment(ref _siguiente)}";
-    private ElementReference _entrada;
+    private FluentTextInput? _entrada;
     private bool _mostrar;
     /// <summary>El usuario ya escribió después de que llegó el parámetro Error: no se muestra.</summary>
     private bool _errorFijoVisto;
@@ -46,7 +45,7 @@
     [Parameter, EditorRequired] public string Etiqueta { get; set; } = "";
     /// <summary>false = la etiqueta solo la leen los lectores de pantalla (como en Figma).</summary>
     [Parameter] public bool EtiquetaVisible { get; set; }
-    /// <summary>text, email, password, search, tel, url, number, date, time.</summary>
+    /// <summary>text, email, password, search, tel, url o number.</summary>
     [Parameter] public string Tipo { get; set; } = "text";
     /// <summary>Icono de 16px de assets/iconos (p. ej. "correo", "buscar-gris").</summary>
     [Parameter] public string? Icono { get; set; }
@@ -65,6 +64,28 @@
     /// <summary>maxlength.</summary>
     [Parameter] public int? Maximo { get; set; }
 
+    private TextInputType TipoFluent => _mostrar ? TextInputType.Text : Tipo switch
+    {
+        "email" => TextInputType.Email,
+        "password" => TextInputType.Password,
+        "search" => TextInputType.Search,
+        "tel" => TextInputType.Telephone,
+        "url" => TextInputType.Url,
+        "number" => TextInputType.Number,
+        _ => TextInputType.Text,
+    };
+
+    /// <summary>name para el formulario; sin etiqueta visible, la etiqueta la leen solo los lectores de pantalla.</summary>
+    private Dictionary<string, object> Atributos
+    {
+        get
+        {
+            var atributos = new Dictionary<string, object> { ["name"] = Nombre };
+            if (!EtiquetaVisible) atributos["aria-label"] = Etiqueta;
+            return atributos;
+        }
+    }
+
     private string Clases => $"campo{(MensajeError != null ? " campo--error" : "")}{(Deshabilitado ? " campo--deshabilitado" : "")}";
 
     private string? MensajeError => Errores?[Nombre] ?? (_errorFijoVisto ? null : Error);
@@ -75,13 +96,13 @@
         _errorAnterior = Error;
     }
 
-    public ValueTask EnfocarAsync() => _entrada.FocusAsync();
+    public ValueTask EnfocarAsync() => _entrada?.Element is { } elemento ? elemento.FocusAsync() : ValueTask.CompletedTask;
 
-    private async Task AlEscribir(ChangeEventArgs e)
+    private async Task AlEscribir(string? valor)
     {
         Errores?.Quitar(Nombre);
         _errorFijoVisto = true;
-        await ValorChanged.InvokeAsync(e.Value?.ToString() ?? "");
+        await ValorChanged.InvokeAsync(valor ?? "");
     }
 
     protected override async Task OnAfterRenderAsync(bool primeraVez)

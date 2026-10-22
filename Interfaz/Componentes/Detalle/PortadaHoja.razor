@@ -4,9 +4,9 @@
 <header class="hoja__portada">
     <Imagen Src="@ImagenUrl" Alt="@Titulo" Ancho="1040" Alto="440" Prioridad />
     <div class="hoja__acciones">
-        <button type="button" class="hoja__accion" aria-label="Compartir" @onclick="AlCompartir"><Icono Nombre="compartir" /></button>
+        <FluentButton Class="hoja__accion" Shape="ButtonShape.Circular" IconOnly aria-label="Compartir" OnClick="() => AlCompartir.InvokeAsync()"><Icono Nombre="compartir" /></FluentButton>
         <BotonFavorito Tipo="Tipo" Id="Id" Tamano="m" Etiqueta="@Titulo" Activo="Favorito" />
-        <button type="button" class="hoja__accion" aria-label="Cerrar" @onclick="Hojas.Cerrar"><Icono Nombre="cerrar-16" /></button>
+        <FluentButton Class="hoja__accion" Shape="ButtonShape.Circular" IconOnly aria-label="Cerrar" OnClick="Hojas.Cerrar"><Icono Nombre="cerrar-16" /></FluentButton>
     </div>
 </header>
 

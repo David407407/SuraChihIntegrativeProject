@@ -1,4 +1,4 @@
-@* Aviso dentro de la modal (los toasts quedan detrás del <dialog>). Muestra Errores.Aviso. *@
+@* Aviso dentro de la modal, junto al formulario (p. ej. "Correo o contraseña incorrectos"). Muestra Errores.Aviso. *@
 @if (Errores.Aviso is { } aviso)
 {
     <p class="modal__aviso @(Errores.AvisoInformativo ? " modal__aviso--info" : "")" role="alert">@aviso</p>

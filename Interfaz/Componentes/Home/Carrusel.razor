@@ -58,8 +58,8 @@
                     }
                 </div>
                 <div class="carrusel__flechas">
-                    <button type="button" class="carrusel__flecha" aria-label="Anterior" @onclick="() => Ir(_actual - 1)"><Icono Nombre="flecha-anterior-blanca" Caja="14" /></button>
-                    <button type="button" class="carrusel__flecha" aria-label="Siguiente" @onclick="() => Ir(_actual + 1)"><Icono Nombre="flecha-siguiente-blanca" Caja="14" /></button>
+                    <FluentButton Class="carrusel__flecha" Shape="ButtonShape.Circular" IconOnly aria-label="Anterior" OnClick="() => Ir(_actual - 1)"><Icono Nombre="flecha-anterior-blanca" Caja="14" /></FluentButton>
+                    <FluentButton Class="carrusel__flecha" Shape="ButtonShape.Circular" IconOnly aria-label="Siguiente" OnClick="() => Ir(_actual + 1)"><Icono Nombre="flecha-siguiente-blanca" Caja="14" /></FluentButton>
                 </div>
             }
         </section>

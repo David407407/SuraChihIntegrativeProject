@@ -2,13 +2,14 @@
 
 Eventos y lugares de Chihuahua en un solo lugar. Proyecto integrador UTCH 2026.
 
-App de escritorio en C# hecha con **.NET MAUI** (.NET 10, Windows y macOS) y **Blazor Hybrid**: componentes
-Razor (C# + HTML + CSS) que se muestran dentro de la ventana con **BlazorWebView**. Los componentes corren
-en el mismo proceso que la app y llaman directo a la librería **BackendLogica**, que habla con MySQL.
+App de escritorio en C# hecha con **WPF** (.NET 10, Windows; el resultado es un .exe) y **Blazor Hybrid**:
+componentes Razor (C# + HTML + CSS) que se muestran dentro de la ventana con **BlazorWebView**. Los controles
+son de **Fluent UI Blazor** con el diseño de Figma. Los componentes corren en el mismo proceso que la app y
+llaman directo a la librería **BackendLogica**, que habla con MySQL.
 
 ```
-┌───────────────────── SuraChihIntegrativeProject (.NET MAUI, Windows) ─────────────────┐
-│  MainPage ── BlazorWebView ── Interfaz (componentes .razor + CSS aislado)              │
+┌───────────────────── SuraChihIntegrativeProject (WPF, Windows) ───────────────────────┐
+│  MainWindow ── BlazorWebView ── Interfaz (componentes .razor + Fluent UI Blazor)       │
 │                                            │                                          │
 │                                  Interfaz/Servicios (Sesion, ServicioHome, ...)        │
 └────────────────────────────────────────────┬──────────────────────────────────────────┘
@@ -26,7 +27,7 @@ en el mismo proceso que la app y llaman directo a la librería **BackendLogica**
 | `BaseDeDatos/surachih_v1.sql` | Script de la BD (tablas, triggers, vistas y datos de prueba). |
 | `Interfaz/` | La interfaz: componentes Razor, páginas, estilos y recursos. Ver [Interfaz/README.md](Interfaz/README.md). |
 | `Interfaz.Navegador/` | Servidor de prueba para abrir la misma interfaz en un navegador (sin la app de escritorio). |
-| `MauiProgram.cs`, `App.xaml`, `MainPage.xaml`, `Platforms/Windows/`, `wwwroot/index.html` | App de escritorio (.NET MAUI): arranque, ventana con BlazorWebView y su página anfitriona. |
+| `App.xaml`, `MainWindow.xaml`, `wwwroot/index.html`, `Resources/AppIcon/` | App de escritorio (WPF): arranque, ventana con BlazorWebView, su página anfitriona y el icono. |
 | `Legacy/` | Pantallas y código de la versión anterior (no se compilan). |
 
 ## Cómo correrlo
@@ -43,24 +44,23 @@ en el mismo proceso que la app y llaman directo a la librería **BackendLogica**
    dotnet run --project BackendLogica.Pruebas
    ```
 4. Abre `SuraChihIntegrativeProject.sln` en Visual Studio (Windows) con la carga de trabajo
-   **Desarrollo de interfaz de usuario de aplicaciones multiplataforma de .NET** (.NET MAUI) y ejecuta
-   `SuraChihIntegrativeProject` con el perfil **Windows Machine**. Desde la consola:
+   **Desarrollo de escritorio de .NET** y ejecuta `SuraChihIntegrativeProject`. Desde la consola:
    ```bash
-   dotnet workload install maui-windows
-   dotnet build SuraChihIntegrativeProject.csproj -t:Run
+   dotnet run --project SuraChihIntegrativeProject.csproj
    ```
-   Requiere [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (ya viene con Edge);
-   Windows App SDK va incluido junto al .exe.
+   Requiere [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (ya viene con Edge).
    En modo Debug, F12 abre las herramientas de desarrollo de la interfaz.
 
-   **En macOS** (Mac Catalyst, macOS 14 o más nuevo) se necesita Xcode completo desde la App Store,
-   no solo las Command Line Tools:
+   Para entregar la app (no necesita .NET instalado en la otra computadora):
    ```bash
-   sudo xcode-select -s /Applications/Xcode.app
-   sudo dotnet workload install maui-maccatalyst
-   dotnet build SuraChihIntegrativeProject.csproj -t:Run
+   dotnet publish SuraChihIntegrativeProject.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publicar
    ```
-   Cada sistema compila solo su destino: en Windows sale el .exe y en macOS la app `SuraChih.app`.
+   En `publicar/` queda `SuraChih.exe` (todo .NET y las librerías van dentro) junto con la carpeta
+   `wwwroot` y `SuraChih.staticwebassets.endpoints.json`, que son la interfaz: se copian juntos. Los
+   `.pdb` y `.xml` no hacen falta. `dbsettings.local.json` va junto al .exe (o en una carpeta de arriba).
+
+   La app WPF solo abre en Windows. Desde macOS o Linux se puede compilar (para revisar errores) pero no
+   abrir: para ver la interfaz ahí usa `Interfaz.Navegador` (abajo).
 
 ### Probar la interfaz en el navegador
 
@@ -73,8 +73,6 @@ dotnet run --project Interfaz.Navegador --DatosFalsos true
 Abre <http://localhost:5180>. Con `--DatosFalsos true` usa los datos de prueba en memoria aunque tu
 `dbsettings.local.json` apunte a MySQL; sin esa opción usa tu configuración, igual que la app.
 Recargar la pestaña cierra la sesión.
-
-> En Linux la app de escritorio no corre; para trabajar la interfaz ahí usa `Interfaz.Navegador`.
 
 Usuarios de prueba (contraseña `Test1234!`): `mariana_r`, `diego_m`, `sofia_c` (normales),
 `cafe_dande` y `misiones_cuu` (organizadores), `mod_ana` y `mod_luis` (moderadores).

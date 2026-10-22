@@ -1,0 +1,373 @@
+/* =====================================================================
+   Controles de Fluent UI con la forma y los colores de Figma.
+   Los componentes de Fluent (FluentButton, FluentTextInput...) pintan su interior en un shadow DOM:
+   el CSS aislado de los .razor.css no les llega, por eso sus estilos viven aquí (globales).
+   Una regla de esta hoja sobre el elemento le gana a los estilos internos de Fluent (:host).
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   Botón (Componentes/Base/Boton.razor) · "Botón" de Figma: 5 tipos × 2 tamaños
+   --------------------------------------------------------------------- */
+.boton {
+  display: inline-flex;
+  min-width: 0;            /* Fluent pone 96px de ancho mínimo */
+  border: 0;
+  font-family: var(--fuente-cuerpo);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: none;
+  border-radius: var(--radio-control);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--duracion-rapida), border-color var(--duracion-rapida),
+              color var(--duracion-rapida), transform var(--duracion-rapida), box-shadow var(--duracion-rapida);
+}
+.boton:active { transform: scale(0.97); }
+
+.boton--m { height: 48px; padding: 0 20px; font-size: 16px; line-height: 20px; }
+.boton--s { height: 36px; padding: 0 14px; font-size: 14px; line-height: 20px; }
+
+.boton__icono { display: inline-flex; }
+/* El decorativo es un <span> normal (sin ranuras de Fluent): el icono final se acomoda con flex */
+span.boton--icono-final { flex-direction: row-reverse; }
+
+.boton--primario { background: var(--color-sol); color: var(--color-tinta); }
+.boton--primario:hover { background: var(--color-sol-hover); box-shadow: 0 6px 16px rgba(255, 196, 0, 0.35); }
+
+.boton--oscuro { background: var(--color-tinta); color: var(--color-superficie); }
+.boton--oscuro:hover { background: var(--color-tinta-hover); }
+
+.boton--secundario {
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+  border: 1.5px solid var(--color-linea);
+}
+.boton--secundario:hover { border-color: var(--color-tinta); }
+
+.boton--peligro { background: var(--color-error); color: var(--color-superficie); }
+.boton--peligro:hover { background: var(--color-error-hover); }
+
+/* Los SVG de Figma vienen en tinta; sobre fondo oscuro o rojo se pintan blancos, como en el diseño. */
+.boton--oscuro .icono img,
+.boton--peligro .icono img { filter: brightness(0) invert(1); }
+
+.boton--fantasma { color: var(--color-tinta); }
+.boton--fantasma:hover { background: var(--color-fondo); }
+
+/* Sobre fondos de color (carrusel del Home, "Btn Ver detalles") */
+.boton--blanco { background: var(--color-superficie); color: var(--color-tinta); }
+.boton--blanco:hover { background: var(--color-sol-suave); }
+
+.boton[disabled],
+.boton[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+/* Sobre el azul del hero ("Btn Crear cuenta gratis") */
+.boton--contorno-claro {
+  color: var(--color-superficie);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+}
+.boton--contorno-claro:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.8); }
+
+
+/* Mientras se espera la respuesta: mismo tamaño, con el FluentSpinner en medio en vez del texto */
+.boton--ocupado { position: relative; pointer-events: none; }
+.boton--ocupado[disabled] { opacity: 1; }
+.boton--ocupado > span,
+.boton--ocupado > .boton__icono { visibility: hidden; }
+.boton__espera {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  /* El arco del spinner toma el color del texto del botón */
+  --colorBrandStroke1: currentColor;
+  --colorBrandStroke2Contrast: transparent;
+}
+
+/* ---------------------------------------------------------------------
+   Campo (Componentes/Base/Campo.razor) · "Campo" de Figma: 48px, borde línea, icono + texto.
+   FluentTextInput pinta un <fluent-field> (etiqueta, caja y mensaje) con la clase .campo.
+   --------------------------------------------------------------------- */
+.campo { display: grid; place-items: stretch; row-gap: 6px; width: 100%; }
+/* Fluent agrega margen arriba y abajo (.my-3-o) a los campos con etiqueta; su CSS llega después, por eso fluent-field */
+fluent-field.campo { margin: 0; }
+.campo > label { justify-self: start; color: var(--color-tinta); font: 600 14px/20px var(--fuente-cuerpo); }
+.campo > label::after { content: none; }   /* Fluent marca los obligatorios con "*"; Figma no */
+
+.campo fluent-text-input { width: 100%; height: auto; }
+.campo fluent-text-input::part(root) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 18px;   /* un poco más que en Figma: con esquinas de píldora el icono no queda pegado a la curva */
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  border: 1.5px solid var(--color-linea);
+  transition: border-color var(--duracion-rapida), box-shadow var(--duracion-rapida);
+}
+/* Fluent marca el foco con una raya azul abajo; Figma usa el borde y un halo */
+.campo fluent-text-input::part(root)::after { display: none; }
+.campo fluent-text-input:hover::part(root) { border-color: #c9d3e3; }
+.campo fluent-text-input:focus-within::part(root) { border-color: var(--color-cielo); box-shadow: 0 0 0 3px rgba(47, 123, 255, 0.15); }
+
+.campo fluent-text-input::part(control) {
+  height: 100%;
+  padding: 0;
+  color: var(--color-tinta);
+  font: 400 16px/24px var(--fuente-cuerpo);
+}
+.campo fluent-text-input::part(control)::placeholder { color: var(--color-texto-2); }
+.campo fluent-text-input > [slot] { display: flex; align-items: center; }
+
+/* Ayuda y error debajo de la caja */
+.campo > [slot="message"] { color: var(--color-texto-2); font: 400 12px/16px var(--fuente-cuerpo); }
+.campo--error { --error: var(--color-error); }
+.campo--error fluent-text-input::part(root) { border-color: var(--color-error); }
+.campo--error fluent-text-input:focus-within::part(root) { box-shadow: 0 0 0 3px rgba(217, 54, 54, 0.15); }
+
+.campo--deshabilitado fluent-text-input::part(root) { background: var(--color-fondo); }
+.campo--deshabilitado fluent-text-input::part(control) { color: var(--color-texto-2); cursor: not-allowed; }
+
+/* ---------------------------------------------------------------------
+   Píldora (Componentes/Base/Pildora.razor) · FluentToggleButton
+   "Pildora" de Figma: opción de un grupo de segmentos, Normal / Activa
+   --------------------------------------------------------------------- */
+.pildora {
+  flex: none;
+  min-width: 0;
+  height: auto;
+  border: 0;
+  font-family: var(--fuente-cuerpo);
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+  /* Borde por dentro, como en Figma: la píldora mide lo mismo activa o no. */
+  box-shadow: inset 0 0 0 1.5px var(--color-linea);
+  white-space: nowrap;
+  transition: background-color var(--duracion-rapida), color var(--duracion-rapida),
+              box-shadow var(--duracion-rapida), transform var(--duracion-rapida);
+}
+.pildora:not([pressed]):hover { box-shadow: inset 0 0 0 1.5px var(--color-tinta); }
+.pildora:active { transform: scale(0.96); }
+.pildora[pressed] {
+  background: var(--color-tinta);
+  color: var(--color-superficie);
+  box-shadow: none;
+}
+
+/* ---------------------------------------------------------------------
+   Chip categoría (Componentes/Base/ChipCategoria.razor) · FluentToggleButton o FluentBadge
+   "Chip categoría" de Figma: fondo por categoría, Activo = borde tinta
+   --------------------------------------------------------------------- */
+.chip-categoria {
+  display: inline-flex;
+  min-width: 0;
+  height: auto;
+  border: 0 solid transparent;   /* FluentBadge dibuja su contorno con el color del borde */
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px 5px 10px;   /* 26px de alto, como en Figma */
+  border-radius: var(--radio-control);
+  background: var(--fondo-categoria, var(--color-fondo));
+  color: var(--color-tinta);
+  font: 500 12px/16px var(--fuente-cuerpo);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  cursor: default;
+  transition: box-shadow var(--duracion-rapida), transform var(--duracion-rapida);
+}
+/* El borde de 1.5px de Activo se dibuja por dentro (sombra) para que el chip no cambie de tamaño
+   al activarse y la fila de filtros no salte. */
+fluent-toggle-button.chip-categoria { cursor: pointer; }
+/* FluentBadge envuelve el contenido en un <span>: ahí va la separación entre icono y texto */
+.chip-categoria > span,
+.chip > span { display: inline-flex; align-items: center; gap: 6px; }
+.chip-categoria > [slot] { display: inline-flex; }
+fluent-toggle-button.chip-categoria:hover { box-shadow: inset 0 0 0 1.5px rgba(11, 27, 58, 0.25); }
+fluent-toggle-button.chip-categoria:active { transform: scale(0.96); }
+.chip-categoria[pressed],
+fluent-toggle-button.chip-categoria[pressed]:hover { box-shadow: inset 0 0 0 1.5px var(--color-tinta); }
+
+.chip-categoria--familiar    { --fondo-categoria: var(--categoria-familiar); }
+.chip-categoria--musica      { --fondo-categoria: var(--categoria-musica); }
+.chip-categoria--deportes    { --fondo-categoria: var(--categoria-deportes); }
+.chip-categoria--tecnologia  { --fondo-categoria: var(--categoria-tecnologia); }
+.chip-categoria--gastronomia { --fondo-categoria: var(--categoria-gastronomia); }
+
+/* ---------------------------------------------------------------------
+   Chip (Componentes/Base/Chip.razor) · FluentBadge · "Chip tipo" de Figma
+   --------------------------------------------------------------------- */
+.chip {
+  display: inline-flex;
+  min-width: 0;
+  height: auto;
+  border: 0 solid transparent;   /* FluentBadge dibuja su contorno con el color del borde */
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: var(--radio-control);
+  color: var(--color-tinta);
+  font: 500 12px/16px var(--fuente-cuerpo);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.chip--sol-suave { background: var(--color-sol-suave); }
+.chip--superficie { background: var(--color-superficie); }
+.chip--fondo { background: var(--color-fondo); }   /* "Chip tipo" del detalle de lugar */
+.chip--sol { background: var(--color-sol); padding: 5px 12px 5px 10px; }
+
+/* ---------------------------------------------------------------------
+   Botón favorito (Componentes/Base/BotonFavorito.razor) · FluentToggleButton
+   Los tres corazones y el latido siguen en BotonFavorito.razor.css
+   --------------------------------------------------------------------- */
+.boton-favorito__boton {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0;
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: background-color var(--duracion-rapida), border-color var(--duracion-rapida);
+}
+.boton-favorito__boton:hover { border-color: var(--color-favorito); }
+.boton-favorito--activo .boton-favorito__boton,
+.boton-favorito--activo .boton-favorito__boton:hover { background: var(--color-favorito-suave); border-color: transparent; }
+
+/* ---------------------------------------------------------------------
+   Volver arriba (Componentes/Base/VolverArriba.razor) · FluentButton de solo icono
+   --------------------------------------------------------------------- */
+.volver-arriba {
+  position: fixed;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  right: 24px;
+  bottom: 24px;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radio-control);
+  background: var(--color-tinta);
+  box-shadow: var(--sombra-suave);
+  transition: transform var(--duracion-rapida), background-color var(--duracion-rapida);
+}
+.volver-arriba .icono { transform: rotate(-90deg); }   /* la flecha "Siguiente" del carrusel, apuntando arriba */
+.volver-arriba:hover { background: var(--color-tinta-hover); }
+.volver-arriba:active { transform: scale(0.94); }
+
+/* Oculto hasta que se baja más de una pantalla: la animación avanza con el scroll de la página
+   (de 100vh a 100vh + 120px), así que no hace falta JavaScript para saber dónde va el usuario.
+   Se anima `translate` y no `transform` para no pisar el :active de arriba. */
+@supports (animation-timeline: scroll()) {
+  .volver-arriba {
+    animation: volver-aparece linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 100vh calc(100vh + 120px);
+  }
+}
+@keyframes volver-aparece {
+  from { visibility: hidden; opacity: 0; translate: 0 12px; }
+  to { visibility: visible; opacity: 1; translate: none; }
+}
+
+/* ---------------------------------------------------------------------
+   Ventana modal (Componentes/Modales/VentanaModal.razor) · FluentDialog
+   El <dialog> de Fluent ocupa toda la ventana y es transparente: la caja blanca de Figma la pinta
+   VentanaModal.razor.css. Aquí van el velo y el botón de cerrar (un FluentButton).
+   --------------------------------------------------------------------- */
+/* [fuib]: el CSS de Fluent (que llega después, con <App>.styles.css) trae fluent-dialog[fuib]::part(dialog) */
+fluent-dialog.modal[fuib]::part(dialog) {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+fluent-dialog.modal[fuib]::part(dialog)::backdrop { background: var(--color-velo-modal); }
+
+.modal__cerrar {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 36px;
+  min-width: 0;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio-control);
+  background: var(--color-fondo);
+  transition: background-color var(--duracion-rapida), transform var(--duracion-rapida);
+}
+.modal__cerrar:hover { background: var(--color-linea); }
+.modal__cerrar:active { transform: scale(0.94); }
+@media (max-width: 480px) {
+  .modal__cerrar { top: 14px; right: 14px; }
+}
+
+/* ---------------------------------------------------------------------
+   Avisos (Estado/Avisos.cs) · FluentToast · "Toast / Cambios guardados" de Figma:
+   píldora tinta abajo al centro, con el icono de Fluent en amarillo (éxito) o blanco.
+   --------------------------------------------------------------------- */
+.toast {
+  --colorStatusSuccessForeground1: var(--color-sol);
+  --colorStatusSuccessForegroundInverted: var(--color-sol);
+  --colorStatusDangerForegroundInverted: var(--color-superficie);
+  --colorNeutralForegroundInverted2: var(--color-superficie);
+}
+.toast::part(dialog) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: auto;
+  min-width: 0;
+  max-width: calc(100vw - 32px);
+  padding: 12px 20px 12px 16px;
+  border: 0;
+  border-radius: var(--radio-control);
+  background: var(--color-tinta);
+  color: var(--color-superficie);
+  box-shadow: var(--sombra-suave);
+  font: 600 14px/20px var(--fuente-cuerpo);
+}
+.toast--error::part(dialog) { background: #9f1239; }
+.toast > [slot="media"] { display: flex; }
+.toast > div:not([slot]) { margin-top: -6px; }   /* Fluent separa el texto 6px del título, que aquí no hay */
+
+/* ---------------------------------------------------------------------
+   Hoja de detalle (Componentes/Detalle/HojaDetalle.razor) · FluentDialog que ocupa toda la ventana y se
+   desplaza por dentro; la caja de 1040px la pinta HojaDetalle.razor.css.
+   --------------------------------------------------------------------- */
+fluent-dialog.hoja[fuib]::part(dialog) {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+fluent-dialog.hoja[fuib]::part(dialog)::backdrop { background: var(--color-velo-modal); }

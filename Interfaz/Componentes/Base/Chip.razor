@@ -2,8 +2,9 @@
   Chip de texto pequeño ("Chip tipo" de Figma): categoría de un evento o lugar.
   <Chip Texto="Café" Variante="superficie" />
   Variantes: sol-suave (por defecto) · superficie · fondo · sol
+  Por dentro es un FluentBadge. Estilos en css/controles.css.
 *@
-<span class="chip chip--@Variante @Clase">@if (Icono != null) {<Icono Nombre="@Icono" Caja="12" />}@Texto</span>
+<FluentBadge Class="@($"chip chip--{Variante} {Clase}".TrimEnd())" Shape="BadgeShape.Circular">@if (Icono != null) {<Icono Nombre="@Icono" Caja="12" />}@Texto</FluentBadge>
 
 @code {
     [Parameter, EditorRequired] public string Texto { get; set; } = "";

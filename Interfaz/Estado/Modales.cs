@@ -6,7 +6,7 @@ namespace Interfaz.Estado
 {
     /// <summary>
     /// La ventana modal (los "Modal / ..." de Figma). La pinta Componentes/Modales/VentanaModal.razor
-    /// con un &lt;dialog&gt; nativo, así que el foco queda atrapado dentro, Esc cierra y lo de atrás no se
+    /// con un FluentDialog, así que el foco queda atrapado dentro, Esc cierra y lo de atrás no se
     /// puede tocar.
     /// </summary>
     /// <remarks>
