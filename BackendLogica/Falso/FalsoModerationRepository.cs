@@ -29,6 +29,7 @@ namespace BackendLogica.Falso
                         if (e?.Estado != EstadoEvento.Pendiente) throw Trigger(MensajesTrigger.EventoNoPendiente);
                         if (e.OrganizadorId == moderadorId) throw Trigger(MensajesTrigger.PropioEvento);
                         e.Estado = decision == DecisionModeracion.Aprobado ? EstadoEvento.Aprobado : EstadoEvento.Rechazado;
+                        e.ActualizadoEn = Ahora;
                         break;
                     case TipoObjetivoModeracion.Lugar:
                         var l = a.Lugar(objetivoId);

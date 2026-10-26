@@ -167,12 +167,16 @@ namespace BackendLogica.Repositorios
                 ORDER BY c.start_at DESC
                 """, new { organizadorId }, ct);
 
-        /// <summary>Eventos en un estado dado (ej. Pendiente para el panel de moderación).</summary>
+        /// <summary>
+        /// Eventos en un estado dado (ej. Pendiente para la bandeja de moderación), por antigüedad: primero el que
+        /// lleva más tiempo así. <c>updated_at</c> marca cuándo se envió a revisión o se editó por última vez
+        /// (no sale en <c>v_event_card</c>, por eso la subconsulta).
+        /// </summary>
         public Task<List<EventoTarjeta>> ListarPorEstadoAsync(EstadoEvento estado, CancellationToken ct = default) =>
             ConsultarTarjetasAsync($"""
                 {SelectTarjeta}
                 WHERE c.status = @estado
-                ORDER BY c.start_at
+                ORDER BY (SELECT e.updated_at FROM event e WHERE e.id = c.id), c.id
                 """, new { estado }, ct);
 
         /// <summary>Embudo vistas → interesados → inscritos y calificación de cada evento del organizador.</summary>
@@ -217,32 +221,45 @@ namespace BackendLogica.Repositorios
                             @BoletosUrl, @ImagenUrl, @estado)
                     """, ParametrosEvento(organizadorId, datos, enviarARevision ? EstadoEvento.Pendiente : EstadoEvento.Borrador));
                 await GuardarEtiquetasAsync(tx, id, datos.EtiquetaIds);
+                await GuardarGaleriaAsync(tx, id, datos.Galeria);
                 return id;
             }, ct);
         }
 
         /// <summary>
-        /// Edita un evento propio. Si ya estaba aprobado, la BD lo regresa a moderación automáticamente.
+        /// Edita un evento propio con sus etiquetas y su galería. Si ya estaba aprobado, la BD lo regresa a
+        /// moderación (<c>trg_event_bu</c> por el contenido, <c>trg_eventimg_ai</c> por fotos nuevas).
         /// </summary>
-        /// <returns>false si el evento no existe o no es de este organizador.</returns>
-        public Task<bool> ActualizarAsync(int eventoId, int organizadorId, DatosEvento datos, CancellationToken ct = default)
+        /// <returns>El estado en que quedó, o null si el evento no existe, no es de este organizador o está cancelado.</returns>
+        public Task<ResultadoEdicionEvento?> ActualizarAsync(int eventoId, int organizadorId, DatosEvento datos, CancellationToken ct = default)
         {
             // La BD v1 no guarda borradores incompletos, así que al editar se exige todo (igual que antes).
             ValidarDatos(datos, esBorrador: false);
-            return EnTransaccionAsync(async tx =>
+            return EnTransaccionAsync<ResultadoEdicionEvento?>(async tx =>
             {
-                int filas = await tx.EjecutarAsync("""
+                string? antes = await tx.EscalarAsync<string>("""
+                    SELECT status FROM event
+                    WHERE id = @eventoId AND organizer_id = @organizadorId AND status <> 'cancelled'
+                    FOR UPDATE
+                    """, new { eventoId, organizadorId });
+                if (antes == null) return null;
+
+                await tx.EjecutarAsync("""
                     UPDATE event SET place_id = @LugarId, title = @Titulo, description = @Descripcion,
                            start_at = @Inicio, end_at = @Fin, address = @Direccion,
                            latitude = @Latitud, longitude = @Longitud, price_min = @PrecioMin,
                            price_max = @PrecioMax, ticket_url = @BoletosUrl, main_image_url = @ImagenUrl
-                    WHERE id = @eventoId AND organizer_id = @organizadorId AND status <> 'cancelled'
+                    WHERE id = @eventoId
                     """, ParametrosEvento(organizadorId, datos, null, eventoId));
-                if (filas == 0) return false;
 
                 await tx.EjecutarAsync("DELETE FROM event_tag WHERE event_id = @eventoId", new { eventoId });
                 await GuardarEtiquetasAsync(tx, eventoId, datos.EtiquetaIds);
-                return true;
+                await GuardarGaleriaAsync(tx, eventoId, datos.Galeria);
+
+                string despues = (await tx.EscalarAsync<string>("SELECT status FROM event WHERE id = @eventoId", new { eventoId }))!;
+                var (estadoAntes, estadoDespues) = (EnumBD.Leer<EstadoEvento>(antes), EnumBD.Leer<EstadoEvento>(despues));
+                return new ResultadoEdicionEvento(estadoDespues,
+                    estadoAntes == EstadoEvento.Aprobado && estadoDespues == EstadoEvento.Pendiente);
             }, ct);
         }
 
@@ -263,12 +280,29 @@ namespace BackendLogica.Repositorios
                 """, new { eventoId, organizadorId, motivo = motivo.Trim() }, ct) > 0;
         }
 
-        /// <summary>Agrega una foto a la galería (al final). Si el evento estaba aprobado, vuelve a moderación.</summary>
-        public Task<int> AgregarImagenAsync(int eventoId, string url, CancellationToken ct = default) =>
-            InsertarAsync("""
-                INSERT INTO event_image (event_id, url, sort_order)
-                SELECT @eventoId, @url, COALESCE(MAX(sort_order), 0) + 1 FROM event_image WHERE event_id = @eventoId
-                """, new { eventoId, url }, ct);
+        /// <summary>
+        /// Agrega una foto a la galería (al final) de un evento propio. Si el evento estaba aprobado, vuelve a moderación.
+        /// </summary>
+        /// <returns>Id de la imagen, o null si el evento no existe, no es de este organizador o está cancelado.</returns>
+        public Task<int?> AgregarImagenAsync(int eventoId, int organizadorId, string url, CancellationToken ct = default)
+        {
+            Validar.UrlImagen(url);
+            return EnTransaccionAsync<int?>(async tx =>
+            {
+                // El dueño se revisa aparte: un INSERT ... SELECT que lea event chocaría con trg_eventimg_ai,
+                // que actualiza esa misma tabla (error 1442).
+                if (await tx.EscalarAsync<int>("""
+                        SELECT COUNT(*) FROM event
+                        WHERE id = @eventoId AND organizer_id = @organizadorId AND status <> 'cancelled'
+                        FOR UPDATE
+                        """, new { eventoId, organizadorId }) == 0)
+                    return null;
+                return await tx.InsertarAsync("""
+                    INSERT INTO event_image (event_id, url, sort_order)
+                    SELECT @eventoId, @url, COALESCE(MAX(sort_order), 0) + 1 FROM event_image WHERE event_id = @eventoId
+                    """, new { eventoId, url });
+            }, ct);
+        }
 
         // ------------------------------------------------------------------
         // Apoyo
@@ -285,6 +319,33 @@ namespace BackendLogica.Repositorios
         {
             foreach (int etiquetaId in etiquetaIds.Distinct())
                 await tx.EjecutarAsync("INSERT INTO event_tag (event_id, tag_id) VALUES (@eventoId, @etiquetaId)", new { eventoId, etiquetaId });
+        }
+
+        /// <summary>
+        /// Deja la galería igual a <paramref name="galeria"/>: quita las fotos que ya no vienen, reordena las que siguen
+        /// e inserta solo las nuevas. No se borra y vuelve a insertar todo porque cada INSERT dispara
+        /// <c>trg_eventimg_ai</c>, que regresaría a moderación un evento aprobado aunque sus fotos no cambiaran.
+        /// </summary>
+        private static async Task GuardarGaleriaAsync(Transaccion tx, int eventoId, IReadOnlyList<string> galeria)
+        {
+            var actuales = await tx.ConsultarAsync("SELECT id, url FROM event_image WHERE event_id = @eventoId",
+                r => (Id: r.Entero("id"), Url: r.Texto("url")), new { eventoId });
+            var urls = galeria.Distinct().ToList();
+
+            var quitar = actuales.Where(i => !urls.Contains(i.Url)).Select(i => i.Id).ToList();
+            if (quitar.Count > 0)
+                await tx.EjecutarAsync("DELETE FROM event_image WHERE id IN @quitar", new { quitar });
+
+            for (int i = 0; i < urls.Count; i++)
+            {
+                var existente = actuales.FirstOrDefault(a => a.Url == urls[i]);
+                if (existente.Url != null)
+                    await tx.EjecutarAsync("UPDATE event_image SET sort_order = @orden WHERE id = @id",
+                        new { orden = i + 1, id = existente.Id });
+                else
+                    await tx.EjecutarAsync("INSERT INTO event_image (event_id, url, sort_order) VALUES (@eventoId, @url, @orden)",
+                        new { eventoId, url = urls[i], orden = i + 1 });
+            }
         }
 
         /// <summary>
@@ -309,6 +370,8 @@ namespace BackendLogica.Repositorios
             }
             if (d.Latitud.HasValue && d.Longitud.HasValue)
                 Validar.CoordenadasChihuahua(d.Latitud.Value, d.Longitud.Value);
+            foreach (string url in d.Galeria)
+                Validar.UrlImagen(url);
         }
 
         /// <summary>Lo que el diseño permite pero la BD v1 todavía no puede guardar.</summary>

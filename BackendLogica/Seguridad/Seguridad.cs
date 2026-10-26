@@ -87,6 +87,14 @@ namespace BackendLogica.Seguridad
                 throw new DatosInvalidosException("La ubicación debe estar dentro del estado de Chihuahua.");
         }
 
+        /// <summary>Foto subida a Cloudinary: su <c>secure_url</c> (https, hasta 500 caracteres como <c>event_image.url</c>).</summary>
+        public static void UrlImagen(string? url)
+        {
+            if (url == null || url.Length > 500
+                || !Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri.Scheme != Uri.UriSchemeHttps)
+                throw new DatosInvalidosException("Cada foto debe ser una URL https (la secure_url que devuelve Cloudinary).");
+        }
+
         public static void RangoPrecio(decimal? minimo, decimal? maximo)
         {
             if (minimo < 0 || (minimo.HasValue && maximo.HasValue && minimo > maximo))

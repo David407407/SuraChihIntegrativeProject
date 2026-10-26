@@ -313,12 +313,12 @@ async Task PruebasFalso()
         Afirmar(eventos.Any(e => e.Id == 2), "debería encontrar la cata de café");
         return string.Join(" | ", eventos.Select(e => e.Titulo));
     });
-    await Prueba("IEventRepository: filtros del rediseño (Gastronomía + rango del 24 oct)", async () =>
+    await Prueba("IEventRepository: filtros del rediseño (Gastronomía + rango del 28 nov)", async () =>
     {
         var eventos = await f.Eventos.FiltrarAsync(new FiltroEventos
         {
             EtiquetaIds = [5], Precio = FiltroPrecio.DePago, Cuando = FiltroCuando.Rango,
-            Desde = new DateTime(2026, 10, 24), Hasta = new DateTime(2026, 10, 24)
+            Desde = new DateTime(2026, 11, 28), Hasta = new DateTime(2026, 11, 28)
         });
         Afirmar(eventos.Count == 1 && eventos[0].Id == 2, "debería salir solo la cata");
         var gratis = await f.Eventos.FiltrarAsync(new FiltroEventos { Precio = FiltroPrecio.Gratis });
@@ -519,11 +519,82 @@ async Task PruebasFalso()
         Afirmar((await f.Reportes.ListarAsync()).Count == 0, "ya no está abierto");
         return "";
     });
+
+    // --- Semanas 3–4: publicar con galería, avisar al editar y bandejas por antigüedad ---
+    // Van al final porque cambian el evento 2 (aprobado), que usan las pruebas de arriba.
+    const string Foto1 = "https://res.cloudinary.com/demo/image/upload/v1/surachih/prueba1.jpg";
+    const string Foto2 = "https://res.cloudinary.com/demo/image/upload/v1/surachih/prueba2.jpg";
+    await Prueba("Publicar con galería guarda las fotos de Cloudinary en orden", async () =>
+    {
+        int id = await f.Eventos.CrearAsync(4, EventoDePrueba("Con galería", DateTime.Now.AddDays(10), [Foto1, Foto2]));
+        var galeria = (await f.Eventos.ObtenerAsync(id))!.Galeria;
+        Afirmar(galeria.SequenceEqual([Foto1, Foto2]), $"galería: {string.Join(", ", galeria)}");
+        return $"{galeria.Count} fotos";
+    });
+    await Prueba("La galería solo acepta URLs https", () =>
+        EsperarError<DatosInvalidosException>(() =>
+            f.Eventos.CrearAsync(4, EventoDePrueba("URL mala", DateTime.Now.AddDays(10), ["foto.jpg"]))));
+    await Prueba("Bandeja de eventos pendientes: el que lleva más tiempo esperando va primero", async () =>
+    {
+        // El primero en enviarse es el de fecha más lejana: ordenar por fecha los invertiría.
+        int primero = await f.Eventos.CrearAsync(4, EventoDePrueba("Enviado primero", DateTime.Now.AddDays(40)));
+        int segundo = await f.Eventos.CrearAsync(4, EventoDePrueba("Enviado después", DateTime.Now.AddDays(5)));
+        var ids = (await f.Eventos.ListarPorEstadoAsync(EstadoEvento.Pendiente)).Select(e => e.Id).ToList();
+        Afirmar(ids.IndexOf(primero) < ids.IndexOf(segundo), $"orden: {string.Join(", ", ids)}");
+        return "";
+    });
+    await Prueba("Editar un aprobado avisa que volvió a revisión; editar uno pendiente no", async () =>
+    {
+        var antes = (await f.Eventos.ObtenerAsync(4))!;   // aprobado por la prueba de moderación de arriba
+        var datos = DatosDe(antes) with { Titulo = antes.Evento.Titulo + " (editado)" };
+        var r1 = await f.Eventos.ActualizarAsync(4, 4, datos);
+        var r2 = await f.Eventos.ActualizarAsync(4, 4, datos with { Descripcion = "Otra descripción" });
+        Afirmar(r1 is { Estado: EstadoEvento.Pendiente, VolvioARevision: true }, $"primera edición: {r1}");
+        Afirmar(r2 is { Estado: EstadoEvento.Pendiente, VolvioARevision: false }, $"segunda edición: {r2}");
+        Afirmar(await f.Eventos.ActualizarAsync(4, 3, datos) == null, "otro organizador no puede editarlo");
+        return "";
+    });
+    await Prueba("Galería al editar: quitar una foto no regresa a revisión; agregar una sí", async () =>
+    {
+        var cata = (await f.Eventos.ObtenerAsync(2))!;     // aprobada, con 1 foto
+        var quitar = await f.Eventos.ActualizarAsync(2, 3, DatosDe(cata) with { Galeria = [] });
+        Afirmar(quitar is { Estado: EstadoEvento.Aprobado, VolvioARevision: false }, $"quitar: {quitar}");
+        Afirmar((await f.Eventos.ObtenerAsync(2))!.Galeria.Count == 0, "la foto se quitó");
+        var agregar = await f.Eventos.ActualizarAsync(2, 3, DatosDe(cata) with { Galeria = [Foto1] });
+        Afirmar(agregar is { Estado: EstadoEvento.Pendiente, VolvioARevision: true }, $"agregar: {agregar}");
+        return "";
+    });
+    await Prueba("AgregarImagenAsync solo funciona para el dueño del evento", async () =>
+    {
+        Afirmar(await f.Eventos.AgregarImagenAsync(2, organizadorId: 4, Foto2) == null, "otro organizador no agrega fotos");
+        Afirmar(await f.Eventos.AgregarImagenAsync(2, organizadorId: 3, Foto2) > 0, "el dueño sí");
+        return "";
+    });
 }
+
+// Datos completos de un evento de la organizadora 4 (Misiones) en el lugar 1 (aprobado).
+static DatosEvento EventoDePrueba(string titulo, DateTime inicio, IReadOnlyList<string>? galeria = null) => new()
+{
+    Titulo = titulo, Descripcion = "Evento de prueba", LugarId = 1,
+    Inicio = inicio, Fin = inicio.AddHours(2), PrecioMin = 0, PrecioMax = 0, Galeria = galeria ?? []
+};
+
+// El formulario "Editar evento" lleno con lo que ya tiene el evento.
+static DatosEvento DatosDe(EventoDetalle d) => new()
+{
+    LugarId = d.Evento.LugarId, Titulo = d.Evento.Titulo, Descripcion = d.Evento.Descripcion,
+    Inicio = d.Evento.Inicio, Fin = d.Evento.Fin,
+    Direccion = d.Evento.LugarId == null ? d.Evento.Direccion : null,
+    Latitud = d.Evento.LugarId == null ? d.Evento.Latitud : null,
+    Longitud = d.Evento.LugarId == null ? d.Evento.Longitud : null,
+    PrecioMin = d.Evento.PrecioMin, PrecioMax = d.Evento.PrecioMax, BoletosUrl = d.Evento.BoletosUrl,
+    ImagenUrl = d.Evento.ImagenUrl, EtiquetaIds = d.Evento.Etiquetas.Select(t => t.Id).ToList(), Galeria = d.Galeria
+};
 
 // ----------------------------------------------------------------------
 // Implementación real contra MySQL (escribe: solo en una base *_pruebas)
-// Lo que consumen las pantallas de las semanas 1–2: cuenta, lectura, favoritos, inscripción y vistas.
+// Lo que consumen las pantallas de las semanas 1–4: cuenta, lectura, favoritos, inscripción, vistas,
+// Hazte organizador, Publicar evento, Moderación y bandejas.
 // ----------------------------------------------------------------------
 
 async Task PruebasEscrituraMySql(SuraChihBD bd)
@@ -718,6 +789,114 @@ async Task PruebasEscrituraMySql(SuraChihBD bd)
         // Aunque alguien inserte directo con SQL, la BD no deja la segunda del día.
         await EsperarError<MySqlException>(() => Sql("INSERT INTO event_view (event_id, user_id) VALUES (1, @id)", new { id = u.Id }));
         return "8 aperturas → 1 vista";
+    });
+
+    // --- Semanas 3–4: Hazte organizador, Publicar evento, Moderación y bandejas ---
+    const string Foto1 = "https://res.cloudinary.com/demo/image/upload/v1/surachih/prueba1.jpg";
+    const string Foto2 = "https://res.cloudinary.com/demo/image/upload/v1/surachih/prueba2.jpg";
+
+    await Prueba("Solicitud de organizador: WhatsApp de 10–15 dígitos, pending, rechazo con motivo y reenvío", async () =>
+    {
+        var u = await CuentaNueva("solicita");
+        SolicitudOrganizador Solicitud(string whatsApp) => new(u.Id, $"Negocio {sufijo}", null, "https://instagram.com/prueba", whatsApp);
+
+        await EsperarError<DatosInvalidosException>(() => bd.Organizadores.SolicitarAsync(Solicitud("614-123-4567")));
+        await EsperarError<DatosInvalidosException>(() => bd.Organizadores.SolicitarAsync(Solicitud("123456789")));
+        await bd.Organizadores.SolicitarAsync(Solicitud("526141234567"));
+        Afirmar((await bd.Organizadores.ObtenerAsync(u.Id))?.Estado == EstadoOrganizador.Pendiente, "debe quedar pending");
+        Afirmar((await bd.Organizadores.ListarPorEstadoAsync(EstadoOrganizador.Pendiente)).Any(o => o.UsuarioId == u.Id), "sale en la bandeja");
+        await EsperarError<DuplicadoException>(() => bd.Organizadores.SolicitarAsync(Solicitud("526141234567")));
+
+        await EsperarError<DatosInvalidosException>(() => bd.Moderacion.RechazarAsync(1, TipoObjetivoModeracion.Organizador, u.Id, "  "), "Escribe el motivo del rechazo.");
+        await bd.Moderacion.RechazarAsync(1, TipoObjetivoModeracion.Organizador, u.Id, "Falta tu red social");
+        Afirmar((await bd.Organizadores.ObtenerAsync(u.Id))?.Estado == EstadoOrganizador.Rechazado, "el trigger aplicó el rechazo");
+        await bd.Organizadores.SolicitarAsync(Solicitud("5261412345678"));
+        await bd.Moderacion.AprobarAsync(2, TipoObjetivoModeracion.Organizador, u.Id);
+        Afirmar(await bd.Organizadores.EsAprobadoAsync(u.Id), "el reenvío se aprobó");
+        return "";
+    });
+    await Prueba("Bandeja de organizadores: la solicitud más antigua primero", async () =>
+    {
+        var lista = await bd.Organizadores.ListarPorEstadoAsync(EstadoOrganizador.Pendiente);
+        Afirmar(lista.Zip(lista.Skip(1)).All(p => p.First.SolicitadoEn <= p.Second.SolicitadoEn), "fuera de orden");
+        return $"{lista.Count} pendientes";
+    });
+    await Prueba("Publicar: event + event_tag + event_image en un paso; borrador y envío a revisión", async () =>
+    {
+        int id = await bd.Eventos.CrearAsync(4, EventoDePrueba("Publicado con galería", DateTime.Now.AddDays(12), [Foto1, Foto2]) with { EtiquetaIds = [1, 3] });
+        var d = (await bd.Eventos.ObtenerAsync(id))!;
+        Afirmar(d.Evento.Estado == EstadoEvento.Pendiente, "enviar a revisión deja pending");
+        Afirmar(d.Galeria.SequenceEqual([Foto1, Foto2]), $"galería: {string.Join(", ", d.Galeria)}");
+        Afirmar(d.Evento.Etiquetas.Select(t => t.Id).Order().SequenceEqual([1, 3]), "etiquetas");
+
+        int borrador = await bd.Eventos.CrearAsync(4, EventoDePrueba("Borrador", DateTime.Now.AddDays(12)), enviarARevision: false);
+        Afirmar((await bd.Eventos.ObtenerAsync(borrador))!.Evento.Estado == EstadoEvento.Borrador, "borrador = draft");
+        Afirmar(await bd.Eventos.EnviarARevisionAsync(borrador, 4), "enviar el borrador");
+        Afirmar((await bd.Eventos.ObtenerAsync(borrador))!.Evento.Estado == EstadoEvento.Pendiente, "ya en revisión");
+
+        await EsperarError<DatosInvalidosException>(() =>
+            bd.Eventos.CrearAsync(4, EventoDePrueba("URL mala", DateTime.Now.AddDays(12), ["http://res.cloudinary.com/demo/x.jpg"])));
+        return "";
+    });
+    await Prueba("Editar un aprobado: trg_event_bu lo regresa a pending y el resultado lo avisa", async () =>
+    {
+        int id = await bd.Eventos.CrearAsync(4, EventoDePrueba("Para editar", DateTime.Now.AddDays(15), [Foto1]));
+        await bd.Moderacion.AprobarAsync(1, TipoObjetivoModeracion.Evento, id);
+        await bd.Moderacion.DestacarEventoAsync(id, 9);
+        var d = (await bd.Eventos.ObtenerAsync(id))!;
+
+        var soloPrecio = await bd.Eventos.ActualizarAsync(id, 4, DatosDe(d) with { PrecioMin = 50, PrecioMax = 50 });
+        Afirmar(soloPrecio is { Estado: EstadoEvento.Aprobado, VolvioARevision: false }, $"cambiar el precio no lo regresa: {soloPrecio}");
+        var quitarFoto = await bd.Eventos.ActualizarAsync(id, 4, DatosDe(d) with { Galeria = [] });
+        Afirmar(quitarFoto is { Estado: EstadoEvento.Aprobado, VolvioARevision: false }, $"quitar una foto no lo regresa: {quitarFoto}");
+
+        var titulo = await bd.Eventos.ActualizarAsync(id, 4, DatosDe(d) with { Titulo = "Para editar (nuevo título)" });
+        Afirmar(titulo is { Estado: EstadoEvento.Pendiente, VolvioARevision: true }, $"cambiar el título sí: {titulo}");
+        Afirmar(!(await bd.Eventos.ObtenerAsync(id))!.Evento.Destacado, "sale del carrusel");
+        Afirmar(await bd.Eventos.ActualizarAsync(id, 3, DatosDe(d)) == null, "otro organizador no puede editarlo");
+
+        await bd.Moderacion.AprobarAsync(1, TipoObjetivoModeracion.Evento, id);
+        var foto = await bd.Eventos.ActualizarAsync(id, 4, DatosDe((await bd.Eventos.ObtenerAsync(id))!) with { Galeria = [Foto1, Foto2] });
+        Afirmar(foto is { Estado: EstadoEvento.Pendiente, VolvioARevision: true }, $"agregar una foto (trg_eventimg_ai) también: {foto}");
+        Afirmar((await bd.Eventos.ObtenerAsync(id))!.Galeria.SequenceEqual([Foto1, Foto2]), "galería final");
+        return "";
+    });
+    await Prueba("AgregarImagenAsync solo para el dueño (y regresa a revisión un aprobado)", async () =>
+    {
+        int id = await bd.Eventos.CrearAsync(4, EventoDePrueba("Fotos sueltas", DateTime.Now.AddDays(16)));
+        await bd.Moderacion.AprobarAsync(1, TipoObjetivoModeracion.Evento, id);
+        Afirmar(await bd.Eventos.AgregarImagenAsync(id, organizadorId: 3, Foto1) == null, "otro organizador no agrega fotos");
+        Afirmar(await bd.Eventos.AgregarImagenAsync(id, organizadorId: 4, Foto1) > 0, "el dueño sí");
+        Afirmar((await bd.Eventos.ObtenerAsync(id))!.Evento.Estado == EstadoEvento.Pendiente, "volvió a revisión");
+        return "";
+    });
+    await Prueba("Moderación: rechazo exige motivo y nadie modera lo suyo (trg_moderation_bi)", async () =>
+    {
+        int id = await bd.Eventos.CrearAsync(4, EventoDePrueba("Para moderar", DateTime.Now.AddDays(17)));
+        await EsperarError<DatosInvalidosException>(() => bd.Moderacion.DecidirAsync(1, TipoObjetivoModeracion.Evento, id, DecisionModeracion.Rechazado));
+        await bd.Moderacion.RechazarAsync(1, TipoObjetivoModeracion.Evento, id, "La foto no corresponde al evento");
+        Afirmar((await bd.Eventos.ObtenerAsync(id))!.Evento.Estado == EstadoEvento.Rechazado, "el trigger aplicó el rechazo");
+        Afirmar((await bd.Moderacion.ObtenerUltimaDecisionAsync(TipoObjetivoModeracion.Evento, id))?.Comentario == "La foto no corresponde al evento", "Ver motivo");
+
+        await Sql("UPDATE user SET is_mod = TRUE WHERE id = 4");   // la organizadora 4 también modera
+        try
+        {
+            Afirmar(await bd.Eventos.EnviarARevisionAsync(id, 4), "reenviar el rechazado");
+            await EsperarError<ReglaNegocioException>(() => bd.Moderacion.AprobarAsync(4, TipoObjetivoModeracion.Evento, id), "No puedes moderar tu propio evento.");
+        }
+        finally
+        {
+            await Sql("UPDATE user SET is_mod = FALSE WHERE id = 4");
+        }
+        return "";
+    });
+    await Prueba("Bandeja de eventos pendientes: el que lleva más tiempo esperando va primero", async () =>
+    {
+        int primero = await bd.Eventos.CrearAsync(4, EventoDePrueba("Enviado primero", DateTime.Now.AddDays(40)));
+        int segundo = await bd.Eventos.CrearAsync(4, EventoDePrueba("Enviado después", DateTime.Now.AddDays(5)));
+        var ids = (await bd.Eventos.ListarPorEstadoAsync(EstadoEvento.Pendiente)).Select(e => e.Id).ToList();
+        Afirmar(ids.IndexOf(primero) < ids.IndexOf(segundo), $"orden: {string.Join(", ", ids)}");
+        return $"{ids.Count} pendientes";
     });
 }
 

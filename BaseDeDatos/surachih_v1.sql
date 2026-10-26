@@ -627,7 +627,7 @@ INSERT INTO event (id, organizer_id, place_id, title, description, start_at, end
   'Plaza de Armas, Centro, Chihuahua', 28.635300, -106.075600, 370, 370,
   'https://boletos.example.com/mision404', 'https://res.cloudinary.com/demo/image/upload/sample.jpg', 'pending'),
  (2, 3, 1, 'Cata de café de especialidad',
-  'Tres orígenes, tres métodos de extracción ☕', '2026-10-24 17:00', '2026-10-24 19:00',
+  'Tres orígenes, tres métodos de extracción ☕', '2026-11-28 17:00', '2026-11-28 19:00',
   NULL, NULL, NULL, 250, 250, NULL, 'https://res.cloudinary.com/demo/image/upload/sample.jpg', 'pending'),
  (3, 4, NULL, 'Carrera nocturna 5K',
   'Carrera recreativa familiar 🏃', '2026-09-20 19:00', '2026-09-20 22:00',
