@@ -89,7 +89,19 @@ namespace BackendLogica.Modelos
         public string? BoletosUrl { get; init; }
         public string? ImagenUrl { get; init; }
         public IReadOnlyCollection<int> EtiquetaIds { get; init; } = [];
+        /// <summary>
+        /// Fotos de la galería en el orden en que se muestran: la <c>secure_url</c> que devuelve Cloudinary al subirlas
+        /// (la librería no habla con Cloudinary). Al editar es la galería completa, como <see cref="EtiquetaIds"/>:
+        /// las que ya no vienen se quitan de la BD (el archivo sigue en Cloudinary).
+        /// </summary>
+        public IReadOnlyList<string> Galeria { get; init; } = [];
     }
+
+    /// <summary>
+    /// Resultado de "Guardar cambios" de un evento propio. Con <see cref="VolvioARevision"/> la pantalla avisa
+    /// que el evento aprobado regresó a moderación (y salió del carrusel) por cambiar su contenido o sus fotos.
+    /// </summary>
+    public sealed record ResultadoEdicionEvento(EstadoEvento Estado, bool VolvioARevision);
 
     /// <summary>Embudo del panel del organizador (vista <c>v_event_stats</c>).</summary>
     public sealed record EstadisticasEvento(

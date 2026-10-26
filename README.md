@@ -32,13 +32,18 @@ llaman directo a la librería **BackendLogica**, que habla con MySQL.
 
 ## Cómo correrlo
 
-1. Crea la BD ejecutando `BaseDeDatos/surachih_v1.sql` completo en MySQL Workbench o en la consola
-   `mysql` (MySQL 8.0.16+; los triggers usan `DELIMITER`). Si ya la tenías cargada, en vez de volver a
-   crearla puedes correr los scripts de cambios de `BaseDeDatos/` (`agregar_favoritos_lugares.sql`,
-   `ocultar_resenas_cuentas_eliminadas.sql`, `vista_unica_por_dia.sql`); ninguno borra datos.
-2. Copia `dbsettings.example.json` como `dbsettings.local.json` (git lo ignora) y pon tus datos.
-   Para trabajar pantallas **sin MySQL**, pon `"UseFakeData": true`: la app usa los datos de prueba
-   en memoria (ver [BackendLogica/README.md](BackendLogica/README.md#trabajar-sin-mysql-repositorio-falso)).
+1. La BD es **compartida**: vive en Aiven (MySQL 8.4) y todo el equipo usa la misma, así los eventos
+   que alguien agrega los ven todos. Pide a quien administra el proyecto el archivo
+   `dbsettings.local.json` (por WhatsApp o Drive, **nunca** en git: el repositorio es público) y ponlo
+   en la raíz de la solución. Git ya lo ignora. La conexión a Aiven siempre va cifrada (SSL).
+
+   **No corras `BaseDeDatos/surachih_v1.sql` contra la BD compartida:** empieza con
+   `DROP DATABASE surachih` y borra los eventos de todo el equipo. Solo sirve para crear una BD
+   nueva (por ejemplo, una local con `localhost` en tu `dbsettings.local.json`; requiere MySQL 8.0.16+
+   y los triggers usan `DELIMITER`). La BD compartida tiene la zona horaria de Chihuahua (`-06:00`)
+   porque la app compara `DateTime.Now` con `NOW()` de MySQL.
+2. Para trabajar pantallas **sin MySQL**, pon `"UseFakeData": true` en `dbsettings.local.json`: la app
+   usa los datos de prueba en memoria (ver [BackendLogica/README.md](BackendLogica/README.md#trabajar-sin-mysql-repositorio-falso)).
 3. Verifica la conexión y la librería:
    ```bash
    dotnet run --project BackendLogica.Pruebas

@@ -99,6 +99,19 @@ inscripciones y vistas, y que solo corre si la base se llama `*_pruebas` (para n
 Carga `surachih_v1.sql` cambiando `surachih` por `surachih_pruebas` en sus tres primeras instrucciones,
 pon `"Database": "surachih_pruebas"` en `dbsettings.local.json` y corre `dotnet run --project BackendLogica.Pruebas`.
 
+## Implementación real (MySQL) para las pantallas de las semanas 3–4
+
+| Qué | Métodos | Tablas / triggers | Quién lo consume |
+|---|---|---|---|
+| Solicitud de organizador | `Organizadores.SolicitarAsync` → queda `pending`; si la anterior fue rechazada se reenvía. WhatsApp: solo dígitos, 10 a 15 (`Validar.WhatsApp` y `ck_orgprof_whatsapp`) | `organizer_profile` | Ivan (Hazte organizador) |
+| Publicar evento | `Eventos.CrearAsync(organizadorId, datos, enviarARevision)`: `true` → `pending` ("Enviar a revisión"), `false` → `draft` ("Guardar borrador"). Guarda evento, etiquetas y galería en una sola transacción. `EnviarARevisionAsync` manda un borrador o un rechazado corregido | `event`, `event_tag`, `event_image`; `trg_event_bi` (solo organizadores aprobados, lugar aprobado) | Betsy (Publicar evento) |
+| Editar evento | `Eventos.ActualizarAsync` → `ResultadoEdicionEvento` (`null` si no es suyo o está cancelado). Si `VolvioARevision` es `true`, **avisar en la UI** que el evento regresó a moderación y salió del carrusel | `trg_event_bu` (título, descripción, foto principal, boletos o ubicación), `trg_eventimg_ai` (fotos nuevas). Fechas, precio, etiquetas o quitar fotos no lo regresan | Betsy (Publicar evento) |
+| Fotos | `DatosEvento.Galeria`: las `secure_url` (https) que devuelve Cloudinary al subirlas, en orden. Al editar es la galería completa: las que faltan se quitan de la BD (el archivo sigue en Cloudinary) y solo las nuevas se insertan. `AgregarImagenAsync(eventoId, organizadorId, url)` → `null` si el evento no es suyo | `event_image` | Betsy (Publicar evento) |
+| Moderación | `Moderacion.AprobarAsync` / `RechazarAsync` / `DecidirAsync` insertan en `moderation`; el trigger aplica la decisión. Rechazar exige comentario ("Escribe el motivo del rechazo.") | `trg_moderation_bi` (solo moderadores, objetivo pendiente, **nadie modera lo suyo**), `trg_moderation_ai`, `ck_mod_reject_reason` | Ivan (Moderación / Organizadores), Carlos (Publicaciones, Revisar evento) |
+| Bandejas | `Eventos.ListarPorEstadoAsync(Pendiente)`, `Lugares.ListarPorEstadoAsync(Pendiente)`, `Organizadores.ListarPorEstadoAsync(Pendiente)`: **el que lleva más tiempo esperando primero** | eventos por `updated_at` (cuándo se envió o editó), lugares por `created_at`, organizadores por `requested_at` | Ivan (Moderación / Organizadores), Carlos (Publicaciones) |
+
+Las pruebas de `BackendLogica.Pruebas` cubren todo esto contra el falso y, en una base `*_pruebas`, contra los triggers reales.
+
 ## Jerarquía de clases
 
 ```

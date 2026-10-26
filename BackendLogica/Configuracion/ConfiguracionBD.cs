@@ -36,6 +36,9 @@ namespace BackendLogica.Configuracion
             Password = Contrasena,
             Database = BaseDeDatos,
             CharacterSet = "utf8mb4",   // acentos y emojis de la BD
+            SslMode = Servidor is "localhost" or "127.0.0.1"
+                ? MySqlSslMode.Preferred   // MySQL local: cifra si se puede
+                : MySqlSslMode.Required,   // BD compartida en Aiven: siempre cifrado
             Pooling = true              // reutiliza conexiones: abrir/cerrar por consulta es barato
         }.ConnectionString;
 

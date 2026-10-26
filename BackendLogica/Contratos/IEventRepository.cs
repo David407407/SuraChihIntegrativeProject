@@ -62,13 +62,20 @@ namespace BackendLogica.Contratos
         /// <summary>NUEVO para el rediseño: gráfica "Últimos 7 días". Incluye los días sin vistas (en 0).</summary>
         Task<List<VistasDia>> ListarVistasPorDiaAsync(int eventoId, int dias = 7, CancellationToken ct = default);
 
-        /// <summary>"Enviar a revisión" o, con <paramref name="enviarARevision"/> = false, "Guardar borrador".</summary>
+        /// <summary>
+        /// "Enviar a revisión" o, con <paramref name="enviarARevision"/> = false, "Guardar borrador".
+        /// Guarda el evento, sus etiquetas y su galería en un solo paso.
+        /// </summary>
         /// <returns>Id del evento nuevo.</returns>
         Task<int> CrearAsync(int organizadorId, DatosEvento datos, bool enviarARevision = true, CancellationToken ct = default);
 
-        /// <summary>Edita un evento propio. Si estaba aprobado, vuelve a moderación y sale del carrusel.</summary>
-        /// <returns>false si no existe, no es suyo o está cancelado.</returns>
-        Task<bool> ActualizarAsync(int eventoId, int organizadorId, DatosEvento datos, CancellationToken ct = default);
+        /// <summary>
+        /// Edita un evento propio (datos, etiquetas y galería). Si estaba aprobado y cambia su contenido o se le
+        /// agregan fotos, vuelve a moderación y sale del carrusel: <see cref="ResultadoEdicionEvento.VolvioARevision"/>.
+        /// Cambiar solo fechas, precio o etiquetas, o quitar fotos, no lo regresa.
+        /// </summary>
+        /// <returns>null si no existe, no es suyo o está cancelado.</returns>
+        Task<ResultadoEdicionEvento?> ActualizarAsync(int eventoId, int organizadorId, DatosEvento datos, CancellationToken ct = default);
 
         /// <summary>Manda a moderación un borrador o un evento rechazado ya corregido.</summary>
         Task<bool> EnviarARevisionAsync(int eventoId, int organizadorId, CancellationToken ct = default);
@@ -76,8 +83,11 @@ namespace BackendLogica.Contratos
         /// <summary>Modal "Cancelar evento". El motivo se muestra a los inscritos.</summary>
         Task<bool> CancelarAsync(int eventoId, int organizadorId, string motivo, CancellationToken ct = default);
 
-        /// <summary>Agrega una foto a la galería. Si el evento estaba aprobado, vuelve a moderación.</summary>
-        /// <returns>Id de la imagen.</returns>
-        Task<int> AgregarImagenAsync(int eventoId, string url, CancellationToken ct = default);
+        /// <summary>
+        /// Agrega una foto (su <c>secure_url</c> de Cloudinary) al final de la galería de un evento propio.
+        /// Si el evento estaba aprobado, vuelve a moderación.
+        /// </summary>
+        /// <returns>Id de la imagen, o null si el evento no existe, no es suyo o está cancelado.</returns>
+        Task<int?> AgregarImagenAsync(int eventoId, int organizadorId, string url, CancellationToken ct = default);
     }
 }

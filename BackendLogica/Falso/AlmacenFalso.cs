@@ -239,7 +239,7 @@ namespace BackendLogica.Falso
             {
                 Id = 2, OrganizadorId = 3, LugarId = 1, Titulo = "Cata de café de especialidad",
                 Descripcion = "Tres orígenes, tres métodos de extracción ☕",
-                Inicio = new DateTime(2026, 10, 24, 17, 0, 0), Fin = new DateTime(2026, 10, 24, 19, 0, 0),
+                Inicio = new DateTime(2026, 11, 28, 17, 0, 0), Fin = new DateTime(2026, 11, 28, 19, 0, 0),
                 PrecioMin = 250, PrecioMax = 250, ImagenUrl = ImagenDemo, Estado = EstadoEvento.Aprobado, CreadoEn = ahora,
                 EtiquetaIds = [5], Galeria = [new(SiguienteImagenEvento(), ImagenDemo, 1)]
             });
@@ -292,6 +292,8 @@ namespace BackendLogica.Falso
             Resenas.Add(new FilaResena { Id = 1, Tipo = TipoResena.Lugar, ObjetivoId = 1, UsuarioId = 5, Calificacion = 5, Comentario = "El mejor flat white.", CreadaEn = ahora });
             Resenas.Add(new FilaResena { Id = 2, Tipo = TipoResena.Lugar, ObjetivoId = 1, UsuarioId = 6, Calificacion = 4, CreadaEn = ahora });
             Resenas.Add(new FilaResena { Id = 3, Tipo = TipoResena.Lugar, ObjetivoId = 2, UsuarioId = 7, Calificacion = 4, Comentario = "Buen ambiente.", CreadaEn = ahora });
+
+            foreach (var e in Eventos) e.ActualizadoEn = e.CreadoEn;
         }
     }
 
@@ -363,6 +365,8 @@ namespace BackendLogica.Falso
         public bool Destacado;
         public int? OrdenDestacado;
         public DateTime CreadoEn;
+        /// <summary>event.updated_at: cuándo se envió a revisión o se editó por última vez.</summary>
+        public DateTime ActualizadoEn;
         public List<int> EtiquetaIds = [];
         public List<FilaImagen> Galeria = [];
     }

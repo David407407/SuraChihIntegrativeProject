@@ -104,7 +104,7 @@ namespace BackendLogica.Falso
                 .OrderByDescending(e => e.FechaPorConfirmar).ThenByDescending(e => e.Inicio)), ct);
 
         public Task<List<EventoTarjeta>> ListarPorEstadoAsync(EstadoEvento estado, CancellationToken ct = default) =>
-            Hacer(a => Tarjetas(a, a.Eventos.Where(e => e.Estado == estado).OrderBy(AlmacenFalso.OrdenFecha)), ct);
+            Hacer(a => Tarjetas(a, a.Eventos.Where(e => e.Estado == estado).OrderBy(e => e.ActualizadoEn).ThenBy(e => e.Id)), ct);
 
         /// <summary>Misma cuenta que la vista <c>v_event_stats</c>.</summary>
         public Task<List<EstadisticasEvento>> ListarEstadisticasAsync(int organizadorId, CancellationToken ct = default) =>
@@ -147,36 +147,43 @@ namespace BackendLogica.Falso
                     Id = AlmacenFalso.Siguiente(a.Eventos, x => x.Id),
                     OrganizadorId = organizadorId,
                     Estado = enviarARevision ? EstadoEvento.Pendiente : EstadoEvento.Borrador,
-                    CreadoEn = Ahora
+                    CreadoEn = Ahora,
+                    ActualizadoEn = Ahora
                 };
                 Copiar(datos, e);
+                GuardarGaleria(a, e, datos.Galeria);
                 a.Eventos.Add(e);
                 return e.Id;
             }, ct);
 
-        public Task<bool> ActualizarAsync(int eventoId, int organizadorId, DatosEvento datos, CancellationToken ct = default) =>
+        public Task<ResultadoEdicionEvento?> ActualizarAsync(int eventoId, int organizadorId, DatosEvento datos, CancellationToken ct = default) =>
             Hacer(a =>
             {
                 var e = a.Eventos.FirstOrDefault(x => x.Id == eventoId && x.OrganizadorId == organizadorId && x.Estado != EstadoEvento.Cancelado);
                 EventoDB.ValidarDatos(datos, esBorrador: e?.Estado == EstadoEvento.Borrador);
-                if (e == null) return false;
+                if (e == null) return null;
 
                 // trg_event_bu: cambiar otro lugar exige que esté aprobado.
                 if (datos.LugarId != null && datos.LugarId != e.LugarId) RevisarLugar(a, datos.LugarId);
                 RevisarEtiquetas(a, datos.EtiquetaIds);
 
-                // trg_event_bu: editar el contenido de un evento aprobado lo regresa a moderación.
+                // trg_event_bu: editar el contenido de un evento aprobado lo regresa a moderación;
+                // trg_eventimg_ai: agregarle fotos también (quitarlas no).
                 bool cambioContenido =
                     e.Titulo != datos.Titulo.Trim() || e.Descripcion != datos.Descripcion.Trim() ||
                     e.ImagenUrl != datos.ImagenUrl || e.BoletosUrl != datos.BoletosUrl || e.LugarId != datos.LugarId ||
                     e.Direccion != datos.Direccion || e.Latitud != datos.Latitud || e.Longitud != datos.Longitud;
-                if (e.Estado == EstadoEvento.Aprobado && cambioContenido)
+                bool fotosNuevas = datos.Galeria.Except(e.Galeria.Select(i => i.Url)).Any();
+                bool volvio = e.Estado == EstadoEvento.Aprobado && (cambioContenido || fotosNuevas);
+                if (volvio)
                 {
                     e.Estado = EstadoEvento.Pendiente;
                     e.Destacado = false;
                 }
                 Copiar(datos, e);
-                return true;
+                GuardarGaleria(a, e, datos.Galeria);
+                e.ActualizadoEn = Ahora;
+                return new ResultadoEdicionEvento(e.Estado, volvio);
             }, ct);
 
         public Task<bool> EnviarARevisionAsync(int eventoId, int organizadorId, CancellationToken ct = default) =>
@@ -188,6 +195,7 @@ namespace BackendLogica.Falso
                 // En MySQL v1 un borrador siempre está completo; aquí puede no estarlo.
                 EventoDB.ValidarDatos(ADatos(e), esBorrador: false);
                 e.Estado = EstadoEvento.Pendiente;
+                e.ActualizadoEn = Ahora;
                 return true;
             }, ct);
 
@@ -200,13 +208,16 @@ namespace BackendLogica.Falso
                 e.Estado = EstadoEvento.Cancelado;
                 e.MotivoCancelacion = motivo.Trim();
                 e.Destacado = false;
+                e.ActualizadoEn = Ahora;
                 return true;
             }, ct);
 
-        public Task<int> AgregarImagenAsync(int eventoId, string url, CancellationToken ct = default) =>
+        public Task<int?> AgregarImagenAsync(int eventoId, int organizadorId, string url, CancellationToken ct = default) =>
             Hacer(a =>
             {
-                var e = a.Evento(eventoId) ?? throw AlmacenFalso.NoExiste();
+                Validar.UrlImagen(url);
+                var e = a.Eventos.FirstOrDefault(x => x.Id == eventoId && x.OrganizadorId == organizadorId && x.Estado != EstadoEvento.Cancelado);
+                if (e == null) return (int?)null;
                 var imagen = new FilaImagen(a.SiguienteImagenEvento(), url, e.Galeria.Select(i => i.Orden).DefaultIfEmpty(0).Max() + 1);
                 e.Galeria.Add(imagen);
                 // trg_eventimg_ai
@@ -214,6 +225,7 @@ namespace BackendLogica.Falso
                 {
                     e.Estado = EstadoEvento.Pendiente;
                     e.Destacado = false;
+                    e.ActualizadoEn = Ahora;
                 }
                 return imagen.Id;
             }, ct);
@@ -249,6 +261,15 @@ namespace BackendLogica.Falso
             if (etiquetaIds.Any(id => a.Etiquetas.All(t => t.Datos.Id != id))) throw AlmacenFalso.NoExiste();
         }
 
+        /// <summary>Misma regla que <c>EventoDB.GuardarGaleriaAsync</c>: conserva las fotos que siguen y agrega las nuevas.</summary>
+        private static void GuardarGaleria(AlmacenFalso a, FilaEvento e, IReadOnlyList<string> galeria)
+        {
+            e.Galeria = galeria.Distinct().Select((url, i) =>
+                e.Galeria.FirstOrDefault(f => f.Url == url) is { } actual
+                    ? actual with { Orden = i + 1 }
+                    : new FilaImagen(a.SiguienteImagenEvento(), url, i + 1)).ToList();
+        }
+
         private static void Copiar(DatosEvento d, FilaEvento e)
         {
             e.LugarId = d.LugarId;
@@ -274,7 +295,7 @@ namespace BackendLogica.Falso
             FechaPorConfirmar = e.FechaPorConfirmar, PrecioPorConfirmar = e.PrecioPorConfirmar,
             Direccion = e.Direccion, Latitud = e.Latitud, Longitud = e.Longitud,
             PrecioMin = e.PrecioMin, PrecioMax = e.PrecioMax, BoletosUrl = e.BoletosUrl, ImagenUrl = e.ImagenUrl,
-            EtiquetaIds = e.EtiquetaIds
+            EtiquetaIds = e.EtiquetaIds, Galeria = e.Galeria.OrderBy(i => i.Orden).Select(i => i.Url).ToList()
         };
 
         /// <summary>Lunes siguiente a las 00:00 (igual que EventoDB).</summary>
