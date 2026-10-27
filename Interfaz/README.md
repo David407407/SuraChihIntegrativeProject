@@ -22,9 +22,11 @@ Diseno/PlantillaPrincipal    navbar arriba + ventana modal, hoja de detalle y Fl
 Paginas/                     una página por pantalla, con su @page
   Landing.razor  /           Home.razor  /home        MapaPagina.razor  /mapa
   Perfil.razor   /perfil     Favoritos.razor  /favoritos                 Catalogo.razor  /componentes
+  Moderacion.razor  /moderacion              RevisarEvento.razor  /moderacion/evento/{id}
 Componentes/
   Base/                      Boton, Campo, Chip, ChipCategoria, Pildora, BotonFavorito, Imagen, Icono,
-                             EncabezadoSeccion, VolverArriba
+                             EncabezadoSeccion, VolverArriba, Interruptor, Opcion, AreaTexto
+  Moderacion/                FilaPendiente (renglón de la bandeja), ListaRevision, CajaDestacar
   Tarjetas/                  Tarjeta (Card evento / Card lugar), TarjetaRecomendada, ItemLugar,
                              TarjetaEventoPrincipal, TarjetaEventoFila
   Navegacion/                Navbar, MenuCuenta, Pie
@@ -123,6 +125,9 @@ variante con el código para usarla.
 | Pildora | `<Pildora Texto="Cafés" Activa="..." OnClick="..." />` | Normal / Activa. Una activa por grupo |
 | Item (lista del mapa) | `<ItemLugar Lugar="l" Activo="..." OnClick="..." />` | Normal / Activo |
 | Mapa, Pin, Zoom | `<Mapa ... />` (ver "Mapa") | Pin Normal / Activo; detalle · explorar · pin arrastrable |
+| Interruptor | `<Interruptor @bind-Activo="x" Etiqueta="Destacar en el inicio" />` | Apagado (gris) / Encendido (verde). Es un `<button role="switch">` |
+| Opción | `<Opcion Texto="Otro" Seleccionada="..." OnClick="..." />` dentro de `role="radiogroup"` | Normal / Seleccionada (sol suave). Una por grupo |
+| Área | `<AreaTexto Nombre="comentario" Etiqueta="..." @bind-Valor="x" Errores="errores" />` | Normal / foco / error. Texto de varias líneas (`<textarea>`) |
 
 Las cards reciben los records de BackendLogica tal cual (`EventoTarjeta`, `LugarTarjeta`) y van dentro de
 `<div class="rejilla-tarjetas">`, que acomoda 4 por fila a 1200px como en Figma.
@@ -168,6 +173,7 @@ Botones que todavía no tienen pantalla muestran "llega en la siguiente versión
 | Modales de cuenta (WBS 4.2) | `Modales.IniciarSesion(correo, aviso)` · `CrearCuenta()` · `RecuperarContrasena()` → "Revisa tu correo" → `ContrasenaNueva(token)` · `RequiereSesion(texto)` |
 | "¿Vas a ir?" / "¿Cancelar tu inscripción?" | `await Modales.ConfirmarInscripcionAsync(evento)` / `ConfirmarCancelacionAsync(evento)` → estado final |
 | "¿Eliminar tu cuenta?" | `await Modales.ConfirmarEliminarCuentaAsync()` → true si se desactivó |
+| Moderación (WBS 4.3) | `await Modales.AprobarEventoAsync(e, comentario, destacar)` / `RechazarEventoAsync(e, comentario)` → true si se decidió · `DecisionRegistradaAsync()` (se cierra sola) · `MotivoRechazo(titulo, registro)` (lo ve el organizador) |
 | Detalle de evento / de lugar | `Hojas.AbrirEvento(id)` · `Hojas.AbrirEvento(id, inscribir: true)` · `Hojas.AbrirLugar(id)` |
 
 - Solo hay una modal a la vez: abrir otra cambia el contenido sin cerrar la ventana.
@@ -187,6 +193,23 @@ Estados del detalle de evento (columnas `status`, `is_finished` y `cancel_reason
 | Ya vas a ir | además el usuario está inscrito | botón verde "Ya vas a ir" + "Cancelar inscripción" |
 | Finalizado | `Terminado` | aviso "Este evento ya terminó" + "Escribir reseña" + "Ver reseñas (N)" |
 | Cancelado | `Estado == Cancelado` | aviso "Este evento fue cancelado" + "Motivo" (`MotivoCancelacion`) |
+
+## Moderación (WBS 4.3)
+
+Solo para moderadores (`Usuario.EsModerador`; en los datos de prueba `mod_ana` y `mod_luis`). Se entra desde
+el menú de cuenta → "Moderación". Los datos los da `Servicios/ServicioModeracion.cs`.
+
+- **Publicaciones** (`/moderacion`): eventos y lugares pendientes, los más antiguos primero (se puede
+  invertir). "Hace 2 días" sale en rojo. Etiquetas: "Primer evento" (su organizador no tiene eventos
+  publicados), "Lugar nuevo" y "Editado: vuelve a revisión" (ya estaba aprobado). Lo propio sale con
+  candado: la BD no deja que alguien modere lo suyo. Las pestañas Organizadores, Reportes e Historial
+  muestran su conteo, pero sus pantallas todavía no existen (igual que revisar lugares).
+- **Revisar evento** (`/moderacion/evento/{id}`): vista previa como la verán los usuarios, datos del
+  organizador, "Lista de revisión" (solo visual, no se guarda) y la decisión. Aprobar puede destacar el
+  evento en el carrusel (`is_featured`, al final del orden). Rechazar pide motivo y comentario; el
+  organizador recibe "Motivo: comentario". Después de "Decisión registrada" pasa al siguiente pendiente.
+- **No pruebes aprobando o rechazando contra la BD compartida** sin avisar: cambia eventos reales del
+  equipo. Usa `--DatosFalsos true` (el evento 4 está pendiente).
 
 ## Mapa
 

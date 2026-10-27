@@ -1,0 +1,10 @@
+/* Figma: 12px de relleno, 14px entre la miniatura y el texto (div. para ganarle a .modal__resumen de VentanaModal) */
+div.aprobar__resumen.modal__resumen { flex-direction: row; align-items: center; gap: 14px; padding: 12px; }
+.aprobar__resumen ::deep .aprobar__miniatura {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radio-s);
+  overflow: hidden;
+}
+.aprobar__texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

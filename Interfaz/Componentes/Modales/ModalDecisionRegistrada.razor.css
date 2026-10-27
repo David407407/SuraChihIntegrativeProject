@@ -1,0 +1,10 @@
+/* Figma: caja de 400px con todo centrado y 16px entre piezas */
+.registrada {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 336px;
+  margin-inline: auto;
+  text-align: center;
+}

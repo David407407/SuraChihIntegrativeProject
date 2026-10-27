@@ -1,0 +1,277 @@
+@*
+  "Moderación / Revisar evento" de Figma (WBS 4.3).
+  - Izquierda: "Así lo verán los usuarios" (portada, categorías, título, descripción, datos y galería).
+  - Derecha: el organizador (cuándo lo aprobaron, sus eventos aprobados / rechazados, reportes y contacto),
+    la "Lista de revisión" (solo visual) y la "Decisión": comentario, "Destacar en el inicio",
+    Rechazar / Aprobar. Cada botón confirma en su modal y luego sale "Decisión registrada".
+  - "1 de 4" y las flechas recorren los eventos pendientes; al decidir pasa al siguiente (o a la bandeja).
+*@
+@page "/moderacion/evento/{Id:int}"
+@implements IDisposable
+@inject Sesion Sesion
+@inject ServicioModeracion Servicio
+@inject Modales Modales
+@inject Acciones Acciones
+@inject ILogger<RevisarEvento> Registro
+
+<PageTitle>SuraChih · Revisar evento</PageTitle>
+
+<main class="revisar contenedor">
+    <button type="button" class="revisar__volver t-small-fuerte texto-2" @onclick="VolverABandeja">
+        <Icono Nombre="flecha-volver-gris-12" Caja="12" /><span>Volver a la bandeja</span>
+    </button>
+
+    @if (_error != null)
+    {
+        <div class="revisar__error">
+            <h1 class="t-h2">@_error</h1>
+            <div><Boton Texto="Volver a la bandeja" Variante="oscuro" OnClick="VolverABandeja" /></div>
+        </div>
+    }
+    else if (_datos is not { } d)
+    {
+        <div class="esqueleto revisar__esqueleto-titulo" aria-hidden="true"></div>
+        <div class="revisar__cuerpo">
+            <div class="esqueleto revisar__esqueleto-vista" aria-hidden="true"></div>
+            <div class="esqueleto revisar__esqueleto-lateral" aria-hidden="true"></div>
+        </div>
+    }
+    else
+    {
+        var e = d.Evento;
+        <header class="revisar__encabezado">
+            <div class="revisar__titulo">
+                <div class="revisar__etiquetas">
+                    <Chip Texto="Pendiente" Icono="reloj-arena-12" Clase="chip--estado" />
+                    <Chip Texto="Evento" Variante="fondo" Icono="calendario-12" Clase="chip--estado" />
+                    @if (d.Editado)
+                    {
+                        <Chip Texto="Editado: vuelve a revisión" Variante="cielo-suave" Icono="editar-cielo-12" Clase="chip--estado" />
+                    }
+                    else if (d.PrimerEvento)
+                    {
+                        <Chip Texto="Primer evento del organizador" Variante="cielo-suave" Icono="estrella-cielo-12" Clase="chip--estado" />
+                    }
+                </div>
+                <h1 class="t-h1">Revisar evento</h1>
+                <p class="t-body texto-2">@(d.EnviadoEn is { } enviado ? $"Enviado el {Formato.FechaYHora(enviado)} · " : "")Evento #@e.Id</p>
+            </div>
+            @if (Posicion >= 0)
+            {
+                <nav class="revisar__navegacion" aria-label="Eventos pendientes">
+                    <p class="t-small texto-2">@(Posicion + 1) de @d.Cola.Count</p>
+                    <button type="button" class="revisar__flecha" aria-label="Evento anterior" disabled="@(Posicion == 0)"
+                            @onclick="() => Acciones.RevisarEvento(d.Cola[Posicion - 1])">
+                        <Icono Nombre="chevron-izquierda-14" Caja="14" />
+                    </button>
+                    <button type="button" class="revisar__flecha" aria-label="Evento siguiente" disabled="@(Posicion == d.Cola.Count - 1)"
+                            @onclick="() => Acciones.RevisarEvento(d.Cola[Posicion + 1])">
+                        <Icono Nombre="chevron-derecha-14" Caja="14" />
+                    </button>
+                </nav>
+            }
+        </header>
+
+        <div class="revisar__cuerpo">
+            @* ---- Vista previa ---- *@
+            <section class="vista" aria-label="Vista previa del evento">
+                <p class="vista__etiqueta t-small-fuerte texto-2"><Icono Nombre="ojo-gris-14" Caja="14" /><span>Así lo verán los usuarios</span></p>
+                <article class="vista__hoja">
+                    <Imagen Clase="vista__portada" Src="@e.ImagenUrl" Alt="@e.Titulo" Ancho="760" Alto="320" Prioridad />
+                    <div class="vista__info">
+                        @if (e.Etiquetas.Count > 0)
+                        {
+                            <div class="vista__categorias">
+                                @foreach (var etiqueta in e.Etiquetas)
+                                {
+                                    <ChipCategoria Etiqueta="etiqueta" Interactivo="false" />
+                                }
+                            </div>
+                        }
+                        <h2 class="t-h2">@e.Titulo</h2>
+                        <p class="t-body texto-2 vista__descripcion">@(string.IsNullOrWhiteSpace(e.Descripcion) ? "Sin descripción." : e.Descripcion)</p>
+                        <div class="vista__datos">
+                            <DatoBoleto Icono="calendario" Etiqueta="Fechas" Valor="@Formato.FechaEvento(e)" />
+                            @if (Formato.HorarioEvento(e) is { Length: > 0 } horario)
+                            {
+                                <DatoBoleto Icono="reloj" Etiqueta="Horario" Valor="@horario" />
+                            }
+                            <DatoBoleto Icono="ubicacion-16" Etiqueta="Lugar" Valor="@(Formato.DireccionConCiudad(e.LugarNombre, e.Direccion) is { Length: > 0 } lugar ? lugar : "Sin ubicación")" />
+                            <DatoBoleto Icono="etiqueta-16" Etiqueta="Precio" Valor="@(Formato.PrecioEvento(e, Formato.EstiloPrecio.Desde) is { Length: > 0 } precio ? precio : "Precio por confirmar")" />
+                            <DatoBoleto Icono="enlace-16" Etiqueta="Boletos" Valor="@(SinProtocolo(e.BoletosUrl) ?? "Sin enlace")" />
+                        </div>
+                        @if (d.Detalle.Galeria.Count > 0)
+                        {
+                            <div class="vista__galeria">
+                                <p class="t-small-fuerte">Galería (@d.Detalle.Galeria.Count)</p>
+                                <div class="vista__fotos">
+                                    @foreach (var (foto, i) in d.Detalle.Galeria.Select((f, i) => (f, i)))
+                                    {
+                                        <a class="vista__foto" href="@foto" target="_blank" rel="noopener noreferrer" aria-label="@($"Abrir foto {i + 1} de la galería")">
+                                            <Imagen Src="@foto" Alt="" Ancho="120" Alto="84" />
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </article>
+            </section>
+
+            @* ---- Columna derecha ---- *@
+            <div class="lateral">
+                <section class="tarjeta-lateral organizador" aria-labelledby="organizador-titulo">
+                    <p class="t-small-fuerte texto-2" id="organizador-titulo">Organizador</p>
+                    <div class="organizador__cabeza">
+                        <span class="organizador__insignia"><Icono Nombre="tienda-18" Caja="18" /></span>
+                        <div class="organizador__nombre">
+                            <p class="t-card-titulo">@d.Organizador.Nombre</p>
+                            <p class="t-small texto-2">@(d.Organizador.AprobadoEn is { } aprobado ? $"Aprobado como organizador el {Formato.RangoFechas(aprobado)}" : "Sin aprobación de organizador registrada")</p>
+                        </div>
+                    </div>
+                    <dl class="organizador__historial">
+                        @Dato(d.Organizador.Aprobados, "aprobados")
+                        @Dato(d.Organizador.Rechazados, "rechazados")
+                        @Dato(d.Organizador.Reportes, "reportes")
+                    </dl>
+                    <div class="organizador__contacto">
+                        @if (SinProtocolo(d.Organizador.RedSocialUrl) is { } red)
+                        {
+                            <a class="organizador__enlace t-small-fuerte" href="@d.Organizador.RedSocialUrl" target="_blank" rel="noopener noreferrer">
+                                <Icono Nombre="enlace-cielo-12" Caja="12" /><span>@red</span>
+                            </a>
+                        }
+                        @if (Telefono(d.Organizador.WhatsApp) is { } telefono)
+                        {
+                            <a class="organizador__enlace t-small-fuerte" href="@($"https://wa.me/{d.Organizador.WhatsApp}")" target="_blank" rel="noopener noreferrer"
+                               aria-label="@($"WhatsApp {telefono}")">
+                                <Icono Nombre="telefono-cielo-12" Caja="12" /><span>@telefono</span>
+                            </a>
+                        }
+                    </div>
+                </section>
+
+                <ListaRevision @key="e.Id" />
+
+                <section class="tarjeta-lateral decision" aria-labelledby="decision-titulo">
+                    <h2 class="t-h3" id="decision-titulo">Decisión</h2>
+                    <AreaTexto @key="e.Id" Nombre="comentario" Etiqueta="Comentario para el organizador" Maximo="500"
+                               Placeholder="Opcional si apruebas. Obligatorio si rechazas." @bind-Valor="_comentario" />
+                    <CajaDestacar @bind-Activo="_destacar" />
+                    @if (d.EsPropio)
+                    {
+                        <p class="decision__propio t-small texto-2"><Icono Nombre="candado-gris-12" Caja="12" /><span>Es tu evento: lo revisa otro moderador.</span></p>
+                    }
+                    <div class="decision__botones">
+                        <Boton Texto="Rechazar" Variante="secundario" Icono="x-circulo-error-18" Deshabilitado="d.EsPropio" OnClick="RechazarAsync" />
+                        <Boton Texto="Aprobar" Icono="check-18" Deshabilitado="d.EsPropio" OnClick="AprobarAsync" />
+                    </div>
+                    <p class="t-caption texto-2">La decisión se guarda en el historial con fecha, comentario y tu nombre.</p>
+                </section>
+            </div>
+        </div>
+    }
+</main>
+
+<VolverArriba />
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private DatosRevision? _datos;
+    private string? _error;
+    private int _cargado;
+    private string? _comentario;
+    private bool _destacar;
+    private int? _usuarioId;
+
+    /// <summary>Lugar del evento en la cola de pendientes, o -1 si ya no está.</summary>
+    private int Posicion => _datos?.Cola is { } cola ? cola.ToList().IndexOf(Id) : -1;
+
+    /// <summary>"Dato" del historial del organizador: cifra y etiqueta en una caja gris.</summary>
+    private static RenderFragment Dato(int valor, string etiqueta) =>
+        @<div class="organizador__dato"><dt class="t-caption texto-2">@etiqueta</dt><dd class="t-card-titulo">@valor</dd></div>;
+
+    /// <summary>"https://instagram.com/fuegalab/" → "instagram.com/fuegalab".</summary>
+    private static string? SinProtocolo(string? url) =>
+        string.IsNullOrWhiteSpace(url) ? null : url.Replace("https://", "").Replace("http://", "").Replace("www.", "").TrimEnd('/');
+
+    /// <summary>"526142220190" → "614 222 0190" (los últimos 10 dígitos, como se escriben en México).</summary>
+    private static string? Telefono(string? whatsApp)
+    {
+        if (string.IsNullOrWhiteSpace(whatsApp) || whatsApp.Length < 10) return null;
+        string d = whatsApp[^10..];
+        return $"{d[..3]} {d[3..6]} {d[6..]}";
+    }
+
+    protected override void OnInitialized() => Sesion.Cambio += AlCambiarSesion;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_cargado == Id) return;
+        if (!Sesion.Iniciada)
+        {
+            Modales.RequiereSesion("Inicia sesión con tu cuenta de moderador para revisar publicaciones.");
+            return;
+        }
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _usuarioId = Sesion.Usuario?.Id;
+        _cargado = Id;
+        _datos = null;
+        _error = null;
+        _comentario = null;
+        _destacar = false;
+        try
+        {
+            _datos = await Servicio.ObtenerRevisionAsync(Id);
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            if (ex is not BackendLogica.Datos.SuraChihException) Registro.LogError(ex, "No se pudo cargar el evento {Id} para revisión", Id);
+            _error = MensajesError.Para(ex);
+        }
+    }
+
+    private async Task AprobarAsync()
+    {
+        if (_datos is not { } d) return;
+        if (await Modales.AprobarEventoAsync(d.Evento, _comentario, _destacar)) await TerminarAsync(d);
+    }
+
+    private async Task RechazarAsync()
+    {
+        if (_datos is not { } d) return;
+        if (await Modales.RechazarEventoAsync(d.Evento, _comentario)) await TerminarAsync(d);
+    }
+
+    /// <summary>"Decisión registrada" y luego el siguiente pendiente (o la bandeja si era el último).</summary>
+    private async Task TerminarAsync(DatosRevision d)
+    {
+        await Modales.DecisionRegistradaAsync();
+        int i = Posicion;
+        var restantes = d.Cola.Where(id => id != Id).ToList();
+        if (restantes.Count == 0) { VolverABandeja(); return; }
+        Acciones.RevisarEvento(restantes[Math.Clamp(i, 0, restantes.Count - 1)]);
+    }
+
+    private void VolverABandeja() => Acciones.IrA(Acciones.Rutas.Moderacion);
+
+    private void AlCambiarSesion() => InvokeAsync(async () =>
+    {
+        int? id = Sesion.Usuario?.Id;
+        if (id == _usuarioId) return;
+        if (_usuarioId != null && id == null) { Acciones.IrA(Acciones.Rutas.Home); return; }
+        await CargarAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
+}

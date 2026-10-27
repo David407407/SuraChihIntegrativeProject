@@ -99,6 +99,20 @@ namespace Interfaz.Utilidades
         public static string HorarioEvento(EventoTarjeta e) =>
             e.FechaPorConfirmar ? "" : $"{HoraCompleta(e.Inicio)} a {HoraCompleta(e.Fin)}";
 
+        /// <summary>Tiempo transcurrido: "5 min" · "6 h" · "1 día" · "2 días" (métrica "Espera más larga").</summary>
+        public static string Duracion(TimeSpan tiempo) => tiempo switch
+        {
+            { TotalHours: < 1 } => $"{Math.Max(1, (int)tiempo.TotalMinutes)} min",
+            { TotalDays: < 1 } => $"{(int)tiempo.TotalHours} h",
+            _ => (int)tiempo.TotalDays == 1 ? "1 día" : $"{(int)tiempo.TotalDays} días",
+        };
+
+        /// <summary>"Hace 6 h", "Hace 2 días" (bandeja de moderación).</summary>
+        public static string Hace(DateTime fecha) => $"Hace {Duracion(DateTime.Now - fecha)}";
+
+        /// <summary>"7 oct a las 18:42" ("Enviado el ..." de Revisar evento).</summary>
+        public static string FechaYHora(DateTime fecha) => $"{RangoFechas(fecha)} a las {fecha:HH:mm}";
+
         /// <summary>18:00 → "6 p.m." · 21:30 → "9:30 p.m." · 00:00 → "12 a.m."</summary>
         public static string Hora(TimeSpan valor)
         {

@@ -1,0 +1,44 @@
+@*
+  "Lista de revisión" de Revisar evento: seis puntos que el moderador marca mientras revisa ("5 de 6").
+  Es solo una ayuda visual: no se guarda (no hay tabla en la BD) ni bloquea Aprobar.
+*@
+<section class="tarjeta-lateral lista" aria-labelledby="lista-titulo">
+    <div class="lista__cabeza">
+        <h2 class="t-h3" id="lista-titulo">Lista de revisión</h2>
+        <p class="t-small-fuerte texto-2" aria-live="polite">@_marcados.Count(m => m) de @Puntos.Length</p>
+    </div>
+    <ul class="lista__puntos">
+        @for (int i = 0; i < Puntos.Length; i++)
+        {
+            int indice = i;
+            var (texto, nota) = Puntos[i];
+            <li>
+                <button type="button" role="checkbox" class="lista__punto" aria-checked="@(_marcados[indice] ? "true" : "false")"
+                        @onclick="() => _marcados[indice] = !_marcados[indice]">
+                    <span class="lista__casilla">@if (_marcados[indice]) {<Icono Nombre="check-blanco-11" Caja="11" />}</span>
+                    <span class="lista__texto">
+                        <span class="t-small-fuerte">@texto</span>
+                        @if (nota != null)
+                        {
+                            <span class="t-caption">@nota</span>
+                        }
+                    </span>
+                </button>
+            </li>
+        }
+    </ul>
+</section>
+
+@code {
+    private static readonly (string Texto, string? Nota)[] Puntos =
+    [
+        ("Información completa y verdadera", null),
+        ("Fecha futura y coherente", null),
+        ("Dirección dentro de Chihuahua", null),
+        ("Imágenes apropiadas", null),
+        ("Enlace oficial de boletos", null),
+        ("Permisos del lugar", "Aplica si hay música en vivo o venta de alcohol"),
+    ];
+
+    private readonly bool[] _marcados = new bool[Puntos.Length];
+}

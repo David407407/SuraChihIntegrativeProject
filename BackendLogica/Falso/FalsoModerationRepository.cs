@@ -66,6 +66,13 @@ namespace BackendLogica.Falso
                 .OrderByDescending(m => m.DecididoEn).ThenByDescending(m => m.Id)
                 .Select(m => ADatos(a, m)).FirstOrDefault(), ct);
 
+        public Task<List<EnvioPendiente>> ListarEnviosPendientesAsync(CancellationToken ct = default) =>
+            Hacer(a => a.Eventos.Where(e => e.Estado == EstadoEvento.Pendiente)
+                .Select(e => new EnvioPendiente(TipoObjetivoModeracion.Evento, e.Id, e.ActualizadoEn))
+                .Concat(a.Lugares.Where(l => l.Estado == EstadoLugar.Pendiente)
+                    .Select(l => new EnvioPendiente(TipoObjetivoModeracion.Lugar, l.Id, l.CreadoEn)))
+                .ToList(), ct);
+
         public Task<bool> DestacarEventoAsync(int eventoId, int? orden, CancellationToken ct = default) =>
             Hacer(a =>
             {

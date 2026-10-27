@@ -15,7 +15,9 @@
   --color-cielo-texto: #1c64f2;  /* fechas y enlaces */
   --color-sol: #ffd43b;          /* botón primario, acentos */
   --color-sol-suave: #fff3c4;    /* chips, sección de encuesta */
+  --color-cielo-suave: #eaf3ff;  /* chips "Lugar" / "Editado" y métricas de moderación */
   --color-exito: #1f9d61;        /* "Abierto hasta..." */
+  --color-exito-suave: #e3f5ec;  /* métrica "Decisiones hoy" */
   --color-estrella: #ffc400;
   --color-favorito: #e11d48;     /* corazón */
   --color-favorito-suave: #ffe4e6;

@@ -1,0 +1,25 @@
+@*
+  "Interruptor" de Figma (44 × 26, apagado gris / encendido verde): "Destacar en el inicio" de moderación.
+  Es un botón con role="switch": Espacio o Enter lo cambian y los lectores de pantalla dicen si está activo.
+
+  <Interruptor @bind-Activo="_destacar" Etiqueta="Destacar en el inicio" />
+*@
+<button type="button" role="switch" class="interruptor @Clase" aria-checked="@(Activo ? "true" : "false")"
+        aria-label="@Etiqueta" disabled="@Deshabilitado" @onclick="Alternar">
+    <span class="interruptor__perilla"></span>
+</button>
+
+@code {
+    [Parameter] public bool Activo { get; set; }
+    [Parameter] public EventCallback<bool> ActivoChanged { get; set; }
+    /// <summary>Lo que activa (lo leen los lectores de pantalla; el texto visible va junto al interruptor).</summary>
+    [Parameter, EditorRequired] public string Etiqueta { get; set; } = "";
+    [Parameter] public bool Deshabilitado { get; set; }
+    [Parameter] public string? Clase { get; set; }
+
+    private async Task Alternar()
+    {
+        Activo = !Activo;
+        await ActivoChanged.InvokeAsync(Activo);
+    }
+}

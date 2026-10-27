@@ -74,6 +74,16 @@ namespace BackendLogica.Repositorios
                 """, Mapear, new { objetivoId }, ct);
         }
 
+        /// <summary>Fecha de envío de lo pendiente: la última modificación del evento o lugar.</summary>
+        public Task<List<EnvioPendiente>> ListarEnviosPendientesAsync(CancellationToken ct = default) =>
+            ConsultarAsync("""
+                SELECT 'event' AS tipo, id, updated_at FROM event WHERE status = 'pending'
+                UNION ALL
+                SELECT 'place', id, updated_at FROM place WHERE status = 'pending'
+                """, r => new EnvioPendiente(
+                    r.Texto("tipo") == "event" ? TipoObjetivoModeracion.Evento : TipoObjetivoModeracion.Lugar,
+                    r.Entero("id"), r.Fecha("updated_at")), ct: ct);
+
         /// <summary>
         /// Pone (o quita, con <paramref name="orden"/> null) un evento aprobado en el carrusel del hero.
         /// </summary>

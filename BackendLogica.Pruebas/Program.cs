@@ -374,6 +374,12 @@ async Task PruebasFalso()
         Afirmar(historial.Count == 8, $"{historial.Count} decisiones");
         return $"{historial.Count} decisiones";
     });
+    await Prueba("IModerationRepository: fecha de envío de lo pendiente", async () =>
+    {
+        var envios = await f.Moderacion.ListarEnviosPendientesAsync();
+        Afirmar(envios.Single() is { Tipo: TipoObjetivoModeracion.Evento, ObjetivoId: 4 }, "solo el taller de fotografía está pendiente");
+        return $"evento #{envios[0].ObjetivoId} enviado el {envios[0].EnviadoEn:g}";
+    });
     await Prueba("IOrganizerRepository: solicitudes pendientes", async () =>
     {
         var pendientes = await f.Organizadores.ListarPorEstadoAsync(EstadoOrganizador.Pendiente);

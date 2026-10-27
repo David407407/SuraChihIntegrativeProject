@@ -1,0 +1,13 @@
+@*
+  "Modal / Decisión registrada" de Figma: confirmación centrada, sin botones. La abre
+  Modales.DecisionRegistradaAsync() después de aprobar o rechazar y se cierra sola.
+*@
+<div class="registrada" role="status">
+    <div class="modal__icono modal__icono--exito"><Icono Nombre="check-exito-24" Caja="24" /></div>
+    <h2 class="modal__titulo t-h2" id="modal-titulo">Decisión registrada</h2>
+    <p class="t-body texto-2">@Texto</p>
+</div>
+
+@code {
+    [Parameter] public string Texto { get; set; } = "Quedó en el historial con fecha y comentario.";
+}

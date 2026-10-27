@@ -1,0 +1,70 @@
+@*
+  Renglón de la bandeja "Moderación / Publicaciones" ("Pendiente:..." en Figma): miniatura, etiquetas
+  (Evento / Lugar, Primer evento / Lugar nuevo, Editado: vuelve a revisión), título, autor y datos, hace
+  cuánto se envió (en rojo si ya pasaron 2 días) y "Revisar", o el candado si es del propio moderador.
+*@
+<article class="pendiente">
+    <Imagen Clase="pendiente__miniatura" Src="@P.ImagenUrl" Alt="" Ancho="120" Alto="88" />
+    <div class="pendiente__info">
+        <div class="pendiente__etiquetas">
+            @if (P.Evento != null)
+            {
+                <Chip Texto="Evento" Variante="fondo" Icono="calendario-12" Clase="chip--estado" />
+                @if (P.Nuevo && !P.Editado)
+                {
+                    <Chip Texto="Primer evento" Icono="estrella-tinta-12" Clase="chip--estado" />
+                }
+            }
+            else
+            {
+                <Chip Texto="Lugar" Variante="cielo-suave" Icono="ubicacion-cielo-12" Clase="chip--estado" />
+                @if (P.Nuevo)
+                {
+                    <Chip Texto="Lugar nuevo" Icono="estrella-tinta-12" Clase="chip--estado" />
+                }
+            }
+            @if (P.Editado)
+            {
+                <Chip Texto="Editado: vuelve a revisión" Variante="cielo-suave" Icono="editar-cielo-12" Clase="chip--estado" />
+            }
+        </div>
+        <h2 class="t-card-titulo">@P.Titulo</h2>
+        <p class="pendiente__meta t-small texto-2">
+            <Icono Nombre="tienda-gris-12" Caja="12" />
+            <strong class="t-small-fuerte">@P.Autor</strong>
+            <span>· @Detalle</span>
+        </p>
+    </div>
+    <div class="pendiente__lado">
+        <p class="pendiente__enviado t-small @(Atrasado ? "pendiente__enviado--atrasado" : "texto-2")">
+            <Icono Nombre="@(Atrasado ? "reloj-error-12" : "reloj-gris-12")" Caja="12" />
+            <time datetime="@P.EnviadoEn.ToString("s")" title="@($"Enviado el {Formato.FechaYHora(P.EnviadoEn)}")">@Formato.Hace(P.EnviadoEn)</time>
+        </p>
+        @if (P.EsPropio)
+        {
+            <p class="pendiente__bloqueado t-caption texto-2">
+                <Icono Nombre="candado-gris-12" Caja="12" />
+                <span>Es tu @(P.Evento != null ? "evento" : "lugar"): lo revisa otro moderador</span>
+            </p>
+        }
+        else
+        {
+            <Boton Texto="Revisar" Variante="oscuro" Tamano="s" Icono="chevron-blanco-16" aria-label="@($"Revisar {P.Titulo}")" OnClick="AlRevisar" />
+        }
+    </div>
+</article>
+
+@code {
+    /// <summary>A partir de cuánto la espera sale en rojo.</summary>
+    private static readonly TimeSpan EsperaLarga = TimeSpan.FromDays(2);
+
+    [Parameter, EditorRequired] public PendienteModeracion P { get; set; } = default!;
+    [Parameter] public EventCallback AlRevisar { get; set; }
+
+    private bool Atrasado => DateTime.Now - P.EnviadoEn >= EsperaLarga;
+
+    /// <summary>Evento: "17 oct – 15 nov · Centro". Lugar: su dirección.</summary>
+    private string Detalle => P.Evento is { } e
+        ? string.Join(" · ", new[] { Formato.FechaEvento(e), Formato.UbicacionEvento(e) }.Where(t => !string.IsNullOrEmpty(t)))
+        : P.Lugar!.Direccion;
+}

@@ -43,6 +43,8 @@
 }
 /* Rojo: "¿Cancelar tu inscripción?", "¿Eliminar tu cuenta?" */
 .modal__contenido ::deep .modal__icono--peligro { background: var(--color-error-suave); }
+/* Verde: "¿Aprobar y publicar?", "Decisión registrada" (moderación) */
+.modal__contenido ::deep .modal__icono--exito { background: var(--color-exito-suave); }
 
 /* Caja gris con el evento en los modales de inscripción ("Resumen" en Figma) */
 .modal__contenido ::deep .modal__resumen {

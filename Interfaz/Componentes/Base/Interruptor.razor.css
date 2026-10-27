@@ -1,0 +1,35 @@
+/* Figma: pista 44 × 26 (radio 13), perilla blanca de 20px con sombra 0 1 3 al 15 % */
+.interruptor {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio-control);
+  background: var(--color-linea);
+  cursor: pointer;
+  transition: background var(--duracion-rapida);
+}
+.interruptor[aria-checked="true"] { background: var(--color-exito); }
+.interruptor:hover { background: #d3dae8; }
+.interruptor[aria-checked="true"]:hover { background: var(--color-exito-hover); }
+.interruptor:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; }
+.interruptor:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.interruptor__perilla {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-superficie);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform var(--duracion-rapida) var(--curva-salida);
+}
+.interruptor[aria-checked="true"] .interruptor__perilla { transform: translateX(18px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .interruptor, .interruptor__perilla { transition: none; }
+}

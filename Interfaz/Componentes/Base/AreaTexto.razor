@@ -1,0 +1,47 @@
+@*
+  Campo de varias líneas ("Área" de Figma: etiqueta arriba, caja con borde y radio 12). Para comentarios
+  de moderación. El error sale de Errores[Nombre] y se quita al volver a escribir, igual que en Campo.
+
+  <AreaTexto Nombre="comentario" Etiqueta="Comentario para el organizador" Placeholder="..." @bind-Valor="_comentario" Errores="_errores" />
+*@
+<div class="area @(MensajeError != null ? "area--error" : "") @Clase">
+    <label class="t-small-fuerte" for="@_id">@Etiqueta</label>
+    <textarea @ref="_caja" id="@_id" name="@Nombre" class="area__caja t-body" rows="@Filas" placeholder="@Placeholder"
+              maxlength="@Maximo" aria-invalid="@(MensajeError != null ? "true" : null)"
+              aria-describedby="@(MensajeError != null ? $"{_id}-error" : null)"
+              value="@Valor" @oninput="AlEscribir"></textarea>
+    @if (MensajeError != null)
+    {
+        <p class="area__error t-caption" id="@($"{_id}-error")">@MensajeError</p>
+    }
+</div>
+
+@code {
+    private static int _siguiente;
+    private readonly string _id = $"area-{Interlocked.Increment(ref _siguiente)}";
+    private ElementReference _caja;
+
+    /// <summary>Atributo name y clave en <see cref="Errores"/>.</summary>
+    [Parameter, EditorRequired] public string Nombre { get; set; } = "";
+    [Parameter, EditorRequired] public string Etiqueta { get; set; } = "";
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string? Valor { get; set; }
+    [Parameter] public EventCallback<string> ValorChanged { get; set; }
+    [Parameter] public ErroresFormulario? Errores { get; set; }
+    [Parameter] public int Filas { get; set; } = 3;
+    [Parameter] public int? Maximo { get; set; }
+    [Parameter] public string? Clase { get; set; }
+
+    private string? MensajeError => Errores?[Nombre];
+
+    private async Task AlEscribir(ChangeEventArgs e)
+    {
+        Errores?.Quitar(Nombre);
+        await ValorChanged.InvokeAsync(e.Value?.ToString() ?? "");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (Errores?.TomarFoco(Nombre) == true) await _caja.FocusAsync();
+    }
+}
