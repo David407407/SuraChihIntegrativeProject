@@ -225,6 +225,14 @@ fluent-toggle-button.chip-categoria[pressed]:hover { box-shadow: inset 0 0 0 1.5
 .chip--estado { padding: 5px 12px 5px 10px; }
 
 /* ---------------------------------------------------------------------
+   Botones de solo icono (IconOnly): favoritos, cerrar, flechas, volver arriba
+   --------------------------------------------------------------------- */
+/* Fluent les pone max-width: 32px dentro de su shadow DOM; con el ancho de Figma (36, 40...) quedaban
+   más altos que anchos (ovalados). El ancho y el alto los da la regla de cada botón. */
+fluent-button[icon-only],
+fluent-toggle-button[icon-only] { max-width: none; }
+
+/* ---------------------------------------------------------------------
    Botón favorito (Componentes/Base/BotonFavorito.razor) · FluentToggleButton
    Los tres corazones y el latido siguen en BotonFavorito.razor.css
    --------------------------------------------------------------------- */
