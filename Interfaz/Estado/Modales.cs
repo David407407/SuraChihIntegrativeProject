@@ -107,5 +107,32 @@ namespace Interfaz.Estado
         /// <returns>true si la cuenta quedó desactivada; false si se cerró o canceló.</returns>
         public async Task<bool> ConfirmarEliminarCuentaAsync() =>
             await Abrir<ModalEliminarCuenta>() as bool? ?? false;
+
+        // ---------------------------------------------------------------- Moderación (WBS 4.3)
+
+        /// <summary>Cuánto se ve "Decisión registrada" antes de cerrarse sola.</summary>
+        private static readonly TimeSpan DuracionRegistrada = TimeSpan.FromSeconds(1.8);
+
+        /// <summary>"Modal / Aprobar publicación" (¿Aprobar y publicar?). Aprueba y, si se pidió, destaca.</summary>
+        /// <returns>true si se aprobó.</returns>
+        public async Task<bool> AprobarEventoAsync(EventoTarjeta evento, string? comentario, bool destacar) =>
+            await Abrir<ModalAprobar>(new Dictionary<string, object?> { ["Evento"] = evento, ["Comentario"] = comentario, ["Destacar"] = destacar }) as bool? ?? false;
+
+        /// <summary>"Modal / Rechazar": motivo y comentario obligatorio.</summary>
+        /// <returns>true si se rechazó.</returns>
+        public async Task<bool> RechazarEventoAsync(EventoTarjeta evento, string? comentario) =>
+            await Abrir<ModalRechazar>(new Dictionary<string, object?> { ["Evento"] = evento, ["Comentario"] = comentario }) as bool? ?? false;
+
+        /// <summary>"Modal / Decisión registrada": se muestra un momento y se cierra sola (o antes, con Esc o el botón).</summary>
+        public async Task DecisionRegistradaAsync()
+        {
+            var tarea = Abrir<ModalDecisionRegistrada>();
+            if (await Task.WhenAny(tarea, Task.Delay(DuracionRegistrada)) != tarea && Componente == typeof(ModalDecisionRegistrada)) Cerrar();
+            await tarea;
+        }
+
+        /// <summary>"Modal / Motivo de rechazo" (lo ve el organizador): la última decisión de moderación sobre su evento.</summary>
+        public void MotivoRechazo(string titulo, RegistroModeracion registro) =>
+            _ = Abrir<ModalMotivoRechazo>(new Dictionary<string, object?> { ["Titulo"] = titulo, ["Registro"] = registro });
     }
 }

@@ -1,0 +1,35 @@
+@*
+  "Modal / Motivo de rechazo" de Figma: lo que ve el ORGANIZADOR cuando moderación rechaza su evento
+  ("Tu evento fue rechazado", quién y cuándo, el comentario y "Editar y reenviar").
+  Lo abrirá el panel del organizador con Modales.MotivoRechazo(titulo, registro), donde registro sale de
+  bd.Moderacion.ObtenerUltimaDecisionAsync(TipoObjetivoModeracion.Evento, id). Mientras ese panel no
+  exista, "Editar y reenviar" muestra "llega en la siguiente versión" (y se puede ver en /componentes).
+*@
+@inject Modales Modales
+@inject Acciones Acciones
+
+<EncabezadoModal Titulo="Tu evento fue rechazado" Icono="x-circulo-error" Peligro
+                 Texto="@($"{Titulo} no se publicó. Esto es lo que indicó moderación:")" />
+<div class="motivo">
+    <p class="motivo__autor t-caption">
+        <Icono Nombre="comentario-error-14" Caja="14" />
+        <span>@Registro.ModeradorNombre · @Formato.RangoFechas(Registro.DecididoEn), @Registro.DecididoEn.ToString("HH:mm")</span>
+    </p>
+    <p class="t-body">@(Registro.Comentario ?? "Sin comentario.")</p>
+</div>
+<p class="t-small texto-2">Al reenviarlo vuelve a pasar por revisión.</p>
+<div class="modal__botones">
+    <Boton Texto="Editar y reenviar" Icono="editar-18" Clase="modal__ancho" OnClick="EditarYReenviar" />
+    <Boton Texto="Cerrar" Variante="secundario" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    [Parameter, EditorRequired] public RegistroModeracion Registro { get; set; } = default!;
+
+    private void EditarYReenviar()
+    {
+        Modales.Cerrar();
+        Acciones.Proximamente("Editar eventos");
+    }
+}

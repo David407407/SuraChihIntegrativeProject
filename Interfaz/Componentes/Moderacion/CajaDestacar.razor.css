@@ -1,0 +1,9 @@
+.destacar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radio-s);
+  background: var(--color-fondo);
+}
+.destacar__texto { display: flex; flex: 1; flex-direction: column; min-width: 0; }

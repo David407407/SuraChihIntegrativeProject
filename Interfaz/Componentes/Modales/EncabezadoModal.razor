@@ -1,7 +1,7 @@
 @* Encabezado de los modales: icono en círculo (opcional), título y texto. *@
 @if (Icono != null)
 {
-    <div class="modal__icono @(Peligro ? " modal__icono--peligro" : "")"><Icono Nombre="@Icono" Caja="24" /></div>
+    <div class="modal__icono @(Peligro ? " modal__icono--peligro" : Exito ? " modal__icono--exito" : "")"><Icono Nombre="@Icono" Caja="24" /></div>
 }
 <header class="modal__encabezado">
     @* VentanaModal anuncia este título a los lectores de pantalla (aria-labelledby="modal-titulo"). *@
@@ -18,4 +18,6 @@
     [Parameter] public string? Icono { get; set; }
     /// <summary>Círculo rojo en vez de amarillo.</summary>
     [Parameter] public bool Peligro { get; set; }
+    /// <summary>Círculo verde ("¿Aprobar y publicar?", "Decisión registrada").</summary>
+    [Parameter] public bool Exito { get; set; }
 }

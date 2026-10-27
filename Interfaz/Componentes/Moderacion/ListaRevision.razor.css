@@ -1,0 +1,43 @@
+/* Misma caja que las otras tarjetas de la columna derecha (ver RevisarEvento.razor.css) */
+.tarjeta-lateral {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  border: 1px solid var(--color-linea);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+}
+
+.lista__cabeza { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lista__puntos { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+
+.lista__punto {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-texto-2);
+  text-align: left;
+  cursor: pointer;
+}
+.lista__punto[aria-checked="true"] { color: var(--color-tinta); }
+.lista__punto:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; border-radius: 6px; }
+
+/* Casilla de 20px, radio 6: verde con palomita o blanca con borde gris */
+.lista__casilla {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--color-texto-2);
+  border-radius: 6px;
+  background: var(--color-superficie);
+  transition: background var(--duracion-rapida), border-color var(--duracion-rapida);
+}
+.lista__punto[aria-checked="true"] .lista__casilla { border-color: var(--color-exito); background: var(--color-exito); }
+.lista__texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

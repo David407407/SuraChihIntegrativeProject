@@ -1,0 +1,11 @@
+/* "Comentario": caja roja suave con autor y fecha arriba */
+.motivo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: var(--radio-m);
+  background: var(--color-error-suave);
+  color: var(--color-tinta);
+}
+.motivo__autor { display: flex; align-items: center; gap: 8px; color: var(--color-error); }

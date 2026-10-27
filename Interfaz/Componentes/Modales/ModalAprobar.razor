@@ -1,0 +1,59 @@
+@*
+  "Modal / Aprobar publicación" de Figma: insignia verde, "¿Aprobar y publicar?", resumen del evento,
+  "Destacar en el inicio" y "Aprobar y publicar" / "Volver". Lo abre Revisar evento con
+  Modales.AprobarEventoAsync(...); el interruptor llega como estaba en la tarjeta "Decisión".
+*@
+@inject ServicioModeracion Moderacion
+@inject Modales Modales
+@inject Avisos Avisos
+
+<EncabezadoModal Titulo="¿Aprobar y publicar?" Icono="check-circulo-exito-24" Exito
+                 Texto="Se publica de inmediato y queda en el historial con tu nombre." />
+
+@* "Resumen": miniatura de 64px, título y fechas · organizador *@
+<div class="modal__resumen aprobar__resumen">
+    <Imagen Clase="aprobar__miniatura" Src="@Evento.ImagenUrl" Alt="" Ancho="64" Alto="64" />
+    <div class="aprobar__texto">
+        <p class="t-body-fuerte">@Evento.Titulo</p>
+        <p class="t-small texto-2">@Formato.FechaEvento(Evento) · @Evento.OrganizadorNombre</p>
+    </div>
+</div>
+<CajaDestacar @bind-Activo="_destacar" />
+<AvisoModal Errores="_errores" />
+<div class="modal__botones">
+    <Boton Texto="Aprobar y publicar" Icono="check-18" Clase="modal__ancho" Ocupado="_enviando" OnClick="AprobarAsync" />
+    <Boton Texto="Volver" Variante="secundario" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EventoTarjeta Evento { get; set; } = default!;
+    /// <summary>Comentario opcional de la tarjeta "Decisión" (se guarda en el historial).</summary>
+    [Parameter] public string? Comentario { get; set; }
+    [Parameter] public bool Destacar { get; set; }
+
+    private readonly ErroresFormulario _errores = new();
+    private bool _destacar;
+    private bool _enviando;
+
+    protected override void OnInitialized() => _destacar = Destacar;
+
+    private async Task AprobarAsync()
+    {
+        _errores.Limpiar();
+        _enviando = true;
+        try
+        {
+            bool destacado = await Moderacion.AprobarAsync(Evento.Id, Comentario, _destacar);
+            if (!destacado) Avisos.Mostrar("Se aprobó, pero no se pudo poner en el carrusel.", TipoAviso.Error);
+            Modales.Cerrar(true);
+        }
+        catch (Exception ex)
+        {
+            _errores.PonerAviso(MensajesError.Para(ex));
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+}

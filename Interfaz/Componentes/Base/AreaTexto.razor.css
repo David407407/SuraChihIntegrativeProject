@@ -1,0 +1,22 @@
+.area { display: flex; flex-direction: column; gap: 8px; }
+.area label { color: var(--color-tinta); }
+
+/* Figma: padding 12 × 14, borde línea de 1px, radio 12 */
+.area__caja {
+  width: 100%;
+  min-height: 84px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-linea);
+  border-radius: var(--radio-s);
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+  font-family: var(--fuente-cuerpo);
+  resize: vertical;
+  transition: border-color var(--duracion-rapida), box-shadow var(--duracion-rapida);
+}
+.area__caja::placeholder { color: var(--color-texto-2); }
+.area__caja:hover { border-color: #c9d2e3; }
+.area__caja:focus { outline: none; border-color: var(--color-cielo); box-shadow: 0 0 0 3px rgba(47, 123, 255, 0.18); }
+
+.area--error .area__caja { border-color: var(--color-error); }
+.area__error { color: var(--color-error); }

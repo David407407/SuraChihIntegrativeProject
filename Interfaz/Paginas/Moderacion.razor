@@ -1,0 +1,218 @@
+@*
+  "Moderación / Publicaciones" de Figma (WBS 4.3): la bandeja de lo que espera revisión.
+  - Encabezado con el moderador, pestañas (Publicaciones; Organizadores, Reportes e Historial muestran su
+    conteo pero todavía no tienen pantalla) y las cuatro métricas.
+  - Píldoras Todo / Eventos / Lugares y el orden ("Más antiguos primero" por defecto) filtran aquí.
+  - "Revisar" abre "Moderación / Revisar evento". Lo propio sale con candado (la BD no deja moderarlo).
+  Solo entran moderadores (Usuario.EsModerador); el menú de cuenta solo les muestra "Moderación" a ellos.
+*@
+@page "/moderacion"
+@implements IDisposable
+@inject Sesion Sesion
+@inject ServicioModeracion Servicio
+@inject Modales Modales
+@inject Avisos Avisos
+@inject Acciones Acciones
+@inject ILogger<Moderacion> Registro
+
+<PageTitle>SuraChih · Moderación</PageTitle>
+
+<main class="moderacion contenedor">
+    <header class="moderacion__encabezado">
+        <span class="moderacion__insignia"><Icono Nombre="escudo-blanco-26" Caja="26" /></span>
+        <div class="moderacion__titulo">
+            <p class="t-small-fuerte moderacion__seccion">Moderación</p>
+            <h1 class="t-h1">Por revisar</h1>
+            <p class="t-body texto-2">Nada se publica sin tu aprobación. Revisa lo más antiguo primero.</p>
+        </div>
+        @if (Sesion.Usuario is { EsModerador: true } usuario)
+        {
+            <p class="moderacion__moderador t-small-fuerte">
+                <span class="moderacion__avatar" aria-hidden="true">@usuario.NombreUsuario[..1].ToUpperInvariant()</span>
+                <span>@usuario.NombreUsuario · Moderador</span>
+            </p>
+        }
+    </header>
+
+    @if (!Sesion.Iniciada)
+    {
+        <div class="moderacion__vacio">
+            <span class="moderacion__vacio-icono"><Icono Nombre="candado-cielo" Caja="32" /></span>
+            <h2 class="t-h2">Inicia sesión para moderar</h2>
+            <p class="t-body texto-2">Entra con tu cuenta de moderador para revisar lo que espera publicarse.</p>
+            <div><Boton Texto="Iniciar sesión" Variante="oscuro" OnClick="Acciones.IniciarSesion" /></div>
+        </div>
+    }
+    else if (!EsModerador)
+    {
+        <div class="moderacion__vacio">
+            <span class="moderacion__vacio-icono"><Icono Nombre="candado-cielo" Caja="32" /></span>
+            <h2 class="t-h2">Solo para moderadores</h2>
+            <p class="t-body texto-2">Esta sección es del equipo que revisa los eventos y lugares antes de publicarse.</p>
+            <div><Boton Texto="Ir al inicio" Variante="oscuro" OnClick="Acciones.Inicio" /></div>
+        </div>
+    }
+    else
+    {
+        <nav class="pestanas" aria-label="Secciones de moderación">
+            <button type="button" class="pestana pestana--activa" aria-current="page">
+                <span class="pestana__etiqueta">Publicaciones<span class="pestana__conteo pestana__conteo--activo">@(_datos?.Pendientes.Count ?? 0)</span></span>
+            </button>
+            <button type="button" class="pestana" @onclick='() => Acciones.Proximamente("Revisar organizadores")'>
+                <span class="pestana__etiqueta">Organizadores<span class="pestana__conteo">@(_datos?.OrganizadoresPendientes ?? 0)</span></span>
+            </button>
+            <button type="button" class="pestana" @onclick='() => Acciones.Proximamente("Los reportes")'>
+                <span class="pestana__etiqueta">Reportes<span class="pestana__conteo">@(_datos?.ReportesAbiertos ?? 0)</span></span>
+            </button>
+            <button type="button" class="pestana" @onclick='() => Acciones.Proximamente("El historial de moderación")'>
+                <span class="pestana__etiqueta">Historial</span>
+            </button>
+        </nav>
+
+        <section class="metricas" aria-label="Resumen">
+            @Metrica("bandeja", "sol-suave", _datos?.Pendientes.Count.ToString(), "Publicaciones pendientes")
+            @Metrica("reloj-cielo", "cielo-suave", _datos == null ? null : EsperaMasLarga, "Espera más larga")
+            @Metrica("check-circulo-exito", "exito-suave", _datos?.DecisionesHoy.ToString(), "Decisiones hoy")
+            @Metrica("bandera-error", "error-suave", _datos?.ReportesAbiertos.ToString(), "Reportes abiertos")
+        </section>
+
+        <div class="moderacion__filtros">
+            <div class="moderacion__pildoras" role="group" aria-label="Qué mostrar">
+                @foreach (var (valor, texto) in Opciones)
+                {
+                    <Pildora Texto="@($"{texto} ({Contar(valor)})")" Activa="_filtro == valor" OnClick="() => _filtro = valor" />
+                }
+            </div>
+            <button type="button" class="moderacion__orden t-small-fuerte texto-2" aria-label="@($"Orden: {TextoOrden}. Cambiar")"
+                    @onclick="() => _recientesPrimero = !_recientesPrimero">
+                <span>@TextoOrden</span>
+                <Icono Nombre="chevron-abajo-gris-12" Caja="12" Clase="@(_recientesPrimero ? "moderacion__flecha--arriba" : null)" />
+            </button>
+        </div>
+
+        <section class="cola" aria-live="polite" aria-label="Publicaciones por revisar">
+            @if (_datos == null)
+            {
+                @for (int i = 0; i < 3; i++)
+                {
+                    <div class="esqueleto cola__esqueleto" aria-hidden="true"></div>
+                }
+            }
+            else if (Visibles.Count == 0)
+            {
+                <div class="moderacion__vacio">
+                    <span class="moderacion__vacio-icono moderacion__vacio-icono--exito"><Icono Nombre="check-exito-24" Caja="32" /></span>
+                    <h2 class="t-h2">Todo al día</h2>
+                    <p class="t-body texto-2">No hay @(_filtro switch { Filtro.Eventos => "eventos", Filtro.Lugares => "lugares", _ => "publicaciones" }) esperando revisión.</p>
+                </div>
+            }
+            else
+            {
+                @foreach (var p in Visibles)
+                {
+                    <FilaPendiente @key="(p.Tipo, p.Id)" P="p" AlRevisar="() => Revisar(p)" />
+                }
+            }
+        </section>
+    }
+</main>
+
+<VolverArriba />
+
+@code {
+    private enum Filtro { Todo, Eventos, Lugares }
+
+    private static readonly (Filtro, string)[] Opciones = [(Filtro.Todo, "Todo"), (Filtro.Eventos, "Eventos"), (Filtro.Lugares, "Lugares")];
+
+    private DatosBandeja? _datos;
+    private Filtro _filtro = Filtro.Todo;
+    private bool _recientesPrimero;
+    private int? _usuarioId;
+
+    private bool EsModerador => Sesion.Usuario?.EsModerador == true;
+
+    private string TextoOrden => _recientesPrimero ? "Más recientes primero" : "Más antiguos primero";
+
+    private int Contar(Filtro filtro) => _datos?.Pendientes.Count(p => Pasa(p, filtro)) ?? 0;
+
+    private static bool Pasa(PendienteModeracion p, Filtro filtro) => filtro switch
+    {
+        Filtro.Eventos => p.Tipo == TipoObjetivoModeracion.Evento,
+        Filtro.Lugares => p.Tipo == TipoObjetivoModeracion.Lugar,
+        _ => true,
+    };
+
+    private List<PendienteModeracion> Visibles
+    {
+        get
+        {
+            var lista = _datos?.Pendientes.Where(p => Pasa(p, _filtro)) ?? [];
+            return [.. _recientesPrimero ? lista.Reverse() : lista];
+        }
+    }
+
+    /// <summary>Lo que lleva más tiempo esperando ("2 días"); "—" si no hay nada.</summary>
+    private string EsperaMasLarga => _datos!.Pendientes.Count == 0 ? "—" : Formato.Duracion(DateTime.Now - _datos.Pendientes.Min(p => p.EnviadoEn));
+
+    /// <summary>"Métrica" de Figma: insignia de color con icono, cifra y etiqueta. Sin valor, un esqueleto.</summary>
+    private static RenderFragment Metrica(string icono, string color, string? valor, string etiqueta) =>
+        @<div class="metrica">
+            <span class="metrica__insignia metrica__insignia--@color"><Icono Nombre="@icono" Caja="16" /></span>
+            <p class="metrica__texto">
+                @if (valor == null)
+                {
+                    <span class="esqueleto metrica__esqueleto" aria-hidden="true"></span>
+                }
+                else
+                {
+                    <strong class="t-h3">@valor</strong>
+                }
+                <span class="t-small texto-2">@etiqueta</span>
+            </p>
+        </div>;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Sesion.Cambio += AlCambiarSesion;
+        if (!Sesion.Iniciada) Modales.RequiereSesion("Inicia sesión con tu cuenta de moderador para revisar publicaciones.");
+        else if (EsModerador) await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _usuarioId = Sesion.Usuario?.Id;
+        _datos = null;
+        try
+        {
+            _datos = await Servicio.ObtenerBandejaAsync();
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            Registro.LogError(ex, "No se pudo cargar la bandeja de moderación");
+            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
+            _datos = new DatosBandeja([], 0, 0, 0);
+        }
+    }
+
+    private void Revisar(PendienteModeracion p)
+    {
+        if (p.Tipo == TipoObjetivoModeracion.Evento) Acciones.RevisarEvento(p.Id);
+        else Acciones.Proximamente("Revisar lugares");
+    }
+
+    private void AlCambiarSesion() => InvokeAsync(async () =>
+    {
+        int? id = Sesion.Usuario?.Id;
+        if (id == _usuarioId) return;
+        if (_usuarioId != null && id == null) { Acciones.IrA(Acciones.Rutas.Home); return; }   // cerró sesión aquí
+        _usuarioId = id;
+        if (EsModerador) await CargarAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
+}

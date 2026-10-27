@@ -20,6 +20,9 @@ namespace Interfaz.Estado
             public const string Mapa = "mapa";
             public const string Perfil = "perfil";
             public const string Favoritos = "favoritos";
+            public const string Moderacion = "moderacion";
+            /// <summary>"Moderación / Revisar evento" de un evento pendiente.</summary>
+            public static string RevisarEvento(int id) => $"moderacion/evento/{id}";
         }
 
         /// <summary>Ruta de la pantalla actual, sin "/" ni query ni #: "", "home", "mapa"...</summary>
@@ -76,7 +79,9 @@ namespace Interfaz.Estado
         public void Favoritos() => SoloConSesion(() => IrA(Rutas.Favoritos));
         public void MiPerfil() => SoloConSesion(() => IrA(Rutas.Perfil));
         public void PanelOrganizador() => Proximamente("El panel de organizador");
-        public void Moderacion() => Proximamente("Moderación");
+        /// <summary>Menú de cuenta (solo moderadores): "Moderación / Publicaciones".</summary>
+        public void Moderacion() => SoloConSesion(() => IrA(Rutas.Moderacion));
+        public void RevisarEvento(int id) => IrA(Rutas.RevisarEvento(id));
         public void PublicarEvento() => RequiereSesion("Publicar eventos");
 
         public void CerrarSesion()

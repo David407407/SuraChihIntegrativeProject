@@ -1,0 +1,42 @@
+/* Figma: tarjeta blanca, borde línea, radio 20, relleno 16, 20px entre columnas */
+.pendiente {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px;
+  border: 1px solid var(--color-linea);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+}
+
+.pendiente ::deep .pendiente__miniatura {
+  flex-shrink: 0;
+  width: 120px;
+  height: 88px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.pendiente__info { display: flex; flex: 1; flex-direction: column; gap: 6px; min-width: 0; }
+.pendiente__etiquetas { display: flex; flex-wrap: wrap; gap: 8px; }
+.pendiente__info h2 { color: var(--color-tinta); }
+.pendiente__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.pendiente__lado { display: flex; flex-shrink: 0; flex-direction: column; align-items: flex-end; gap: 10px; }
+.pendiente__enviado { display: flex; align-items: center; gap: 6px; }
+.pendiente__enviado--atrasado { color: var(--color-error); }
+
+/* "Es tu evento: lo revisa otro moderador" */
+.pendiente__bloqueado {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radio-control);
+  background: var(--color-fondo);
+}
+
+@media (max-width: 720px) {
+  .pendiente { flex-wrap: wrap; }
+  .pendiente__lado { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; }
+}

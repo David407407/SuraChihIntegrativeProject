@@ -1,0 +1,19 @@
+@*
+  "Opción" de Figma (48px, radio a la izquierda; seleccionada en sol suave con borde sol): una opción de
+  un grupo en el que solo se elige una (motivos de "Rechazar"). Va dentro de un role="radiogroup".
+
+  <div role="radiogroup" aria-label="Motivo">
+      <Opcion Texto="Otro" Seleccionada="_motivo == ..." OnClick="() => _motivo = ..." />
+  </div>
+*@
+<button type="button" role="radio" class="opcion @Clase" aria-checked="@(Seleccionada ? "true" : "false")" @onclick="OnClick">
+    <Icono Nombre="@(Seleccionada ? "radio-activo" : "radio")" Caja="18" />
+    <span class="t-body">@Texto</span>
+</button>
+
+@code {
+    [Parameter, EditorRequired] public string Texto { get; set; } = "";
+    [Parameter] public bool Seleccionada { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public string? Clase { get; set; }
+}

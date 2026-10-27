@@ -39,6 +39,9 @@ namespace BackendLogica.Modelos
         string? Comentario,
         DateTime DecididoEn);
 
+    /// <summary>Evento o lugar pendiente de moderación y cuándo se mandó a revisión.</summary>
+    public sealed record EnvioPendiente(TipoObjetivoModeracion Tipo, int ObjetivoId, DateTime EnviadoEn);
+
     /// <summary>Cifras generales para el hero de la landing ("21 eventos esta semana"...).</summary>
     public sealed record ResumenPlataforma(int EventosEstaSemana, int LugaresParaDescubrir, int Categorias);
 }

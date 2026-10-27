@@ -71,6 +71,30 @@
             <Boton Texto="Inicia sesión para continuar" Variante="secundario" Tamano="s" OnClick="() => Modales.RequiereSesion()" />
         </div>)
 
+    @Muestra("Interruptor · Apagado / Encendido", "<Interruptor @bind-Activo=\"activo\" Etiqueta=\"Destacar en el inicio\" />  ·  con texto: <CajaDestacar @bind-Activo=\"activo\" />", true,
+        @<text>
+            <div class="muestra__fila">
+                <Interruptor Etiqueta="Ejemplo apagado" />
+                <Interruptor Etiqueta="Ejemplo encendido" Activo />
+                <Interruptor Etiqueta="Ejemplo deshabilitado" Deshabilitado />
+            </div>
+            <div class="muestra__campos"><CajaDestacar @bind-Activo="_destacar" /></div>
+        </text>)
+
+    @Muestra("Opción (una por grupo) y Área de texto", "<Opcion Texto=\"...\" Seleccionada=\"...\" OnClick=\"...\" /> dentro de role=\"radiogroup\"  ·  <AreaTexto Nombre=\"comentario\" Etiqueta=\"...\" @bind-Valor=\"texto\" Errores=\"errores\" />", true,
+        @<div class="muestra__campos">
+            <div class="muestra__lista" role="radiogroup" aria-label="Motivo de ejemplo">
+                @foreach (var motivo in ServicioModeracion.MotivosRechazo.Take(3)) { <Opcion Texto="@motivo" Seleccionada="_motivo == motivo" OnClick="() => _motivo = motivo" /> }
+            </div>
+            <AreaTexto Nombre="ejemplo" Etiqueta="Comentario para el organizador" Placeholder="Opcional si apruebas. Obligatorio si rechazas." />
+        </div>)
+
+    @Muestra("Modales de moderación (WBS 4.3) · la pantalla está en /moderacion (mod_ana / Test1234!)", "Modales.AprobarEventoAsync(e, comentario, destacar) · RechazarEventoAsync(e, comentario) · DecisionRegistradaAsync() · MotivoRechazo(titulo, registro)", false,
+        @<div class="muestra__fila">
+            <Boton Texto="Decisión registrada" Variante="secundario" Tamano="s" OnClick="() => Modales.DecisionRegistradaAsync()" />
+            <Boton Texto="Motivo de rechazo (organizador)" Variante="secundario" Tamano="s" OnClick='() => Modales.MotivoRechazo("La Copa Desaparecida", RechazoDemo)' />
+        </div>)
+
     @Muestra("Card evento · Normal / Hover (pasa el mouse)", "<Tarjeta Evento=\"evento\" Orden=\"i\" Favorito=\"...\" />  dentro de .rejilla-tarjetas", true,
         @<div class="rejilla-tarjetas">@foreach (var (e, i) in Eventos.Select((e, i) => (e, i))) { <Tarjeta Evento="e" Orden="i" Favorito="i == 1" /> }</div>)
 
@@ -157,6 +181,12 @@
 
     private static readonly (string?, string)[] TiposDemo = [(null, "Todo"), ("coffee", "Cafés"), ("museum", "Museos"), ("tree", "Parques")];
 
+    /// <summary>"Motivo de rechazo" de ejemplo (en la app sale de bd.Moderacion.ObtenerUltimaDecisionAsync).</summary>
+    private static readonly RegistroModeracion RechazoDemo = new(0, 1, "mod_ana", TipoObjetivoModeracion.Evento, 0, DecisionModeracion.Rechazado,
+        "Ubicación fuera de Chihuahua: la dirección está fuera del estado. Corrige la ubicación y vuelve a enviarlo.", new DateTime(2026, 10, 9, 10, 40, 0));
+
+    private bool _destacar;
+    private string _motivo = ServicioModeracion.MotivosRechazo[0];
     private readonly Formulario _formulario = new();
     private readonly ErroresFormulario _errores = new();
     private string? _tipo;

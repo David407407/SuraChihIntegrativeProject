@@ -1,0 +1,18 @@
+.opcion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1.5px solid var(--color-linea);
+  border-radius: var(--radio-s);
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--duracion-rapida), background var(--duracion-rapida);
+}
+.opcion:hover { border-color: #c9d2e3; }
+.opcion[aria-checked="true"] { border-color: var(--color-sol); background: var(--color-sol-suave); }
+.opcion:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; }

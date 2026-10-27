@@ -9,6 +9,8 @@
   <Campo Nombre="correo" Etiqueta="Correo electrónico" Tipo="email" Icono="correo" @bind-Valor="correo" Errores="errores" />
   <Campo Nombre="contrasena" Etiqueta="Contraseña" Tipo="password" Ayuda="Mínimo 8 caracteres" @bind-Valor="contrasena" />
 *@
+@inject InteropJs Js
+
 <FluentTextInput @ref="_entrada" Id="@_id" Class="@Clases" Value="@Valor" ValueChanged="AlEscribir" Immediate ImmediateDelay="0"
                  TextInputType="TipoFluent" Appearance="TextInputAppearance.Outline"
                  Label="@(EtiquetaVisible ? Etiqueta : null)" Placeholder="@(Placeholder ?? Etiqueta)"
@@ -107,6 +109,8 @@
 
     protected override async Task OnAfterRenderAsync(bool primeraVez)
     {
+        // Solo nuestro "Mostrar": se quita el ojo que agrega Edge / WebView2.
+        if (primeraVez && Tipo == "password" && _entrada?.Element is { } elemento) await Js.LlamarAsync("quitarOjoDelNavegador", elemento);
         if (Errores?.TomarFoco(Nombre) == true) await EnfocarAsync();
     }
 }

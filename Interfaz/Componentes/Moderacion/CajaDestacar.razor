@@ -1,0 +1,18 @@
+@*
+  "Destacar" de Figma: caja gris con "Destacar en el inicio" y el Interruptor. Va en la tarjeta "Decisión"
+  de Revisar evento y en el modal "¿Aprobar y publicar?" (is_featured / featured_order del evento).
+
+  <CajaDestacar @bind-Activo="_destacar" />
+*@
+<div class="destacar">
+    <p class="destacar__texto">
+        <span class="t-small-fuerte">Destacar en el inicio</span>
+        <span class="t-caption texto-2">Aparece en el carrusel principal</span>
+    </p>
+    <Interruptor Activo="Activo" ActivoChanged="ActivoChanged" Etiqueta="Destacar en el inicio" />
+</div>
+
+@code {
+    [Parameter] public bool Activo { get; set; }
+    [Parameter] public EventCallback<bool> ActivoChanged { get; set; }
+}

@@ -1,0 +1,63 @@
+@*
+  "Modal / Rechazar" de Figma: insignia roja, motivos (Opcion, uno a la vez), comentario obligatorio y
+  "Rechazar" (rojo) / "Volver". Lo abre Revisar evento con Modales.RechazarEventoAsync(...); el comentario
+  llega con lo que ya se escribió en la tarjeta "Decisión". El organizador ve el motivo y el comentario
+  ("Motivo de rechazo").
+*@
+@inject ServicioModeracion Moderacion
+@inject Modales Modales
+
+<EncabezadoModal Titulo="Rechazar" Icono="x-circulo-error" Peligro
+                 Texto="Elige el motivo principal. El solicitante verá tu comentario." />
+<EditForm Model="this" OnSubmit="RechazarAsync" class="modal__formulario" novalidate>
+    <div class="rechazar__motivos" role="radiogroup" aria-label="Motivo del rechazo">
+        @foreach (var motivo in ServicioModeracion.MotivosRechazo)
+        {
+            <Opcion Texto="@motivo" Seleccionada="_motivo == motivo" OnClick="() => _motivo = motivo" />
+        }
+    </div>
+    <AreaTexto Nombre="comentario" Etiqueta="Comentario (obligatorio)" Filas="3" Maximo="500"
+               Placeholder="Qué debe corregir el organizador" @bind-Valor="_comentario" Errores="_errores" />
+    <AvisoModal Errores="_errores" />
+    <div class="modal__botones">
+        <Boton Texto="Rechazar" Variante="peligro" Icono="x-circulo-blanco-18" Tipo="submit" Clase="modal__ancho" Ocupado="_enviando" />
+        <Boton Texto="Volver" Variante="secundario" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+    </div>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired] public EventoTarjeta Evento { get; set; } = default!;
+    [Parameter] public string? Comentario { get; set; }
+
+    private readonly ErroresFormulario _errores = new();
+    private string _motivo = ServicioModeracion.MotivosRechazo[0];
+    private string? _comentario;
+    private bool _enviando;
+
+    protected override void OnInitialized() => _comentario = Comentario;
+
+    private async Task RechazarAsync()
+    {
+        _errores.Limpiar();
+        if (string.IsNullOrWhiteSpace(_comentario))
+        {
+            _errores.Poner("comentario", "Escribe qué debe corregir el organizador.");
+            return;
+        }
+
+        _enviando = true;
+        try
+        {
+            await Moderacion.RechazarAsync(Evento.Id, _motivo, _comentario);
+            Modales.Cerrar(true);
+        }
+        catch (Exception ex)
+        {
+            _errores.PonerAviso(MensajesError.Para(ex));
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+}

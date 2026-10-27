@@ -22,10 +22,11 @@ namespace Interfaz.Servicios
         public async Task<Usuario> IniciarSesionAsync(string? identificador, string? contrasena)
         {
             if (string.IsNullOrWhiteSpace(identificador) || string.IsNullOrEmpty(contrasena))
-                throw new DatosInvalidosException("Escribe tu correo y tu contraseña.");
+                throw new DatosInvalidosException("Escribe tu correo o usuario y tu contraseña.");
 
-            Usuario usuario = await bd.Usuarios.IniciarSesionAsync(identificador, contrasena)
-                ?? throw new DatosInvalidosException("Correo o contraseña incorrectos.");
+            // identificador: correo o nombre de usuario (UsuarioDB busca en los dos)
+            Usuario usuario = await bd.Usuarios.IniciarSesionAsync(identificador.Trim(), contrasena)
+                ?? throw new DatosInvalidosException("Usuario, correo o contraseña incorrectos.");
             return await AbrirSesionAsync(usuario);
         }
 

@@ -26,6 +26,12 @@ namespace BackendLogica.Contratos
         /// </summary>
         Task<RegistroModeracion?> ObtenerUltimaDecisionAsync(TipoObjetivoModeracion tipo, int objetivoId, CancellationToken ct = default);
 
+        /// <summary>
+        /// NUEVO para el rediseño: cuándo se mandó a revisión cada evento y lugar pendiente ("Hace 2 días",
+        /// "Enviado el 7 oct a las 18:42"). Es su última modificación (<c>updated_at</c>).
+        /// </summary>
+        Task<List<EnvioPendiente>> ListarEnviosPendientesAsync(CancellationToken ct = default);
+
         /// <summary>Pone (o quita, con <paramref name="orden"/> null) un evento aprobado en el carrusel.</summary>
         Task<bool> DestacarEventoAsync(int eventoId, int? orden, CancellationToken ct = default);
     }
