@@ -1,0 +1,11 @@
+/* Figma: 12px de relleno y 14px entre la miniatura y el texto (div. para ganarle a .modal__resumen de VentanaModal) */
+div.enviado__resumen.modal__resumen { flex-direction: row; align-items: center; gap: 14px; padding: 12px; }
+.enviado__resumen ::deep .enviado__miniatura {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radio-s);
+  overflow: hidden;
+}
+.enviado__texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.enviado__texto .t-body-fuerte { overflow-wrap: anywhere; }

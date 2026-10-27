@@ -1,0 +1,33 @@
+@*
+  "Modal / Editar evento publicado" de Figma (WBS 4.6): insignia amarilla con alerta, "Si lo editas, vuelve a
+  revisión", lo que pasa al editarlo y "Editar de todos modos" / "Mejor no". Lo abre Publicar evento al entrar
+  a editar un evento aprobado (Modales.EditarEventoPublicadoAsync).
+*@
+@inject Modales Modales
+
+<div class="modal__icono"><Icono Nombre="alerta-24" Caja="24" /></div>
+<header class="modal__encabezado">
+    <h2 class="modal__titulo t-h2" id="modal-titulo">Si lo editas, vuelve a revisión</h2>
+    <p class="t-body texto-2">
+        Cambiar el título, la descripción, las imágenes, la ubicación o el enlace de boletos regresa
+        <strong class="editar__evento">@Titulo</strong> a revisión.
+    </p>
+</header>
+
+<ul class="modal__resumen editar__puntos" role="list">
+    @Punto("Dejará de mostrarse hasta que lo aprueben de nuevo.")
+    @Punto("Sale del carrusel destacado del inicio.")
+    @Punto(Inscritos == 1 ? "La inscripción se conserva." : $"Las {Inscritos} inscripciones se conservan.")
+</ul>
+<div class="modal__botones">
+    <Boton Texto="Editar de todos modos" Icono="editar-18" Clase="modal__ancho" OnClick="() => Modales.Cerrar(true)" />
+    <Boton Texto="Mejor no" Variante="secundario" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar(false)" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    [Parameter] public int Inscritos { get; set; }
+
+    private static RenderFragment Punto(string texto) =>
+        @<li class="editar__punto t-small"><Icono Nombre="info-gris-14" Caja="14" /><span>@texto</span></li>;
+}

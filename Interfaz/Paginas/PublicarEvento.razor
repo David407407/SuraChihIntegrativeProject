@@ -1,0 +1,776 @@
+@*
+  "Publicar evento" de Figma (WBS 4.6). La misma pantalla sirve para editar un evento propio.
+  - Izquierda, cinco secciones: 1. Información básica (título con contador, descripción y categorías),
+    2. Imágenes (la primera es la portada; se suben a Cloudinary con ServicioImagenes), 3. Fecha y hora,
+    4. Ubicación ("Lugar registrado" u "Otra dirección" con el pin arrastrable del componente Mapa) y
+    5. Precio y boletos ("Gratis" / "De pago" y el enlace oficial).
+  - Derecha: "Vista previa" (cómo se verá la tarjeta), "Antes de enviar" (se palomea solo) y los botones
+    "Enviar a revisión" / "Guardar borrador" (o "Guardar cambios" al editar algo ya enviado o publicado).
+  - Al enviar sale "Enviado a revisión". Al entrar a editar un evento publicado sale "Si lo editas, vuelve
+    a revisión" (editar su contenido lo regresa a moderación y lo saca del carrusel; lo hace la BD).
+  Validaciones (las mismas que la BD): fin posterior al inicio, coordenadas dentro de Chihuahua,
+  precio mínimo ≤ máximo y título de hasta 150 caracteres.
+*@
+@page "/organizador/evento/nuevo"
+@page "/organizador/evento/{Id:int}/editar"
+@using System.Globalization
+@implements IDisposable
+@inject Sesion Sesion
+@inject ServicioPublicacion Servicio
+@inject ServicioImagenes Imagenes
+@inject Modales Modales
+@inject Avisos Avisos
+@inject Acciones Acciones
+@inject InteropJs Js
+@inject NavigationManager Nav
+@inject ILogger<PublicarEvento> Registro
+
+<PageTitle>SuraChih · @(Editando ? "Editar evento" : "Publicar evento")</PageTitle>
+
+<main class="publicar contenedor">
+    <button type="button" class="publicar__volver t-small-fuerte texto-2" @onclick="Acciones.PanelOrganizador">
+        <Icono Nombre="flecha-volver-gris-12" Caja="12" /><span>Volver al panel</span>
+    </button>
+
+    @if (_error != null)
+    {
+        <div class="publicar__error">
+            <h1 class="t-h2">@_error</h1>
+            <div><Boton Texto="Ir al inicio" Variante="oscuro" OnClick="Acciones.Inicio" /></div>
+        </div>
+    }
+    else if (_datos == null)
+    {
+        <div class="esqueleto publicar__esqueleto-titulo" aria-hidden="true"></div>
+        <div class="publicar__cuerpo">
+            <div class="esqueleto publicar__esqueleto-form" aria-hidden="true"></div>
+            <div class="esqueleto publicar__esqueleto-lateral" aria-hidden="true"></div>
+        </div>
+    }
+    else
+    {
+        <header class="publicar__encabezado">
+            <div class="publicar__titulo">
+                <h1 class="t-h1">@(Editando ? "Editar evento" : "Publicar evento")</h1>
+                <p class="t-body texto-2">@Subtitulo</p>
+            </div>
+            @if (ChipEstado is { } chip)
+            {
+                <Chip Texto="@chip.Texto" Variante="@chip.Variante" Icono="@chip.Icono" Clase="chip--estado" />
+            }
+        </header>
+
+        <div class="publicar__cuerpo">
+            <form class="formulario" novalidate @onsubmit:preventDefault>
+                @* ---- 1. Información básica ---- *@
+                <section class="seccion" id="seccion-info" aria-labelledby="seccion-info-titulo">
+                    @Cabeza("editar-cielo-16", "seccion-info-titulo", "1. Información básica", "Lo que la gente ve primero.")
+                    <Campo Nombre="titulo" Etiqueta="Título del evento" EtiquetaVisible Placeholder="Ej.: Festival de Jazz en el Centro"
+                           @bind-Valor="_titulo" Maximo="MaximoTitulo" Errores="_errores"
+                           Ayuda="@($"{_titulo.Length} / {MaximoTitulo} caracteres")" />
+                    <AreaTexto Nombre="descripcion" Etiqueta="Descripción" Clase="seccion__descripcion" Filas="5" Maximo="5000"
+                               Placeholder="Cuenta de qué se trata, quién se presenta y qué hay que llevar."
+                               @bind-Valor="_descripcion" Errores="_errores" />
+                    <fieldset class="seccion__grupo">
+                        <legend class="seccion__leyenda"><span class="t-small-fuerte">Categorías</span><span class="t-caption texto-2">Puedes elegir varias</span></legend>
+                        <div class="seccion__chips">
+                            @foreach (var etiqueta in _datos.Etiquetas)
+                            {
+                                <ChipCategoria @key="etiqueta.Id" Etiqueta="etiqueta" Activo="_etiquetas.Contains(etiqueta.Id)"
+                                               ActivoChanged="activo => AlternarEtiqueta(etiqueta.Id, activo)" />
+                            }
+                        </div>
+                    </fieldset>
+                </section>
+
+                @* ---- 2. Imágenes ---- *@
+                <section class="seccion" id="seccion-imagenes" aria-labelledby="seccion-imagenes-titulo">
+                    @Cabeza("imagen-cielo-16", "seccion-imagenes-titulo", "2. Imágenes", "JPG o PNG. La primera es la portada.")
+                    <div class="fotos">
+                        @foreach (var (foto, i) in _fotos.Select((f, i) => (f, i)))
+                        {
+                            <div @key="foto" class="foto @(i == 0 ? "foto--portada" : "")">
+                                <Imagen Src="@foto" Alt="@(i == 0 ? "Portada" : $"Foto {i + 1}")" Ancho="@(i == 0 ? 320 : 120)" Alto="180" />
+                                @if (i == 0)
+                                {
+                                    <span class="foto__portada t-caption"><Icono Nombre="estrella-tinta-12" Caja="12" />Portada</span>
+                                }
+                                else
+                                {
+                                    <button type="button" class="foto__boton foto__boton--portada" aria-label="@($"Usar la foto {i + 1} como portada")"
+                                            title="Usar como portada" @onclick="() => HacerPortada(i)">
+                                        <Icono Nombre="estrella-tinta-12" Caja="12" />
+                                    </button>
+                                }
+                                <button type="button" class="foto__boton foto__boton--quitar" aria-label="@($"Quitar la foto {i + 1}")"
+                                        title="Quitar" @onclick="() => QuitarFoto(i)">
+                                    <Icono Nombre="cerrar" Caja="12" />
+                                </button>
+                            </div>
+                        }
+                        @if (_fotos.Count < ServicioImagenes.MaximoFotos)
+                        {
+                            <label class="subir @(_subiendo > 0 ? "subir--ocupado" : "")">
+                                <InputFile class="subir__archivo" OnChange="SubirFotosAsync" multiple accept="@ServicioImagenes.Formatos"
+                                           disabled="@(_subiendo > 0)" aria-describedby="fotos-ayuda" />
+                                @if (_subiendo > 0)
+                                {
+                                    <FluentSpinner Size="SpinnerSize.Tiny" />
+                                    <span class="t-small-fuerte">Subiendo @(_subiendo == 1 ? "1 foto" : $"{_subiendo} fotos")…</span>
+                                }
+                                else
+                                {
+                                    <Icono Nombre="subir-nube-cielo-24" Caja="24" />
+                                    <span class="t-small-fuerte">Arrastra o sube fotos</span>
+                                }
+                                <span class="t-caption texto-2" id="fotos-ayuda">Hasta @ServicioImagenes.MaximoFotos imágenes · 5 MB c/u</span>
+                            </label>
+                        }
+                    </div>
+                    @if (_errores["fotos"] is { } errorFotos)
+                    {
+                        <p class="seccion__error t-caption" role="alert">@errorFotos</p>
+                    }
+                    else if (Imagenes.ModoPrueba)
+                    {
+                        <p class="t-caption texto-2">Datos de prueba sin Cloudinary: las fotos que subas se guardan como una foto de ejemplo.</p>
+                    }
+                </section>
+
+                @* ---- 3. Fecha y hora ---- *@
+                <section class="seccion" id="seccion-fecha" aria-labelledby="seccion-fecha-titulo">
+                    @Cabeza("calendario-cielo-16", "seccion-fecha-titulo", "3. Fecha y hora", null)
+                    <div class="fechas">
+                        @Entrada("inicio-fecha", "Inicio", "date", "calendario-gris-16", _inicioFecha, v => _inicioFecha = v)
+                        @Entrada("inicio-hora", "Hora", "time", "reloj-gris-16", _inicioHora, v => _inicioHora = v)
+                        @Entrada("fin-fecha", "Fin", "date", "calendario-gris-16", _finFecha, v => _finFecha = v)
+                        @Entrada("fin-hora", "Hora", "time", "reloj-gris-16", _finHora, v => _finHora = v)
+                    </div>
+                    @if (_errores["fechas"] is { } errorFechas)
+                    {
+                        <p class="seccion__error t-caption" role="alert">@errorFechas</p>
+                    }
+                    else
+                    {
+                        <p class="t-caption texto-2">La fecha de fin debe ser posterior a la de inicio.</p>
+                    }
+                </section>
+
+                @* ---- 4. Ubicación ---- *@
+                <section class="seccion" id="seccion-ubicacion" aria-labelledby="seccion-ubicacion-titulo">
+                    @Cabeza("ubicacion-cielo-16", "seccion-ubicacion-titulo", "4. Ubicación", "Solo direcciones dentro del estado de Chihuahua.")
+                    <div class="seccion__pildoras" role="group" aria-label="Tipo de ubicación">
+                        <Pildora Texto="Lugar registrado" Activa="_usarLugar" OnClick="() => CambiarUbicacion(true)" />
+                        <Pildora Texto="Otra dirección" Activa="!_usarLugar" OnClick="() => CambiarUbicacion(false)" />
+                    </div>
+                    @if (_usarLugar)
+                    {
+                        <div class="entrada @(_errores["lugar"] != null ? "entrada--error" : "")">
+                            <label class="t-small-fuerte" for="lugar">Lugar</label>
+                            <div class="entrada__caja">
+                                <Icono Nombre="ubicacion-gris-16" />
+                                <select id="lugar" name="lugar" class="entrada__control" value="@(_lugarId?.ToString() ?? "")" @onchange="ElegirLugar">
+                                    <option value="">@(_datos.Lugares.Count == 0 ? "Aún no hay lugares registrados" : "Elige un lugar")</option>
+                                    @foreach (var lugar in _datos.Lugares)
+                                    {
+                                        <option value="@lugar.Id">@lugar.Nombre</option>
+                                    }
+                                </select>
+                            </div>
+                            @if (_errores["lugar"] is { } errorLugar)
+                            {
+                                <p class="seccion__error t-caption" role="alert">@errorLugar</p>
+                            }
+                            else if (LugarElegido is { } elegido)
+                            {
+                                <p class="t-caption texto-2">@elegido.Direccion</p>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <Campo Nombre="direccion" Etiqueta="Dirección" EtiquetaVisible Icono="ubicacion-gris-16" Maximo="255"
+                               Placeholder="Calle, número y colonia" @bind-Valor="_direccion" Errores="_errores" />
+                    }
+                    <div class="mapa-caja @(_errores["mapa"] != null ? "mapa-caja--error" : "")">
+                        <Mapa @key="_usarLugar" Clase="mapa-caja__mapa" Arrastrable="!_usarLugar" Lat="Latitud" Lng="Longitud"
+                              Titulo="@(LugarElegido?.Nombre ?? "Ubicación del evento")" AlMoverUbicacion="MoverPin"
+                              AriaLabel="Mapa para marcar la ubicación del evento" />
+                    </div>
+                    @if (_errores["mapa"] is { } errorMapa)
+                    {
+                        <p class="seccion__error t-caption" role="alert">@errorMapa</p>
+                    }
+                    else if (!_usarLugar)
+                    {
+                        <p class="t-caption texto-2">Arrastra el pin (o haz clic en el mapa) para ajustar el punto exacto.</p>
+                    }
+                </section>
+
+                @* ---- 5. Precio y boletos ---- *@
+                <section class="seccion" id="seccion-precio" aria-labelledby="seccion-precio-titulo">
+                    @Cabeza("boleto-cielo-16", "seccion-precio-titulo", "5. Precio y boletos", "SuraChih no vende boletos: enviamos a tu página oficial.")
+                    <div class="seccion__pildoras" role="group" aria-label="Precio">
+                        <Pildora Texto="Gratis" Activa="!_dePago" OnClick="() => CambiarPrecio(false)" />
+                        <Pildora Texto="De pago" Activa="_dePago" OnClick="() => CambiarPrecio(true)" />
+                    </div>
+                    @if (_dePago)
+                    {
+                        <div class="seccion__fila">
+                            <Campo Nombre="precioMin" Etiqueta="Precio mínimo" EtiquetaVisible Tipo="number" Icono="etiqueta-gris-16"
+                                   Placeholder="0" @bind-Valor="_precioMin" Errores="_errores" />
+                            <Campo Nombre="precioMax" Etiqueta="Precio máximo" EtiquetaVisible Tipo="number" Icono="etiqueta-gris-16"
+                                   Placeholder="0" @bind-Valor="_precioMax" Errores="_errores" />
+                        </div>
+                    }
+                    <Campo Nombre="boletos" Etiqueta="Enlace oficial de boletos" EtiquetaVisible Tipo="url" Icono="enlace-gris-16" Maximo="500"
+                           Placeholder="https://" @bind-Valor="_boletos" Errores="_errores" />
+                </section>
+            </form>
+
+            @* ---- Columna derecha ---- *@
+            <aside class="lateral" aria-label="Resumen y envío">
+                <section class="lateral__caja previa-caja" aria-labelledby="previa-titulo">
+                    <p class="t-small-fuerte texto-2" id="previa-titulo">Vista previa</p>
+                    <article class="previa">
+                        <div class="previa__imagen"><Imagen Src="@_fotos.FirstOrDefault()" Alt="" Ancho="332" Alto="200" /></div>
+                        <div class="previa__info">
+                            <p class="t-small-fuerte previa__fecha">@FechaPrevia</p>
+                            <p class="t-card-titulo previa__titulo">@(string.IsNullOrWhiteSpace(_titulo) ? "Título del evento" : _titulo.Trim())</p>
+                            <p class="t-small texto-2">@LugarPrevio</p>
+                            <p class="t-small-fuerte">@PrecioPrevio</p>
+                        </div>
+                    </article>
+                </section>
+
+                <section class="lateral__caja lista" aria-labelledby="lista-titulo">
+                    <h2 class="t-card-titulo" id="lista-titulo">Antes de enviar</h2>
+                    <ul class="lista__puntos" role="list">
+                        @Revision("Título y descripción claros", TextosListos)
+                        @Revision("Fecha y hora correctas", FechasListas)
+                        @Revision("Dirección dentro de Chihuahua", UbicacionLista)
+                        @Revision("Imágenes propias o con permiso", _fotos.Count > 0)
+                        @Revision("Enlace oficial de boletos", BoletosListos)
+                        @* No se puede comprobar: queda como recordatorio. *@
+                        @Revision("Permisos del lugar, si aplica", false)
+                    </ul>
+                </section>
+
+                <div class="acciones">
+                    @if (_aviso != null)
+                    {
+                        <p class="acciones__aviso t-small" role="alert">@_aviso</p>
+                    }
+                    @if (PuedeEnviar)
+                    {
+                        <Boton Texto="Enviar a revisión" Icono="subir" Clase="acciones__boton" Ocupado="@(_guardando == Guardado.Enviar)"
+                               Deshabilitado="@(_guardando != null || _subiendo > 0)" OnClick="() => GuardarAsync(Guardado.Enviar)" />
+                        <Boton Texto="Guardar borrador" Variante="secundario" Icono="check-18" Clase="acciones__boton" Ocupado="@(_guardando == Guardado.Borrador)"
+                               Deshabilitado="@(_guardando != null || _subiendo > 0)" OnClick="() => GuardarAsync(Guardado.Borrador)" />
+                        <p class="t-caption texto-2">Mientras esté en revisión lo verás como “En revisión” en tu panel.</p>
+                    }
+                    else
+                    {
+                        <Boton Texto="Guardar cambios" Icono="check-18" Clase="acciones__boton" Ocupado="@(_guardando == Guardado.Cambios)"
+                               Deshabilitado="@(_guardando != null || _subiendo > 0)" OnClick="() => GuardarAsync(Guardado.Cambios)" />
+                        <p class="t-caption texto-2">
+                            @(_estado == EstadoEvento.Aprobado
+                                ? "Si cambias el contenido, el evento vuelve a revisión y deja de mostrarse hasta que lo aprueben."
+                                : "Sigue en revisión: el moderador verá la versión nueva.")
+                        </p>
+                    }
+                </div>
+            </aside>
+        </div>
+    }
+</main>
+
+<VolverArriba />
+
+@code {
+    /// <summary>Id del evento que se edita; null en "/organizador/evento/nuevo".</summary>
+    [Parameter] public int? Id { get; set; }
+
+    private const int MaximoTitulo = 150;
+
+    private enum Guardado { Enviar, Borrador, Cambios }
+
+    private DatosFormularioEvento? _datos;
+    private string? _error;
+    private string? _aviso;
+    private int? _cargado;
+    private int? _usuarioId;
+    private EstadoEvento? _estado;
+    private Guardado? _guardando;
+    private int _subiendo;
+    /// <summary>"Borrador guardado hace 1 min".</summary>
+    private DateTime? _guardadoEn;
+    private readonly ErroresFormulario _errores = new();
+
+    // Formulario
+    private string _titulo = "";
+    private string _descripcion = "";
+    private HashSet<int> _etiquetas = [];
+    private List<string> _fotos = [];
+    private string _inicioFecha = "", _inicioHora = "", _finFecha = "", _finHora = "";
+    private bool _usarLugar;
+    private int? _lugarId;
+    private string _direccion = "";
+    private decimal? _lat, _lng;
+    private bool _dePago;
+    private string _precioMin = "", _precioMax = "";
+    private string _boletos = "";
+
+    private bool Editando => Id != null;
+    private int Clave => Id ?? 0;
+
+    /// <summary>Nuevo, borrador o rechazado: "Enviar a revisión" y "Guardar borrador". Pendiente o aprobado: "Guardar cambios".</summary>
+    private bool PuedeEnviar => _estado is null or EstadoEvento.Borrador or EstadoEvento.Rechazado;
+
+    private LugarTarjeta? LugarElegido => _usarLugar ? _datos?.Lugares.FirstOrDefault(l => l.Id == _lugarId) : null;
+    private decimal? Latitud => _usarLugar ? LugarElegido?.Latitud : _lat;
+    private decimal? Longitud => _usarLugar ? LugarElegido?.Longitud : _lng;
+
+    private string Subtitulo => _estado switch
+    {
+        EstadoEvento.Aprobado => "Está publicado. Si cambias su contenido, un moderador lo revisará de nuevo.",
+        EstadoEvento.Pendiente => "Está en revisión. Puedes corregirlo mientras tanto.",
+        EstadoEvento.Rechazado => "Lo rechazaron: corrígelo y envíalo de nuevo a revisión.",
+        _ => "Un moderador lo revisará antes de que aparezca en SuraChih.",
+    };
+
+    /// <summary>Chip junto al título: "Borrador guardado hace 1 min" o el estado del evento que se edita.</summary>
+    private (string Texto, string Variante, string? Icono)? ChipEstado
+    {
+        get
+        {
+            if (_guardadoEn is { } guardado)
+                return ($"Borrador guardado hace {Formato.Duracion(DateTime.Now - guardado)}", "fondo", "check-gris-12");
+            return _estado switch
+            {
+                EstadoEvento.Borrador => ("Borrador", "fondo", (string?)null),
+                EstadoEvento.Pendiente => ("En revisión", "sol-suave", "reloj-arena-12"),
+                EstadoEvento.Aprobado => ("Publicado", "cielo-suave", (string?)null),
+                EstadoEvento.Rechazado => ("Rechazado", "fondo", "x-error-12"),
+                _ => null,
+            };
+        }
+    }
+
+    // ---------------------------------------------------------------- Piezas
+
+    /// <summary>Encabezado de sección: insignia azul de 40px, título numerado y subtítulo.</summary>
+    private static RenderFragment Cabeza(string icono, string id, string titulo, string? subtitulo) =>
+        @<div class="seccion__cabeza">
+            <span class="seccion__insignia"><Icono Nombre="@icono" Caja="16" /></span>
+            <div class="seccion__textos">
+                <h2 class="t-h3" id="@id">@titulo</h2>
+                @if (subtitulo != null)
+                {
+                    <p class="t-small texto-2">@subtitulo</p>
+                }
+            </div>
+        </div>;
+
+    /// <summary>Fecha u hora nativa con la forma del "Campo" de Figma (icono, 48px, píldora).</summary>
+    private RenderFragment Entrada(string id, string etiqueta, string tipo, string icono, string valor, Action<string> cambiar) =>
+        @<div class="entrada @(_errores["fechas"] != null ? "entrada--error" : "")">
+            <label class="t-small-fuerte" for="@id">@etiqueta</label>
+            <div class="entrada__caja">
+                <Icono Nombre="@icono" />
+                <input id="@id" name="@id" type="@tipo" class="entrada__control" value="@valor"
+                       @onchange="e => CambiarFecha(cambiar, e)" />
+            </div>
+        </div>;
+
+    private static RenderFragment Revision(string texto, bool hecho) =>
+        @<li class="lista__punto t-small @(hecho ? "" : "texto-2")">
+            <Icono Nombre="@(hecho ? "check-circulo-exito" : "circulo-gris-16")" Caja="16" />
+            <span>@texto</span>
+            <span class="solo-lectores">@(hecho ? "(listo)" : "(pendiente)")</span>
+        </li>;
+
+    // ---------------------------------------------------------------- "Antes de enviar" y vista previa
+
+    private bool TextosListos => !string.IsNullOrWhiteSpace(_titulo) && !string.IsNullOrWhiteSpace(_descripcion);
+    private bool FechasListas => Fechas() is { } f && f.Fin > f.Inicio;
+    private bool UbicacionLista => Latitud is { } lat && Longitud is { } lng && DentroDeChihuahua(lat, lng);
+    private bool BoletosListos => !_dePago || !string.IsNullOrWhiteSpace(_boletos);
+
+    private string FechaPrevia => Fechas() is { } f
+        ? $"{Formato.RangoFechas(f.Inicio, f.Fin)} · {Formato.HoraCompleta(f.Inicio)}"
+        : "Fecha por definir";
+
+    private string LugarPrevio => LugarElegido?.Nombre
+        ?? (!_usarLugar && !string.IsNullOrWhiteSpace(_direccion) ? _direccion.Trim() : "Ubicación por definir");
+
+    private string PrecioPrevio
+    {
+        get
+        {
+            if (!_dePago) return "Gratis";
+            decimal? min = Numero(_precioMin), max = Numero(_precioMax);
+            return min == null && max == null ? "Precio por definir" : Formato.Precio(min, max, Formato.EstiloPrecio.Desde);
+        }
+    }
+
+    // ---------------------------------------------------------------- Carga
+
+    protected override void OnInitialized() => Sesion.Cambio += AlCambiarSesion;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_cargado == Clave) return;
+        if (!Sesion.Iniciada)
+        {
+            Modales.RequiereSesion("Inicia sesión con tu cuenta de organizador para publicar eventos.");
+            return;
+        }
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _usuarioId = Sesion.Usuario?.Id;
+        _cargado = Clave;
+        _datos = null;
+        _error = null;
+        _aviso = null;
+        _errores.Limpiar();
+        try
+        {
+            var datos = await Servicio.ObtenerFormularioAsync(Id);
+            Llenar(datos);
+            _datos = datos;
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+            return;
+        }
+        catch (Exception ex)
+        {
+            if (ex is not BackendLogica.Datos.SuraChihException) Registro.LogError(ex, "No se pudo abrir el formulario del evento {Id}", Id);
+            _error = MensajesError.Para(ex);
+            return;
+        }
+
+        // "Si lo editas, vuelve a revisión": se pregunta ya con el formulario a la vista.
+        if (_estado == EstadoEvento.Aprobado && _datos.Evento is { } detalle)
+        {
+            StateHasChanged();
+            if (!await Modales.EditarEventoPublicadoAsync(detalle.Evento.Titulo, _datos.Inscritos)) Acciones.Inicio();
+        }
+    }
+
+    /// <summary>Pasa el evento (al editar) a los campos, o los deja vacíos para uno nuevo.</summary>
+    private void Llenar(DatosFormularioEvento datos)
+    {
+        EventoTarjeta? e = datos.Evento?.Evento;
+        if (e?.Id != _recienGuardado) _guardadoEn = null;
+        _estado = e?.Estado;
+        _titulo = e?.Titulo ?? "";
+        _descripcion = e?.Descripcion ?? "";
+        _etiquetas = e == null ? new HashSet<int>() : e.Etiquetas.Select(t => t.Id).ToHashSet();
+        // La portada (main_image_url) va primero y luego la galería (event_image).
+        _fotos = e == null ? new List<string>() : new[] { e.ImagenUrl }.Concat(datos.Evento!.Galeria).OfType<string>().Distinct().ToList();
+        bool conFecha = e is { FechaPorConfirmar: false };
+        _inicioFecha = conFecha ? e!.Inicio.ToString("yyyy-MM-dd") : "";
+        _inicioHora = conFecha ? e!.Inicio.ToString("HH:mm") : "";
+        _finFecha = conFecha ? e!.Fin.ToString("yyyy-MM-dd") : "";
+        _finHora = conFecha ? e!.Fin.ToString("HH:mm") : "";
+        _usarLugar = e?.LugarId != null;
+        _lugarId = e?.LugarId;
+        _direccion = e?.LugarId == null ? e?.Direccion ?? "" : "";
+        _lat = e?.LugarId == null ? e?.Latitud : null;
+        _lng = e?.LugarId == null ? e?.Longitud : null;
+        _dePago = e is { PrecioPorConfirmar: false } && e.PrecioMax > 0;
+        _precioMin = _dePago ? Texto(e!.PrecioMin) : "";
+        _precioMax = _dePago ? Texto(e!.PrecioMax) : "";
+        _boletos = e?.BoletosUrl ?? "";
+    }
+
+    // ---------------------------------------------------------------- Interacción
+
+    private void AlternarEtiqueta(int id, bool activo)
+    {
+        if (activo) _etiquetas.Add(id);
+        else _etiquetas.Remove(id);
+    }
+
+    private void CambiarFecha(Action<string> cambiar, ChangeEventArgs e)
+    {
+        cambiar(e.Value?.ToString() ?? "");
+        _errores.Quitar("fechas");
+    }
+
+    private void CambiarUbicacion(bool usarLugar)
+    {
+        _usarLugar = usarLugar;
+        _errores.Quitar("lugar");
+        _errores.Quitar("direccion");
+        _errores.Quitar("mapa");
+    }
+
+    private void ElegirLugar(ChangeEventArgs e)
+    {
+        _lugarId = int.TryParse(e.Value?.ToString(), out int id) ? id : null;
+        _errores.Quitar("lugar");
+    }
+
+    private void MoverPin((decimal Lat, decimal Lng) punto)
+    {
+        (_lat, _lng) = punto;
+        _errores.Quitar("mapa");
+    }
+
+    private void CambiarPrecio(bool dePago)
+    {
+        _dePago = dePago;
+        _errores.Quitar("precioMin");
+        _errores.Quitar("precioMax");
+    }
+
+    private void HacerPortada(int i)
+    {
+        string foto = _fotos[i];
+        _fotos.RemoveAt(i);
+        _fotos.Insert(0, foto);
+    }
+
+    private void QuitarFoto(int i) => _fotos.RemoveAt(i);
+
+    /// <summary>Sube a Cloudinary las fotos elegidas (o arrastradas), una por una, hasta llenar las 8.</summary>
+    private async Task SubirFotosAsync(InputFileChangeEventArgs e)
+    {
+        _errores.Quitar("fotos");
+        int espacio = ServicioImagenes.MaximoFotos - _fotos.Count;
+        var archivos = e.GetMultipleFiles(Math.Max(e.FileCount, 1)).ToList();
+        if (archivos.Count > espacio)
+            _errores.Poner("fotos", $"Solo caben {ServicioImagenes.MaximoFotos} fotos: se subieron las primeras {espacio}.", enfocar: false);
+
+        var porSubir = archivos.Take(espacio).ToList();
+        _subiendo = porSubir.Count;
+        foreach (IBrowserFile archivo in porSubir)
+        {
+            try
+            {
+                ServicioImagenes.Validar(archivo.ContentType, archivo.Size);
+                await using Stream contenido = archivo.OpenReadStream(ServicioImagenes.MaximoBytes);
+                string url = await Imagenes.SubirAsync(contenido, archivo.Name, archivo.ContentType);
+                if (!_fotos.Contains(url)) _fotos.Add(url);
+            }
+            catch (Exception ex)
+            {
+                if (ex is not BackendLogica.Datos.SuraChihException) Registro.LogError(ex, "No se pudo subir la foto {Nombre}", archivo.Name);
+                _errores.Poner("fotos", $"{archivo.Name}: {MensajesError.Para(ex)}", enfocar: false);
+            }
+            finally
+            {
+                _subiendo--;
+                StateHasChanged();
+            }
+        }
+        _subiendo = 0;
+    }
+
+    // ---------------------------------------------------------------- Guardar
+
+    /// <summary>Id del evento que se acaba de crear como borrador (al recargarlo se conserva "Borrador guardado").</summary>
+    private int? _recienGuardado;
+
+    private async Task GuardarAsync(Guardado como)
+    {
+        _aviso = null;
+        if (Validar() is { } seccion)
+        {
+            _aviso = "Revisa los campos marcados.";
+            await Js.DesplazarAAsync(seccion);
+            return;
+        }
+
+        DatosEvento datos = Datos();
+        _guardando = como;
+        try
+        {
+            if (Id is not { } id)
+            {
+                int nuevo = await Servicio.CrearAsync(datos, enviarARevision: como == Guardado.Enviar);
+                if (como == Guardado.Enviar) await EnviadoAsync(nuevo, datos);
+                else BorradorGuardado(nuevo);
+                return;
+            }
+
+            ResultadoEdicionEvento resultado = await Servicio.ActualizarAsync(id, datos, enviarARevision: como == Guardado.Enviar);
+            if (como == Guardado.Enviar || resultado.VolvioARevision)
+            {
+                await EnviadoAsync(id, datos);
+            }
+            else if (como == Guardado.Borrador)
+            {
+                BorradorGuardado(id);
+            }
+            else
+            {
+                Avisos.Mostrar("Guardaste los cambios");
+                _estado = resultado.Estado;
+            }
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            if (ex is not BackendLogica.Datos.SuraChihException) Registro.LogError(ex, "No se pudo guardar el evento {Id}", Id);
+            _aviso = MensajesError.Para(ex);
+        }
+        finally
+        {
+            _guardando = null;
+        }
+    }
+
+    private void BorradorGuardado(int id)
+    {
+        _guardadoEn = DateTime.Now;
+        _recienGuardado = id;
+        _estado = EstadoEvento.Borrador;
+        Avisos.Mostrar("Guardaste el borrador");
+        // Un borrador nuevo pasa a editarse: así "Guardar borrador" otra vez no crea un segundo evento.
+        if (Id != id)
+        {
+            _cargado = id;   // ya está en pantalla: no se vuelve a pedir
+            Nav.NavigateTo(Acciones.Rutas.EditarEvento(id), replace: true);
+        }
+    }
+
+    /// <summary>"Tu evento está en revisión" y lo que elija: su panel, otro evento nuevo o quedarse a verlo.</summary>
+    private async Task EnviadoAsync(int id, DatosEvento datos)
+    {
+        _estado = EstadoEvento.Pendiente;
+        _guardadoEn = null;
+        string lugar = LugarPrevio;
+        string detalle = $"{Formato.RangoFechas(datos.Inicio, datos.Fin)} · {lugar}";
+        string? eleccion = await Modales.EnviadoARevisionAsync(datos.Titulo.Trim(), datos.ImagenUrl, detalle);
+
+        if (eleccion == ModalEnviadoRevision.PublicarOtro)
+        {
+            _recienGuardado = null;
+            if (Editando) Nav.NavigateTo(Acciones.Rutas.PublicarEvento);
+            else { _cargado = null; await CargarAsync(); }
+        }
+        else if (eleccion == ModalEnviadoRevision.IrAlPanel)
+        {
+            // El panel de organizador aún no tiene pantalla: se va al inicio con el aviso de "próximamente".
+            Acciones.Inicio();
+            Acciones.PanelOrganizador();
+        }
+        else if (Id != id)
+        {
+            _cargado = id;
+            Nav.NavigateTo(Acciones.Rutas.EditarEvento(id), replace: true);
+        }
+    }
+
+    /// <summary>Lo mismo que revisa la BD, para marcar cada campo.</summary>
+    /// <returns>Id de la primera sección con errores, o null si todo está bien.</returns>
+    private string? Validar()
+    {
+        _errores.Limpiar();
+        string? primera = null;
+        void Error(string seccion, string campo, string mensaje)
+        {
+            _errores.Poner(campo, mensaje, enfocar: primera == null);
+            primera ??= seccion;
+        }
+
+        string titulo = _titulo.Trim();
+        if (titulo.Length == 0) Error("seccion-info", "titulo", "Escribe el título del evento.");
+        else if (titulo.Length > MaximoTitulo) Error("seccion-info", "titulo", $"El título puede tener hasta {MaximoTitulo} caracteres.");
+        if (string.IsNullOrWhiteSpace(_descripcion)) Error("seccion-info", "descripcion", "Escribe una descripción.");
+
+        if (Fechas() is not { } f) Error("seccion-fecha", "fechas", "Elige la fecha y la hora de inicio y de fin.");
+        else if (f.Fin <= f.Inicio) Error("seccion-fecha", "fechas", "La fecha de fin debe ser posterior a la de inicio.");
+
+        if (_usarLugar)
+        {
+            if (LugarElegido == null) Error("seccion-ubicacion", "lugar", "Elige un lugar registrado.");
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(_direccion)) Error("seccion-ubicacion", "direccion", "Escribe la dirección.");
+            if (_lat is not { } lat || _lng is not { } lng) Error("seccion-ubicacion", "mapa", "Marca el punto exacto en el mapa.");
+            else if (!DentroDeChihuahua(lat, lng)) Error("seccion-ubicacion", "mapa", "La ubicación debe estar dentro del estado de Chihuahua.");
+        }
+
+        if (_dePago)
+        {
+            decimal? min = Numero(_precioMin), max = Numero(_precioMax);
+            if (min is not { } a || a < 0) Error("seccion-precio", "precioMin", "Escribe un precio válido (0 o más).");
+            if (max is not { } b || b <= 0) Error("seccion-precio", "precioMax", "Escribe un precio mayor a 0.");
+            else if (min is { } c && c > b) Error("seccion-precio", "precioMin", "El precio mínimo no puede ser mayor que el máximo.");
+        }
+
+        string boletos = _boletos.Trim();
+        if (boletos.Length > 0 && (!Uri.TryCreate(boletos, UriKind.Absolute, out Uri? uri) || uri.Scheme is not ("https" or "http")))
+            Error("seccion-precio", "boletos", "Escribe la dirección completa, empezando con https://");
+
+        return primera;
+    }
+
+    private DatosEvento Datos()
+    {
+        var (inicio, fin) = Fechas()!.Value;
+        decimal min = _dePago ? Numero(_precioMin) ?? 0 : 0;
+        decimal max = _dePago ? Numero(_precioMax) ?? 0 : 0;
+        return new DatosEvento
+        {
+            LugarId = _usarLugar ? _lugarId : null,
+            Titulo = _titulo.Trim(),
+            Descripcion = _descripcion.Trim(),
+            Inicio = inicio,
+            Fin = fin,
+            // Con lugar registrado, la ubicación sale del lugar (v_event_card); el evento no guarda otra.
+            Direccion = _usarLugar ? null : _direccion.Trim(),
+            Latitud = _usarLugar ? null : _lat,
+            Longitud = _usarLugar ? null : _lng,
+            PrecioMin = min,
+            PrecioMax = max,
+            BoletosUrl = string.IsNullOrWhiteSpace(_boletos) ? null : _boletos.Trim(),
+            ImagenUrl = _fotos.FirstOrDefault(),
+            EtiquetaIds = [.. _etiquetas],
+            Galeria = [.. _fotos.Skip(1)],
+        };
+    }
+
+    // ---------------------------------------------------------------- Apoyo
+
+    private (DateTime Inicio, DateTime Fin)? Fechas() =>
+        Fecha(_inicioFecha, _inicioHora) is { } inicio && Fecha(_finFecha, _finHora) is { } fin ? (inicio, fin) : null;
+
+    /// <summary>"2026-10-31" + "19:30" (lo que mandan los input date / time).</summary>
+    private static DateTime? Fecha(string dia, string hora) =>
+        DateTime.TryParseExact($"{dia} {hora}", ["yyyy-MM-dd HH:mm", "yyyy-MM-dd HH:mm:ss"], CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime valor)
+            ? valor : null;
+
+    /// <summary>Caja del estado de Chihuahua (los CHECK ck_event_lat / ck_event_lng).</summary>
+    private static bool DentroDeChihuahua(decimal lat, decimal lng) => lat is >= 25.5m and <= 31.8m && lng is >= -109.2m and <= -103.3m;
+
+    private static decimal? Numero(string texto) =>
+        decimal.TryParse(texto.Trim().TrimStart('$').Replace(",", ""), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal valor) ? valor : null;
+
+    private static string Texto(decimal valor) => valor.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private void AlCambiarSesion() => InvokeAsync(async () =>
+    {
+        int? id = Sesion.Usuario?.Id;
+        if (id == _usuarioId) return;
+        if (_usuarioId != null && id == null) { Acciones.Inicio(); return; }
+        _cargado = null;
+        await CargarAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
+}

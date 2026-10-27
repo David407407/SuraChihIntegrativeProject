@@ -1,0 +1,31 @@
+@*
+  "Modal / Enviado a revisión" de Figma (WBS 4.6): insignia verde, "Tu evento está en revisión", resumen del
+  evento (miniatura de 64px, título y fechas · lugar) y "Ir a mi panel" / "Publicar otro evento".
+  Lo abre Publicar evento con Modales.EnviadoARevisionAsync(...) y devuelve lo que eligió el organizador.
+*@
+@inject Modales Modales
+
+<EncabezadoModal Titulo="Tu evento está en revisión" Icono="check-circulo-exito-24" Exito
+                 Texto="Aparecerá como “En revisión” en tu panel. Si lo rechazan, verás el motivo para corregirlo." />
+
+<div class="modal__resumen enviado__resumen">
+    <Imagen Clase="enviado__miniatura" Src="@ImagenUrl" Alt="" Ancho="64" Alto="64" />
+    <div class="enviado__texto">
+        <p class="t-body-fuerte">@Titulo</p>
+        <p class="t-small texto-2">@Detalle</p>
+    </div>
+</div>
+<div class="modal__botones">
+    <Boton Texto="Ir a mi panel" Icono="tienda-18" Clase="modal__ancho" OnClick="() => Modales.Cerrar(IrAlPanel)" />
+    <Boton Texto="Publicar otro evento" Icono="mas-18" Variante="secundario" Clase="modal__ancho" OnClick="() => Modales.Cerrar(PublicarOtro)" />
+</div>
+
+@code {
+    public const string IrAlPanel = "panel";
+    public const string PublicarOtro = "otro";
+
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    [Parameter] public string? ImagenUrl { get; set; }
+    /// <summary>"17 – 31 oct · Centro Histórico".</summary>
+    [Parameter] public string Detalle { get; set; } = "";
+}

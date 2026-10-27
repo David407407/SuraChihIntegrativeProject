@@ -131,6 +131,21 @@ namespace Interfaz.Estado
             await tarea;
         }
 
+        // ---------------------------------------------------------------- Publicar evento (WBS 4.6)
+
+        /// <summary>"Modal / Enviado a revisión": resumen del evento, "Ir a mi panel" y "Publicar otro evento".</summary>
+        /// <param name="imagenUrl">Portada (miniatura de 64px).</param>
+        /// <param name="detalle">"17 – 31 oct · Centro Histórico".</param>
+        /// <returns>Lo que eligió: <see cref="ModalEnviadoRevision.IrAlPanel"/>, <see cref="ModalEnviadoRevision.PublicarOtro"/> o null (cerró).</returns>
+        public async Task<string?> EnviadoARevisionAsync(string titulo, string? imagenUrl, string detalle) =>
+            await Abrir<ModalEnviadoRevision>(new Dictionary<string, object?> { ["Titulo"] = titulo, ["ImagenUrl"] = imagenUrl, ["Detalle"] = detalle }) as string;
+
+        /// <summary>"Modal / Editar evento publicado" (Si lo editas, vuelve a revisión).</summary>
+        /// <param name="inscritos">"Las N inscripciones se conservan."</param>
+        /// <returns>true con "Editar de todos modos"; false con "Mejor no" o al cerrar.</returns>
+        public async Task<bool> EditarEventoPublicadoAsync(string titulo, int inscritos) =>
+            await Abrir<ModalEditarPublicado>(new Dictionary<string, object?> { ["Titulo"] = titulo, ["Inscritos"] = inscritos }) as bool? ?? false;
+
         /// <summary>"Modal / Motivo de rechazo" (lo ve el organizador): la última decisión de moderación sobre su evento.</summary>
         public void MotivoRechazo(string titulo, RegistroModeracion registro) =>
             _ = Abrir<ModalMotivoRechazo>(new Dictionary<string, object?> { ["Titulo"] = titulo, ["Registro"] = registro });
