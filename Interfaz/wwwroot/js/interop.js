@@ -120,6 +120,26 @@ export function enfocarPrimero(contenedor) {
   });
 }
 
+/** Hoja compartida por todos los campos de contraseña (ver quitarOjoDelNavegador). */
+let sinOjo;
+
+/**
+ * Quita el ojo que Edge (y WebView2, la app de escritorio) pone en los campos de contraseña: ya está
+ * nuestro botón "Mostrar", y el de Edge aparece y desaparece según se escriba o se pierda el foco.
+ * El <input> vive dentro del shadow DOM de fluent-text-input, así que el CSS global no lo alcanza.
+ */
+export async function quitarOjoDelNavegador(campo) {
+  if (!campo) return;
+  await customElements.whenDefined(campo.localName);
+  const raiz = campo.shadowRoot;
+  if (!raiz) return;
+  if (!sinOjo) {
+    sinOjo = new CSSStyleSheet();
+    sinOjo.replaceSync('input::-ms-reveal, input::-ms-clear { display: none !important; }');
+  }
+  if (!raiz.adoptedStyleSheets.includes(sinOjo)) raiz.adoptedStyleSheets = [...raiz.adoptedStyleSheets, sinOjo];
+}
+
 // ---------------------------------------------------------------------
 // Dirección de la hoja de detalle. Se usa history directo (y no NavigationManager) porque una
 // navegación de Blazor sube la página hasta arriba, y la pantalla de atrás debe quedarse donde estaba.
