@@ -23,6 +23,7 @@ Paginas/                     una página por pantalla, con su @page
   Landing.razor  /           Home.razor  /home        MapaPagina.razor  /mapa
   Perfil.razor   /perfil     Favoritos.razor  /favoritos                 Catalogo.razor  /componentes
   Moderacion.razor  /moderacion              RevisarEvento.razor  /moderacion/evento/{id}
+  PublicarEvento.razor  /organizador/evento/nuevo  y  /organizador/evento/{id}/editar
 Componentes/
   Base/                      Boton, Campo, Chip, ChipCategoria, Pildora, BotonFavorito, Imagen, Icono,
                              EncabezadoSeccion, VolverArriba, Interruptor, Opcion, AreaTexto
@@ -267,3 +268,22 @@ una animación ligada al scroll), el conteo del hero (contador CSS) y la escala 
 | Chip categoría (Normal → Activo) | borde tinta dibujado por dentro para que el chip no cambie de tamaño |
 
 Todas respetan "reducir movimiento" del sistema operativo (los carruseles dejan de avanzar solos).
+
+## Publicar / editar evento (WBS 4.6)
+
+Solo organizadores aprobados (en los datos de prueba `cafe_dande` y `misiones_cuu`). Se entra con
+"Publicar mi evento" de la landing o con el menú de cuenta → "Publicar evento" (`Acciones.PublicarEvento`).
+La misma página edita un evento propio: `Acciones.EditarEvento(id)`. Los datos los da
+`Servicios/ServicioPublicacion.cs` y las fotos las sube `Servicios/ServicioImagenes.cs`.
+
+- Cinco secciones: información básica (título con contador de 150), imágenes (la primera es la portada),
+  fecha y hora, ubicación ("Lugar registrado" o "Otra dirección" con el pin arrastrable de `<Mapa>`) y
+  precio y boletos. A la derecha: vista previa de la tarjeta, "Antes de enviar" (se palomea solo) y los botones.
+- Antes de guardar se revisa lo mismo que la BD: fin posterior al inicio, coordenadas dentro de Chihuahua,
+  precio mínimo ≤ máximo y título de hasta 150 caracteres. El error sale en su campo y la página baja a él.
+- Nuevo, borrador o rechazado: "Enviar a revisión" / "Guardar borrador". Pendiente o publicado: "Guardar cambios".
+  Al enviar sale "Tu evento está en revisión" (`ModalEnviadoRevision`). Al entrar a editar uno publicado sale
+  "Si lo editas, vuelve a revisión" (`ModalEditarPublicado`).
+- **Fotos**: se suben a Cloudinary con un *upload preset unsigned*. Pon `"CloudinaryCloudName"` y
+  `"CloudinaryUploadPreset"` en tu `dbsettings.local.json`. Con datos de prueba y sin esas llaves se guarda
+  una foto de ejemplo para poder probar la pantalla.

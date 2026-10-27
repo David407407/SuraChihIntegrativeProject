@@ -4,5 +4,7 @@
   "User": "root",
   "Password": "",
   "Database": "surachih",
-  "UseFakeData": false
+  "UseFakeData": false,
+  "CloudinaryCloudName": "",
+  "CloudinaryUploadPreset": ""
 }

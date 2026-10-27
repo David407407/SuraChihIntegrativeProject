@@ -23,6 +23,18 @@ namespace BackendLogica.Configuracion
         /// </summary>
         public bool UsarDatosFalsos { get; init; }
 
+        /// <summary>
+        /// Llave <c>"CloudinaryCloudName"</c>: cuenta de Cloudinary a la que "Publicar evento" sube las fotos.
+        /// Sin ella (y sin <see cref="CloudinaryPreset"/>) no se pueden subir fotos nuevas.
+        /// </summary>
+        public string? CloudinaryNube { get; init; }
+
+        /// <summary>
+        /// Llave <c>"CloudinaryUploadPreset"</c>: upload preset <b>unsigned</b> de esa cuenta (Settings → Upload).
+        /// No es una contraseña: solo permite subir imágenes a la carpeta que diga el preset.
+        /// </summary>
+        public string? CloudinaryPreset { get; init; }
+
         /// <summary>Configuración cargada una sola vez y compartida por todos los repositorios.</summary>
         public static ConfiguracionBD Predeterminada => _predeterminada.Value;
         private static readonly Lazy<ConfiguracionBD> _predeterminada = new(Cargar);
@@ -62,7 +74,9 @@ namespace BackendLogica.Configuracion
                 Usuario = Leer(raiz, "User") ?? config.Usuario,
                 Contrasena = Leer(raiz, "Password") ?? config.Contrasena,
                 BaseDeDatos = Leer(raiz, "Database") ?? config.BaseDeDatos,
-                UsarDatosFalsos = raiz.TryGetProperty("UseFakeData", out JsonElement falso) && falso.ValueKind == JsonValueKind.True
+                UsarDatosFalsos = raiz.TryGetProperty("UseFakeData", out JsonElement falso) && falso.ValueKind == JsonValueKind.True,
+                CloudinaryNube = Leer(raiz, "CloudinaryCloudName"),
+                CloudinaryPreset = Leer(raiz, "CloudinaryUploadPreset")
             };
         }
 

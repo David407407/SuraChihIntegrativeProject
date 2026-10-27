@@ -61,7 +61,12 @@
                 new("Mis planes", "mis-planes", Acciones.MisPlanes),
                 new("Mis favoritos", "corazon-vacio", Acciones.Favoritos),
             };
-            if (EsOrganizador) lista.Add(new("Panel de organizador", "tienda-16", Acciones.PanelOrganizador));
+            if (EsOrganizador)
+            {
+                lista.Add(new("Panel de organizador", "tienda-16", Acciones.PanelOrganizador));
+                // Mientras no exista el panel, este es el camino a "Publicar evento" (WBS 4.6).
+                lista.Add(new("Publicar evento", "calendario", Acciones.PublicarEvento));
+            }
             if (Usuario.EsModerador) lista.Add(new("Moderación", "escudo", Acciones.Moderacion));
             lista.Add(new("Cerrar sesión", "salir", Acciones.CerrarSesion, Peligro: true));
             return lista;

@@ -1,0 +1,6 @@
+.editar__evento { color: var(--color-tinta); font-weight: 600; }
+
+/* Figma: caja gris con 16px de relleno y 10px entre puntos */
+ul.editar__puntos.modal__resumen { gap: 10px; margin: 0; list-style: none; }
+.editar__punto { display: flex; align-items: flex-start; gap: 8px; color: var(--color-tinta); }
+.editar__punto ::deep .icono { margin-top: 3px; flex-shrink: 0; }

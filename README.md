@@ -44,6 +44,8 @@ llaman directo a la librería **BackendLogica**, que habla con MySQL.
    porque la app compara `DateTime.Now` con `NOW()` de MySQL.
 2. Para trabajar pantallas **sin MySQL**, pon `"UseFakeData": true` en `dbsettings.local.json`: la app
    usa los datos de prueba en memoria (ver [BackendLogica/README.md](BackendLogica/README.md#trabajar-sin-mysql-repositorio-falso)).
+   Para subir fotos en "Publicar evento" agrega también `"CloudinaryCloudName"` y `"CloudinaryUploadPreset"`
+   (un upload preset *unsigned* de la cuenta de Cloudinary del equipo).
 3. Verifica la conexión y la librería:
    ```bash
    dotnet run --project BackendLogica.Pruebas

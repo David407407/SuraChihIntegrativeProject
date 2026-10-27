@@ -32,6 +32,8 @@ namespace Interfaz
             servicios.AddScoped<ServicioPerfil>();
             servicios.AddScoped<ServicioFavoritos>();
             servicios.AddScoped<ServicioModeracion>();
+            servicios.AddScoped<ServicioPublicacion>();
+            servicios.AddScoped<ServicioImagenes>();
 
             servicios.AddScoped<InteropJs>();
             servicios.AddScoped<Avisos>();

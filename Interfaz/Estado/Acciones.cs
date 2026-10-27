@@ -23,6 +23,10 @@ namespace Interfaz.Estado
             public const string Moderacion = "moderacion";
             /// <summary>"Moderación / Revisar evento" de un evento pendiente.</summary>
             public static string RevisarEvento(int id) => $"moderacion/evento/{id}";
+            /// <summary>"Publicar evento" (WBS 4.6).</summary>
+            public const string PublicarEvento = "organizador/evento/nuevo";
+            /// <summary>La misma pantalla de "Publicar evento", con los datos de un evento propio.</summary>
+            public static string EditarEvento(int id) => $"organizador/evento/{id}/editar";
         }
 
         /// <summary>Ruta de la pantalla actual, sin "/" ni query ni #: "", "home", "mapa"...</summary>
@@ -82,7 +86,20 @@ namespace Interfaz.Estado
         /// <summary>Menú de cuenta (solo moderadores): "Moderación / Publicaciones".</summary>
         public void Moderacion() => SoloConSesion(() => IrA(Rutas.Moderacion));
         public void RevisarEvento(int id) => IrA(Rutas.RevisarEvento(id));
-        public void PublicarEvento() => RequiereSesion("Publicar eventos");
+
+        /// <summary>
+        /// "Publicar evento" / "Publicar mi evento": sin sesión pide iniciarla; solo los organizadores aprobados
+        /// entran a la pantalla (la solicitud para ser organizador aún no tiene pantalla).
+        /// </summary>
+        public void PublicarEvento()
+        {
+            if (!sesion.Iniciada) modales.RequiereSesion("Inicia sesión con tu cuenta de organizador para publicar eventos.");
+            else if (!sesion.EsOrganizador) avisos.Mostrar("Solo los organizadores aprobados pueden publicar eventos.", TipoAviso.Info);
+            else IrA(Rutas.PublicarEvento);
+        }
+
+        /// <summary>Editar un evento propio (la misma pantalla de "Publicar evento").</summary>
+        public void EditarEvento(int id) => SoloConSesion(() => IrA(Rutas.EditarEvento(id)));
 
         public void CerrarSesion()
         {
