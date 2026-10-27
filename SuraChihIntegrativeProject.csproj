@@ -5,7 +5,11 @@
     proyecto Interfaz, que llaman directo a BackendLogica. El resultado es un .exe normal.
   -->
   <PropertyGroup>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- Con versión de Windows: WebView2 (BlazorWebView) necesita Microsoft.Windows.SDK.NET, que solo se
+         copia a la salida si el TFM la trae. Con "net10.0-windows" a secas la app truena al abrir
+         (FileNotFoundException: Microsoft.Windows.SDK.NET, Version=10.0.17763.10). -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <OutputType>WinExe</OutputType>
     <UseWPF>true</UseWPF>
     <RootNamespace>SuraChihIntegrativeProject</RootNamespace>
