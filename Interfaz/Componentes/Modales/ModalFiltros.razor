@@ -1,0 +1,110 @@
+@*
+  "Modal / Filtros" de Figma (560px): Categoría (chips, varias), Precio (Gratis / De pago), Cuándo (Hoy, Mañana,
+  Este fin de semana, Próxima semana) y Tipo (Eventos, Cafés, Museos, Parques; varios). "Limpiar" quita todo
+  sin cerrar; "Ver resultados" cierra con el filtro nuevo. Lo abre Modales.FiltrosAsync(filtro).
+  El texto buscado y un día del Calendario se conservan (el día se reemplaza si eliges otro "Cuándo").
+*@
+@inject ServicioBusqueda Busqueda
+@inject Modales Modales
+
+<div class="filtros" data-ancho-modal="560">
+    <EncabezadoModal Titulo="Filtros" />
+
+    <section class="filtros__seccion" aria-labelledby="filtros-categoria">
+        <h3 class="t-body-fuerte" id="filtros-categoria">Categoría</h3>
+        <div class="filtros__opciones">
+            @if (_categorias == null)
+            {
+                @for (int i = 0; i < 5; i++)
+                {
+                    <span class="esqueleto filtros__esqueleto" aria-hidden="true"></span>
+                }
+            }
+            else
+            {
+                @foreach (var etiqueta in _categorias)
+                {
+                    <ChipCategoria @key="etiqueta.Id" Etiqueta="etiqueta" Activo="_filtro.Categorias.Contains(etiqueta.Id)"
+                                   ActivoChanged="activo => AlternarCategoria(etiqueta.Id, activo)" />
+                }
+            }
+        </div>
+    </section>
+
+    <section class="filtros__seccion" aria-labelledby="filtros-precio">
+        <h3 class="t-body-fuerte" id="filtros-precio">Precio</h3>
+        <div class="filtros__opciones" role="group" aria-labelledby="filtros-precio">
+            @foreach (var (valor, texto) in Precios)
+            {
+                <Pildora Texto="@texto" Activa="_filtro.Precio == valor"
+                         OnClick="() => _filtro = _filtro with { Precio = _filtro.Precio == valor ? FiltroPrecio.Todos : valor }" />
+            }
+        </div>
+    </section>
+
+    <section class="filtros__seccion" aria-labelledby="filtros-cuando">
+        <h3 class="t-body-fuerte" id="filtros-cuando">Cuándo</h3>
+        <div class="filtros__opciones" role="group" aria-labelledby="filtros-cuando">
+            @foreach (var (valor, texto) in Cuandos)
+            {
+                <Pildora Texto="@texto" Activa="_filtro.Cuando == valor" OnClick="() => AlternarCuando(valor)" />
+            }
+            @if (_filtro is { Cuando: FiltroCuando.Rango, Fecha: { } dia })
+            {
+                <Pildora Texto="@Formato.RangoFechas(dia)" Activa OnClick="() => AlternarCuando(FiltroCuando.Rango)" />
+            }
+        </div>
+    </section>
+
+    <section class="filtros__seccion" aria-labelledby="filtros-tipo">
+        <h3 class="t-body-fuerte" id="filtros-tipo">Tipo</h3>
+        <div class="filtros__opciones" role="group" aria-labelledby="filtros-tipo">
+            @foreach (var (valor, texto) in Tipos)
+            {
+                <Pildora Texto="@texto" Activa="_filtro.Tipos.Contains(valor)" OnClick="() => AlternarTipo(valor)" />
+            }
+        </div>
+    </section>
+
+    <div class="filtros__acciones">
+        <Boton Texto="Limpiar" Variante="fantasma" Deshabilitado="!_filtro.HayFiltros" OnClick="() => _filtro = _filtro.SinFiltros()" />
+        <Boton Texto="Ver resultados" Variante="oscuro" OnClick="() => Modales.Cerrar(_filtro)" />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public FiltroBusqueda Filtro { get; set; } = FiltroBusqueda.Ninguno;
+
+    private static readonly (FiltroPrecio, string)[] Precios = [(FiltroPrecio.Gratis, "Gratis"), (FiltroPrecio.DePago, "De pago")];
+    private static readonly (FiltroCuando, string)[] Cuandos =
+    [
+        (FiltroCuando.Hoy, "Hoy"), (FiltroCuando.Manana, "Mañana"),
+        (FiltroCuando.EsteFinDeSemana, "Este fin de semana"), (FiltroCuando.ProximaSemana, "Próxima semana"),
+    ];
+    private static readonly (TipoBusqueda, string)[] Tipos =
+    [
+        (TipoBusqueda.Eventos, "Eventos"), (TipoBusqueda.Cafes, "Cafés"), (TipoBusqueda.Museos, "Museos"), (TipoBusqueda.Parques, "Parques"),
+    ];
+
+    private FiltroBusqueda _filtro = FiltroBusqueda.Ninguno;
+    private List<Etiqueta>? _categorias;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _filtro = Filtro;
+        try { _categorias = await Busqueda.ListarCategoriasAsync(); }
+        catch (Exception) { _categorias = []; }   // sin categorías el resto de los filtros sigue sirviendo
+    }
+
+    private void AlternarCategoria(int id, bool activo) =>
+        _filtro = _filtro with { Categorias = activo ? [.. _filtro.Categorias, id] : [.. _filtro.Categorias.Where(x => x != id)] };
+
+    /// <summary>Uno a la vez; tocar el activo lo quita.</summary>
+    private void AlternarCuando(FiltroCuando cuando) =>
+        _filtro = _filtro.Cuando == cuando
+            ? _filtro with { Cuando = FiltroCuando.Cualquiera, Fecha = null }
+            : _filtro with { Cuando = cuando, Fecha = null };
+
+    private void AlternarTipo(TipoBusqueda tipo) =>
+        _filtro = _filtro with { Tipos = _filtro.Tipos.Contains(tipo) ? [.. _filtro.Tipos.Where(t => t != tipo)] : [.. _filtro.Tipos, tipo] };
+}

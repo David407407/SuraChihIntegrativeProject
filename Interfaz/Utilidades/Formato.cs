@@ -99,6 +99,13 @@ namespace Interfaz.Utilidades
         public static string HorarioEvento(EventoTarjeta e) =>
             e.FechaPorConfirmar ? "" : $"{HoraCompleta(e.Inicio)} a {HoraCompleta(e.Fin)}";
 
+        /// <summary>"12 de noviembre" (título de los resultados de un día del Calendario).</summary>
+        public static string DiaLargo(DateTime fecha) => $"{fecha.Day} de {MesesLargos[fecha.Month - 1]}";
+
+        /// <summary>"Noviembre 2026" (encabezado del Calendario).</summary>
+        public static string MesYAnio(DateTime fecha) =>
+            $"{char.ToUpperInvariant(MesesLargos[fecha.Month - 1][0])}{MesesLargos[fecha.Month - 1][1..]} {fecha.Year}";
+
         /// <summary>Tiempo transcurrido: "5 min" · "6 h" · "1 día" · "2 días" (métrica "Espera más larga").</summary>
         public static string Duracion(TimeSpan tiempo) => tiempo switch
         {

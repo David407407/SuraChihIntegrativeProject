@@ -315,6 +315,11 @@ fluent-dialog.modal[fuib]::part(dialog) {
 }
 fluent-dialog.modal[fuib]::part(dialog)::backdrop { background: var(--color-velo-modal); }
 
+/* La caja mide 440px; un modal que en Figma es más ancho o angosto lo pide con data-ancho-modal en su raíz
+   ("Filtros" 560, "Calendario" 420). Va aquí porque la caja es de VentanaModal y el contenido es otro componente. */
+div.modal__caja:has([data-ancho-modal="560"]) { width: min(560px, 100%); }
+div.modal__caja:has([data-ancho-modal="420"]) { width: min(420px, 100%); }
+
 .modal__cerrar {
   position: absolute;
   top: 20px;

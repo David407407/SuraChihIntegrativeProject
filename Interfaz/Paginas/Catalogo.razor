@@ -95,6 +95,12 @@
             <Boton Texto="Motivo de rechazo (organizador)" Variante="secundario" Tamano="s" OnClick='() => Modales.MotivoRechazo("La Copa Desaparecida", RechazoDemo)' />
         </div>)
 
+    @Muestra("Búsqueda (WBS 4.5 y 4.7) · la pantalla está en /buscar?q=...", "await Modales.FiltrosAsync(filtro) · await Modales.ElegirFechaAsync()  ·  Acciones.Buscar(\"texto\") · Acciones.Buscar(filtro)", false,
+        @<div class="muestra__fila">
+            <Boton Texto="Filtros" Variante="secundario" Tamano="s" Icono="filtros" OnClick="() => Modales.FiltrosAsync(FiltroBusqueda.Ninguno)" />
+            <Boton Texto="Calendario" Variante="secundario" Tamano="s" Icono="calendario-16-tinta" OnClick="() => Modales.ElegirFechaAsync()" />
+        </div>)
+
     @Muestra("Card evento · Normal / Hover (pasa el mouse)", "<Tarjeta Evento=\"evento\" Orden=\"i\" Favorito=\"...\" />  dentro de .rejilla-tarjetas", true,
         @<div class="rejilla-tarjetas">@foreach (var (e, i) in Eventos.Select((e, i) => (e, i))) { <Tarjeta Evento="e" Orden="i" Favorito="i == 1" /> }</div>)
 

@@ -1,0 +1,91 @@
+@*
+  "Modal / Calendario" de Figma (420px): "Elige una fecha", mes con flechas, semanas de lunes a domingo.
+  Los días que ya pasaron salen apagados y no se pueden elegir; hoy lleva el anillo sol ("Hoy" en la
+  leyenda); el día elegido se rellena. El botón dice "Elige un día" hasta que eliges uno.
+  Lo abre Modales.ElegirFechaAsync(); cierra con el día elegido.
+*@
+@inject Modales Modales
+
+<div class="calendario" data-ancho-modal="420">
+    <EncabezadoModal Titulo="Elige una fecha" />
+
+    <div class="calendario__mes">
+        <p class="t-body-fuerte" aria-live="polite">@Formato.MesYAnio(_mes)</p>
+        <button type="button" class="calendario__flecha" aria-label="Mes anterior" disabled="@(_mes <= MesActual)" @onclick="() => _mes = _mes.AddMonths(-1)">
+            <Icono Nombre="chevron-izquierda-tinta-12" Caja="12" />
+        </button>
+        <button type="button" class="calendario__flecha" aria-label="Mes siguiente" @onclick="() => _mes = _mes.AddMonths(1)">
+            <Icono Nombre="chevron-tinta-12" Caja="12" />
+        </button>
+    </div>
+
+    <div class="calendario__dias" role="grid" aria-label="@Formato.MesYAnio(_mes)">
+        <div class="calendario__semana" role="row">
+            @foreach (var (inicial, nombre) in DiasSemana)
+            {
+                <span class="calendario__encabezado t-caption" role="columnheader" aria-label="@nombre">@inicial</span>
+            }
+        </div>
+        @foreach (var semana in Semanas)
+        {
+            <div class="calendario__semana" role="row">
+                @foreach (var dia in semana)
+                {
+                    @if (dia is not { } d)
+                    {
+                        <span class="calendario__dia" role="gridcell"></span>
+                    }
+                    else
+                    {
+                        <button type="button" role="gridcell" class="@ClasesDia(d) t-small-fuerte" disabled="@(d < Hoy)"
+                                aria-selected="@(d == _elegida ? "true" : "false")" aria-current="@(d == Hoy ? "date" : null)"
+                                aria-label="@Formato.DiaLargo(d)" @onclick="() => _elegida = d">@d.Day</button>
+                    }
+                }
+            </div>
+        }
+    </div>
+
+    <p class="calendario__leyenda t-caption texto-2"><Icono Nombre="punto-hoy" Caja="10" /><span>Hoy</span></p>
+
+    <Boton Texto="@(_elegida is { } e ? $"Ver planes del {Formato.RangoFechas(e)}" : "Elige un día")" Variante="oscuro" Clase="modal__ancho"
+           Deshabilitado="_elegida == null" OnClick="() => Modales.Cerrar(_elegida)" />
+</div>
+
+@code {
+    /// <summary>Día ya elegido (se abre en su mes).</summary>
+    [Parameter] public DateTime? Fecha { get; set; }
+
+    private static readonly (string, string)[] DiasSemana =
+        [("L", "lunes"), ("M", "martes"), ("M", "miércoles"), ("J", "jueves"), ("V", "viernes"), ("S", "sábado"), ("D", "domingo")];
+
+    private DateTime _mes;
+    private DateTime? _elegida;
+
+    private static DateTime Hoy => DateTime.Today;
+    private static DateTime MesActual => new(Hoy.Year, Hoy.Month, 1);
+
+    protected override void OnInitialized()
+    {
+        _elegida = Fecha?.Date >= Hoy ? Fecha.Value.Date : null;
+        DateTime base_ = _elegida ?? Hoy;
+        _mes = new DateTime(base_.Year, base_.Month, 1);
+    }
+
+    /// <summary>Semanas de lunes a domingo; null = hueco antes del día 1 o después del último.</summary>
+    private List<DateTime?[]> Semanas
+    {
+        get
+        {
+            int huecos = ((int)_mes.DayOfWeek + 6) % 7;   // lunes = 0
+            var celdas = Enumerable.Repeat<DateTime?>(null, huecos)
+                .Concat(Enumerable.Range(0, DateTime.DaysInMonth(_mes.Year, _mes.Month)).Select(i => (DateTime?)_mes.AddDays(i)))
+                .ToList();
+            while (celdas.Count % 7 != 0) celdas.Add(null);
+            return celdas.Chunk(7).ToList();
+        }
+    }
+
+    private string ClasesDia(DateTime d) =>
+        "calendario__dia" + (d == Hoy ? " calendario__dia--hoy" : "") + (d == _elegida ? " calendario__dia--elegido" : "");
+}

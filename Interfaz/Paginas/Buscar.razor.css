@@ -1,0 +1,42 @@
+/* "Resultados de búsqueda": 48px arriba, 80px abajo y 24px entre bloques, como en Figma */
+.busqueda {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-block: 48px 80px;
+}
+.busqueda__titulo { overflow-wrap: anywhere; }
+
+/* "Barra": la cuenta a la izquierda y las píldoras a la derecha */
+.busqueda__barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 8px; }
+.busqueda__filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* Cuadrícula de Figma: 40px entre filas y 24px entre columnas */
+.busqueda__rejilla { row-gap: 40px; }
+.busqueda__esqueleto { display: flex; flex-direction: column; gap: 10px; }
+.busqueda__esqueleto-foto { aspect-ratio: 1; border-radius: var(--radio-m); }
+.busqueda__esqueleto-linea { height: 18px; border-radius: 6px; }
+.busqueda__esqueleto-linea--corta { width: 60%; }
+
+/* "Estado vacío": círculo sol suave de 88px con la lupa, título, texto y dos botones */
+.busqueda__vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-top: 80px;
+  text-align: center;
+}
+.busqueda__vacio-icono {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--color-sol-suave);
+}
+.busqueda__vacio-botones { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; padding-top: 8px; }
+
+@media (max-width: 640px) {
+  .busqueda__titulo { font-size: 34px; line-height: 40px; }
+}
