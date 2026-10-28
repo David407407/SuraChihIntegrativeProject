@@ -21,6 +21,8 @@ namespace Interfaz.Estado
             public const string Perfil = "perfil";
             public const string Favoritos = "favoritos";
             public const string Moderacion = "moderacion";
+            /// <summary>"Resultados de búsqueda"; los filtros van en la consulta (ver <see cref="FiltroBusqueda.Ruta"/>).</summary>
+            public const string Buscar = "buscar";
             /// <summary>"Moderación / Revisar evento" de un evento pendiente.</summary>
             public static string RevisarEvento(int id) => $"moderacion/evento/{id}";
             /// <summary>"Publicar evento" (WBS 4.6).</summary>
@@ -64,10 +66,12 @@ namespace Interfaz.Estado
         /// <summary>Botones "Explorar" de la landing: llevan al Home.</summary>
         public void ExplorarEventos() => IrA(Rutas.Home);
         public void ExplorarLugares() => IrA(Rutas.Home);
-        /// <summary>"Ver todo" de las filas de eventos del Home: la pantalla de resultados aún no existe.</summary>
-        public void VerTodosEventos() => Proximamente("Explorar eventos");
+        /// <summary>"Ver todo" de las filas de eventos del Home: todos los eventos próximos.</summary>
+        public void VerTodosEventos() => Buscar(new FiltroBusqueda { Tipos = [TipoBusqueda.Eventos] });
         /// <summary>Buscador del navbar.</summary>
-        public void Buscar(string texto) => Proximamente($"La búsqueda de “{texto}”");
+        public void Buscar(string texto) => Buscar(new FiltroBusqueda { Texto = texto });
+        /// <summary>Resultados con esos filtros (Filtros, Calendario, píldoras de los resultados).</summary>
+        public void Buscar(FiltroBusqueda filtro) => nav.NavigateTo(filtro.Ruta());
 
         // ---------------------------------------------------------------- Cuenta
 

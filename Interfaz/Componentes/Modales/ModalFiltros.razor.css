@@ -1,0 +1,9 @@
+/* Figma: 20px entre secciones, 12px entre el título y sus opciones, 8px entre opciones */
+.filtros { display: flex; flex-direction: column; gap: 20px; }
+.filtros__seccion { display: flex; flex-direction: column; gap: 12px; }
+.filtros__seccion h3 { color: var(--color-tinta); }
+.filtros__opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.filtros__esqueleto { width: 96px; height: 26px; border-radius: var(--radio-control); }
+
+/* "Limpiar" a la izquierda y "Ver resultados" a la derecha */
+.filtros__acciones { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 8px; }

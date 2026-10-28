@@ -1,0 +1,47 @@
+.calendario { display: flex; flex-direction: column; gap: 20px; }
+
+/* "Mes": nombre y flechas de 32px con borde */
+.calendario__mes { display: flex; align-items: center; gap: 8px; }
+.calendario__mes p { flex: 1; color: var(--color-tinta); }
+.calendario__flecha {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid var(--color-linea);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  cursor: pointer;
+  transition: border-color var(--duracion-rapida);
+}
+.calendario__flecha:hover:not(:disabled) { border-color: var(--color-tinta); }
+.calendario__flecha:disabled { opacity: 0.35; cursor: default; }
+.calendario__flecha:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; }
+
+/* "Días": 7 columnas de 48 × 44 con 4px entre ellas (se encogen en pantallas angostas) */
+.calendario__dias { display: flex; flex-direction: column; gap: 4px; }
+.calendario__semana { display: grid; grid-template-columns: repeat(7, minmax(0, 48px)); gap: 4px; }
+.calendario__encabezado { display: grid; place-items: center; height: 28px; color: var(--color-texto-2); }
+
+.calendario__dia {
+  display: grid;
+  place-items: center;
+  height: 44px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--radio-control);
+  background: none;
+  color: var(--color-tinta);
+}
+button.calendario__dia { cursor: pointer; transition: background var(--duracion-rapida), color var(--duracion-rapida); }
+button.calendario__dia:hover:not(:disabled) { background: var(--color-fondo); }
+button.calendario__dia:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 1px; }
+/* Ya pasaron: color línea y sin clic */
+button.calendario__dia:disabled { color: var(--color-linea); cursor: default; }
+/* Hoy: anillo sol de 2px */
+.calendario__dia--hoy { border-color: var(--color-sol); }
+/* El día elegido */
+button.calendario__dia--elegido,
+button.calendario__dia--elegido:hover:not(:disabled) { background: var(--color-tinta); color: var(--color-superficie); }
+
+.calendario__leyenda { display: flex; align-items: center; gap: 6px; }

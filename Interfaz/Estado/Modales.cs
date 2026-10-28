@@ -1,5 +1,6 @@
 using BackendLogica.Modelos;
 using Interfaz.Componentes.Modales;
+using Interfaz.Servicios;
 using Microsoft.AspNetCore.Components;
 
 namespace Interfaz.Estado
@@ -145,6 +146,18 @@ namespace Interfaz.Estado
         /// <returns>true con "Editar de todos modos"; false con "Mejor no" o al cerrar.</returns>
         public async Task<bool> EditarEventoPublicadoAsync(string titulo, int inscritos) =>
             await Abrir<ModalEditarPublicado>(new Dictionary<string, object?> { ["Titulo"] = titulo, ["Inscritos"] = inscritos }) as bool? ?? false;
+
+        // ---------------------------------------------------------------- Búsqueda (WBS 4.5 y 4.7)
+
+        /// <summary>"Modal / Filtros": categoría, precio, cuándo y tipo.</summary>
+        /// <returns>El filtro elegido ("Ver resultados"), o null si se cerró.</returns>
+        public async Task<FiltroBusqueda?> FiltrosAsync(FiltroBusqueda actual) =>
+            await Abrir<ModalFiltros>(new Dictionary<string, object?> { ["Filtro"] = actual }) as FiltroBusqueda;
+
+        /// <summary>"Modal / Calendario": un día de hoy en adelante.</summary>
+        /// <returns>El día elegido, o null si se cerró.</returns>
+        public async Task<DateTime?> ElegirFechaAsync(DateTime? actual = null) =>
+            await Abrir<ModalCalendario>(new Dictionary<string, object?> { ["Fecha"] = actual }) as DateTime?;
 
         /// <summary>"Modal / Motivo de rechazo" (lo ve el organizador): la última decisión de moderación sobre su evento.</summary>
         public void MotivoRechazo(string titulo, RegistroModeracion registro) =>

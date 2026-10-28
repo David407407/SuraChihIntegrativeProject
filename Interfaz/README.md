@@ -24,6 +24,7 @@ Paginas/                     una página por pantalla, con su @page
   Perfil.razor   /perfil     Favoritos.razor  /favoritos                 Catalogo.razor  /componentes
   Moderacion.razor  /moderacion              RevisarEvento.razor  /moderacion/evento/{id}
   PublicarEvento.razor  /organizador/evento/nuevo  y  /organizador/evento/{id}/editar
+  Buscar.razor  /buscar?q=...  (resultados de búsqueda, filtros y calendario)
 Componentes/
   Base/                      Boton, Campo, Chip, ChipCategoria, Pildora, BotonFavorito, Imagen, Icono,
                              EncabezadoSeccion, VolverArriba, Interruptor, Opcion, AreaTexto
@@ -174,6 +175,7 @@ Botones que todavía no tienen pantalla muestran "llega en la siguiente versión
 | Modales de cuenta (WBS 4.2) | `Modales.IniciarSesion(correo, aviso)` · `CrearCuenta()` · `RecuperarContrasena()` → "Revisa tu correo" → `ContrasenaNueva(token)` · `RequiereSesion(texto)` |
 | "¿Vas a ir?" / "¿Cancelar tu inscripción?" | `await Modales.ConfirmarInscripcionAsync(evento)` / `ConfirmarCancelacionAsync(evento)` → estado final |
 | "¿Eliminar tu cuenta?" | `await Modales.ConfirmarEliminarCuentaAsync()` → true si se desactivó |
+| Búsqueda (WBS 4.5 y 4.7) | `await Modales.FiltrosAsync(filtro)` → `FiltroBusqueda` o null · `await Modales.ElegirFechaAsync()` → día o null |
 | Moderación (WBS 4.3) | `await Modales.AprobarEventoAsync(e, comentario, destacar)` / `RechazarEventoAsync(e, comentario)` → true si se decidió · `DecisionRegistradaAsync()` (se cierra sola) · `MotivoRechazo(titulo, registro)` (lo ve el organizador) |
 | Detalle de evento / de lugar | `Hojas.AbrirEvento(id)` · `Hojas.AbrirEvento(id, inscribir: true)` · `Hojas.AbrirLugar(id)` |
 
@@ -194,6 +196,28 @@ Estados del detalle de evento (columnas `status`, `is_finished` y `cancel_reason
 | Ya vas a ir | además el usuario está inscrito | botón verde "Ya vas a ir" + "Cancelar inscripción" |
 | Finalizado | `Terminado` | aviso "Este evento ya terminó" + "Escribir reseña" + "Ver reseñas (N)" |
 | Cancelado | `Estado == Cancelado` | aviso "Este evento fue cancelado" + "Motivo" (`MotivoCancelacion`) |
+
+## Búsqueda, filtros y calendario (WBS 4.5 y 4.7)
+
+`Paginas/Buscar.razor` (`/buscar`) con `Servicios/ServicioBusqueda.cs`. **Lo que se busca va en la dirección**
+(`FiltroBusqueda.Ruta()` / `DesdeConsulta(...)`), así Atrás regresa a la búsqueda anterior y cualquier pantalla
+puede abrir resultados ya filtrados con `Acciones.Buscar(texto)` o `Acciones.Buscar(filtro)`:
+
+| Parámetro | Valores | Ejemplo |
+|---|---|---|
+| `q` | texto (título, lugar o categoría; lugares por nombre o dirección) | `q=música` |
+| `cat` | ids de etiquetas, separados por coma (eventos con alguna) | `cat=2,3` |
+| `precio` | `gratis` · `pago` | `precio=gratis` |
+| `cuando` | `hoy` · `manana` · `finde` · `proxima` · `fecha` (con `fecha=2026-11-12`) | `cuando=finde` |
+| `tipo` | `eventos` · `cafes` · `museos` · `parques`, separados por coma | `tipo=cafes,museos` |
+
+- Entradas: buscador del navbar (Enter), "Ver todo" de las filas de eventos del Home, y "Fecha" / "Filtros"
+  de los filtros rápidos del Home (empiezan con lo que ya estaba puesto ahí).
+- Los eventos los filtra `Eventos.FiltrarAsync` en una sola consulta (solo vigentes, por fecha). Los lugares
+  salen si se eligió un tipo de lugar o, sin tipo, mientras no haya fecha ni categoría (no aplican a lugares).
+- **Calendario**: días pasados apagados, hoy con anillo sol; elegir un día muestra "Planes para el 12 de noviembre"
+  (eventos que ocurren ese día, también los de varios días).
+- Sin resultados: "Quitar filtros" (deja el texto) y "Explorar todo".
 
 ## Moderación (WBS 4.3)
 

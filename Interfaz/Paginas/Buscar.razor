@@ -1,0 +1,193 @@
+@*
+  "Resultados de búsqueda" y "Resultados de búsqueda (sin resultados)" de Figma (WBS 4.5 y 4.7).
+  - Lo que se busca va en la dirección (FiltroBusqueda): el buscador del navbar, "Ver todo" del Home, los
+    modales Filtros y Calendario y las píldoras de aquí solo cambian la dirección, y esta pantalla vuelve a
+    pedir los resultados. Así Atrás regresa a la búsqueda anterior.
+  - Barra: cuántos hay, "Cualquier fecha" / "Este fin de semana" / "Gratis" (atajos de los filtros), "Fecha"
+    (Calendario) y "Filtros" (con cuántos hay puestos).
+  - Cuadrícula de Card evento y Card lugar de siempre; sin nada, el estado vacío con "Quitar filtros" y
+    "Explorar todo".
+*@
+@page "/buscar"
+@implements IDisposable
+@inject ServicioBusqueda Servicio
+@inject Sesion Sesion
+@inject Modales Modales
+@inject Avisos Avisos
+@inject Acciones Acciones
+@inject ILogger<Buscar> Registro
+
+<PageTitle>SuraChih · @Titulo</PageTitle>
+
+<main class="busqueda contenedor">
+    <h1 class="t-h1 busqueda__titulo">@Titulo</h1>
+
+    <div class="busqueda__barra">
+        <p class="t-body texto-2 busqueda__cuenta" aria-live="polite">@Cuenta</p>
+        <div class="busqueda__filtros" role="group" aria-label="Filtros rápidos">
+            <Pildora Texto="Cualquier fecha" Activa="_filtro.Cuando == FiltroCuando.Cualquiera"
+                     OnClick="() => Ir(_filtro with { Cuando = FiltroCuando.Cualquiera, Fecha = null })" />
+            <Pildora Texto="Este fin de semana" Activa="_filtro.Cuando == FiltroCuando.EsteFinDeSemana" OnClick="() => AlternarCuando(FiltroCuando.EsteFinDeSemana)" />
+            @if (_filtro is { Cuando: FiltroCuando.Rango, Fecha: { } dia })
+            {
+                <Pildora Texto="@Formato.RangoFechas(dia)" Activa OnClick="ElegirFechaAsync" />
+            }
+            else if (_filtro.Cuando is not (FiltroCuando.Cualquiera or FiltroCuando.EsteFinDeSemana))
+            {
+                <Pildora Texto="@TextoCuando" Activa OnClick="() => AlternarCuando(_filtro.Cuando)" />
+            }
+            <Pildora Texto="Gratis" Activa="_filtro.Precio == FiltroPrecio.Gratis"
+                     OnClick="() => Ir(_filtro with { Precio = _filtro.Precio == FiltroPrecio.Gratis ? FiltroPrecio.Todos : FiltroPrecio.Gratis })" />
+            <Boton Texto="Fecha" Variante="secundario" Tamano="s" Icono="calendario-16-tinta" OnClick="ElegirFechaAsync" />
+            <Boton Texto="@(_filtro.CuantosFiltros > 0 ? $"Filtros ({_filtro.CuantosFiltros})" : "Filtros")" Variante="secundario" Tamano="s"
+                   Icono="filtros" OnClick="AbrirFiltrosAsync" />
+        </div>
+    </div>
+
+    @if (_resultados == null)
+    {
+        <div class="rejilla-tarjetas busqueda__rejilla" aria-hidden="true">
+            @for (int i = 0; i < 8; i++)
+            {
+                <div class="busqueda__esqueleto">
+                    <div class="esqueleto busqueda__esqueleto-foto"></div>
+                    <div class="esqueleto busqueda__esqueleto-linea"></div>
+                    <div class="esqueleto busqueda__esqueleto-linea busqueda__esqueleto-linea--corta"></div>
+                </div>
+            }
+        </div>
+    }
+    else if (_resultados.Total == 0)
+    {
+        <div class="busqueda__vacio">
+            <span class="busqueda__vacio-icono"><Icono Nombre="buscar-cielo-32" Caja="32" /></span>
+            <h2 class="t-h2">No encontramos nada con esa búsqueda</h2>
+            <p class="t-body texto-2">Prueba con otra palabra o quita algunos filtros.</p>
+            <div class="busqueda__vacio-botones">
+                @if (_filtro.HayFiltros)
+                {
+                    <Boton Texto="Quitar filtros" Variante="secundario" OnClick="() => Ir(_filtro.SinFiltros())" />
+                }
+                <Boton Texto="Explorar todo" Variante="oscuro" OnClick="() => Ir(FiltroBusqueda.Ninguno)" />
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="rejilla-tarjetas busqueda__rejilla">
+            @foreach (var (e, i) in _resultados.Eventos.Select((e, i) => (e, i)))
+            {
+                <Tarjeta @key="(1, e.Id)" Evento="e" Orden="i % 4" Favorito="_resultados.FavoritosEventos.Contains(e.Id)" />
+            }
+            @foreach (var (l, i) in _resultados.Lugares.Select((l, i) => (l, i)))
+            {
+                <Tarjeta @key="(2, l.Id)" Lugar="l" Orden="(_resultados.Eventos.Count + i) % 4" Favorito="_resultados.FavoritosLugares.Contains(l.Id)" />
+            }
+        </div>
+    }
+</main>
+
+<VolverArriba />
+
+@code {
+    [SupplyParameterFromQuery(Name = "q")] public string? Q { get; set; }
+    [SupplyParameterFromQuery(Name = "cat")] public string? Cat { get; set; }
+    [SupplyParameterFromQuery(Name = "precio")] public string? Precio { get; set; }
+    [SupplyParameterFromQuery(Name = "cuando")] public string? Cuando { get; set; }
+    [SupplyParameterFromQuery(Name = "fecha")] public string? Fecha { get; set; }
+    [SupplyParameterFromQuery(Name = "tipo")] public string? Tipo { get; set; }
+
+    private FiltroBusqueda _filtro = FiltroBusqueda.Ninguno;
+    private ResultadosBusqueda? _resultados;
+    /// <summary>Ruta de lo que se pidió por última vez (para no repetir la consulta).</summary>
+    private string? _pedida;
+    private int? _usuarioId;
+
+    /// <summary>"Resultados para “música”" · "Planes para el 12 de noviembre" · "Explorar".</summary>
+    private string Titulo => _filtro switch
+    {
+        { Texto: { } texto } => $"Resultados para “{texto}”",
+        { Cuando: FiltroCuando.Rango, Fecha: { } dia } => $"Planes para el {Formato.DiaLargo(dia)}",
+        { Tipos: [TipoBusqueda.Eventos] } => "Eventos próximos",
+        _ => "Explorar",
+    };
+
+    /// <summary>"8 eventos" · "1 evento y 2 lugares" ("" mientras carga).</summary>
+    private string Cuenta
+    {
+        get
+        {
+            if (_resultados is not { } r) return "";
+            string Plural(int n, string uno, string varios) => $"{n} {(n == 1 ? uno : varios)}";
+            var partes = new List<string>();
+            if (_filtro.IncluyeEventos) partes.Add(Plural(r.Eventos.Count, "evento", "eventos"));
+            if (_filtro.IncluyeLugares && (r.Lugares.Count > 0 || !_filtro.IncluyeEventos)) partes.Add(Plural(r.Lugares.Count, "lugar", "lugares"));
+            return string.Join(" y ", partes);
+        }
+    }
+
+    private string TextoCuando => _filtro.Cuando switch
+    {
+        FiltroCuando.Hoy => "Hoy",
+        FiltroCuando.Manana => "Mañana",
+        FiltroCuando.ProximaSemana => "Próxima semana",
+        _ => "",
+    };
+
+    protected override void OnInitialized() => Sesion.Cambio += AlCambiarSesion;
+
+    /// <summary>Cada cambio de la dirección (otra búsqueda, Atrás) llega aquí.</summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        _filtro = FiltroBusqueda.DesdeConsulta(Q, Cat, Precio, Cuando, Fecha, Tipo);
+        string ruta = _filtro.Ruta();
+        if (ruta == _pedida) return;
+        _pedida = ruta;
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _usuarioId = Sesion.Usuario?.Id;
+        _resultados = null;
+        FiltroBusqueda pedido = _filtro;
+        try
+        {
+            var resultados = await Servicio.BuscarAsync(pedido);
+            if (pedido == _filtro) _resultados = resultados;   // mientras tanto se pidió otra búsqueda
+        }
+        catch (Exception ex)
+        {
+            Registro.LogError(ex, "No se pudo buscar {Ruta}", pedido.Ruta());
+            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
+            _resultados = new ResultadosBusqueda([], [], new HashSet<int>(), new HashSet<int>());
+        }
+    }
+
+    private void Ir(FiltroBusqueda filtro) => Acciones.Buscar(filtro);
+
+    /// <summary>Tocar el activo lo quita (vuelve a "Cualquier fecha").</summary>
+    private void AlternarCuando(FiltroCuando cuando) =>
+        Ir(_filtro.Cuando == cuando ? _filtro with { Cuando = FiltroCuando.Cualquiera, Fecha = null } : _filtro with { Cuando = cuando, Fecha = null });
+
+    private async Task ElegirFechaAsync()
+    {
+        // Un día es para eventos: los tipos de lugar se quitan (los lugares no tienen fecha).
+        if (await Modales.ElegirFechaAsync(_filtro.Fecha) is { } dia) Ir(_filtro with { Cuando = FiltroCuando.Rango, Fecha = dia, Tipos = [] });
+    }
+
+    private async Task AbrirFiltrosAsync()
+    {
+        if (await Modales.FiltrosAsync(_filtro) is { } nuevo) Ir(nuevo);
+    }
+
+    /// <summary>Con otra sesión cambian los corazones: se vuelve a pedir.</summary>
+    private void AlCambiarSesion() => InvokeAsync(async () =>
+    {
+        if (Sesion.Usuario?.Id == _usuarioId) return;
+        await CargarAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
+}

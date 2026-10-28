@@ -86,7 +86,14 @@
     }
 
     private void AlCambiar() => InvokeAsync(StateHasChanged);
-    private void AlNavegar(object? sender, LocationChangedEventArgs e) => InvokeAsync(StateHasChanged);
+    private void AlNavegar(object? sender, LocationChangedEventArgs e) => InvokeAsync(() =>
+    {
+        // En los resultados se queda lo buscado (también al volver con Atrás); fuera de ellos se limpia.
+        _busqueda = Acciones.RutaActual == Acciones.Rutas.Buscar
+            ? System.Web.HttpUtility.ParseQueryString(new Uri(e.Location).Query)["q"] ?? ""
+            : "";
+        StateHasChanged();
+    });
 
     public void Dispose()
     {
