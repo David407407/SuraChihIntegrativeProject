@@ -111,6 +111,15 @@ namespace Interfaz.Estado
         /// <summary>"Modal / Redirigiendo": la página oficial de boletos se está abriendo en el navegador.</summary>
         public void Redirigiendo() => _ = Abrir<ModalRedirigiendo>();
 
+        /// <summary>"Modal / Escribir reseña" de un evento (ya terminado) o de un lugar. Si ya tiene la suya, la edita.</summary>
+        /// <returns>true si se publicó o editó.</returns>
+        public async Task<bool> EscribirResenaAsync(TipoResena tipo, int objetivoId, string titulo) =>
+            await Abrir<ModalEscribirResena>(new Dictionary<string, object?> { ["Tipo"] = tipo, ["ObjetivoId"] = objetivoId, ["Titulo"] = titulo }) as bool? ?? false;
+
+        /// <summary>"Modal / Compartir": el enlace del evento o lugar con "Copiar".</summary>
+        public void Compartir(string titulo, string url) =>
+            _ = Abrir<ModalCompartir>(new Dictionary<string, object?> { ["Titulo"] = titulo, ["Url"] = url });
+
         /// <summary>"Modal / Eliminar cuenta".</summary>
         /// <returns>true si la cuenta quedó desactivada; false si se cerró o canceló.</returns>
         public async Task<bool> ConfirmarEliminarCuentaAsync() =>

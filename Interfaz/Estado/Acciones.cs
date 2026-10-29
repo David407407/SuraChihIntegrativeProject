@@ -1,3 +1,4 @@
+using BackendLogica.Modelos;
 using Interfaz.Servicios;
 using Microsoft.AspNetCore.Components;
 
@@ -22,6 +23,8 @@ namespace Interfaz.Estado
             public const string Favoritos = "favoritos";
             /// <summary>"Mis planes" (WBS 4.4).</summary>
             public const string MisPlanes = "mis-planes";
+            /// <summary>Pantalla "Reseñas" de un evento o lugar.</summary>
+            public static string Resenas(TipoResena tipo, int id) => $"resenas/{(tipo == TipoResena.Evento ? "evento" : "lugar")}/{id}";
             public const string Moderacion = "moderacion";
             /// <summary>"Resultados de búsqueda"; los filtros van en la consulta (ver <see cref="FiltroBusqueda.Ruta"/>).</summary>
             public const string Buscar = "buscar";
@@ -122,6 +125,32 @@ namespace Interfaz.Estado
         // ---------------------------------------------------------------- Detalles (se abren encima de cualquier pantalla)
 
         public void VerEvento(int id) => hojas.AbrirEvento(id);
+
+        /// <summary>"Ver reseñas (N)" / "Ver todas las reseñas": pantalla Reseñas (la hoja de detalle se cierra sola).</summary>
+        public void VerResenas(TipoResena tipo, int id) => IrA(Rutas.Resenas(tipo, id));
+
+        /// <summary>
+        /// "Escribir reseña": sin sesión pide iniciarla; con sesión abre la modal.
+        /// </summary>
+        /// <returns>true si se publicó (o editó) la reseña.</returns>
+        public async Task<bool> EscribirResenaAsync(TipoResena tipo, int id, string titulo)
+        {
+            if (!sesion.Iniciada)
+            {
+                modales.RequiereSesion("Inicia sesión para escribir reseñas.");
+                return false;
+            }
+            bool publicada = await modales.EscribirResenaAsync(tipo, id, titulo);
+            if (publicada) avisos.Mostrar("¡Gracias! Publicamos tu reseña");
+            return publicada;
+        }
+
+        /// <summary>Compartir de la portada del detalle: el enlace del evento (/e/N) o lugar (/l/N).</summary>
+        public void Compartir(TipoResena tipo, int id, string titulo) =>
+            modales.Compartir(titulo, $"{SitioPublico}/{(tipo == TipoResena.Evento ? "e" : "l")}/{id}");
+
+        /// <summary>Dirección pública de SuraChih que se comparte (la del diseño: "surachih.com/e/evento").</summary>
+        public const string SitioPublico = "https://surachih.com";
         public void VerLugar(int id) => hojas.AbrirLugar(id);
 
         /// <summary>"Voy a ir" de las tarjetas: abre el detalle con "¿Vas a ir?" encima (o pide iniciar sesión).</summary>

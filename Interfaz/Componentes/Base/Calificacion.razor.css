@@ -1,0 +1,18 @@
+/* Figma: estrellas de 40px con 4px entre ellas */
+.calificacion { display: flex; gap: 4px; }
+.calificacion__estrella {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio-s);
+  background: none;
+  cursor: pointer;
+  transition: transform var(--duracion-rapida);
+}
+.calificacion__estrella:hover { transform: scale(1.1); }
+.calificacion__estrella:active { transform: scale(0.94); }
+.calificacion__estrella:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 1px; }
+.calificacion__error { color: var(--color-error); margin-top: -8px; }

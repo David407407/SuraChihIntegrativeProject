@@ -23,6 +23,7 @@ Paginas/                     una página por pantalla, con su @page
   Landing.razor  /           Home.razor  /home        MapaPagina.razor  /mapa
   Perfil.razor   /perfil     Favoritos.razor  /favoritos                 Catalogo.razor  /componentes
   MisPlanes.razor  /mis-planes
+  Resenas.razor  /resenas/evento/{id}  y  /resenas/lugar/{id}
   Moderacion.razor  /moderacion              RevisarEvento.razor  /moderacion/evento/{id}
   PublicarEvento.razor  /organizador/evento/nuevo  y  /organizador/evento/{id}/editar
   Buscar.razor  /buscar?q=...  (resultados de búsqueda, filtros y calendario)
@@ -323,3 +324,17 @@ La misma página edita un evento propio: `Acciones.EditarEvento(id)`. Los datos 
 - **Mis planes** (`/mis-planes`, navbar y menú de cuenta): pestañas Próximos / Pasados / Cancelados con
   `Servicios/ServicioPlanes.cs` (→ `Inscripciones.ListarPlanesAsync`). Próximos permite cancelar la inscripción;
   Pasados muestra "Asististe" + "Escribir reseña"; Cancelados distingue "Cancelado por el organizador".
+
+## Detalle de lugar, compartir y reseñas
+
+- **Detalle de lugar** (`Componentes/Detalle/DetalleLugar.razor`): la misma hoja que el evento y el mismo `<Mapa>`.
+  El horario sale de `place_hours` (si `closes_at < opens_at` cierra después de medianoche; lo calcula
+  `EstadoHorario.Calcular`) y la calificación de `v_place_rating`.
+- **Compartir** (botón de la portada, evento o lugar): `ModalCompartir` con el enlace `https://surachih.com/e/N`
+  o `/l/N` (`Acciones.SitioPublico`) y "Copiar" (portapapeles, `copiarTexto` en js/interop.js).
+- **Escribir reseña**: `ModalEscribirResena` con el componente `<Calificacion>` (5 estrellas). Los eventos solo
+  se reseñan cuando ya terminaron; si el usuario ya tiene su reseña, la modal la edita. Los errores de los
+  triggers (lo propio, repetida...) salen tal cual.
+- **Reseñas** (`/resenas/{evento|lugar}/{id}`): resumen con promedio, barras por estrellas y la lista
+  (`Servicios/ServicioResenas.cs`). "Volver" regresa a la pantalla de antes con la hoja abierta.
+- `<Estrellas Valor="4.6" Tamano="14" />` pinta estrellas de solo lectura (12, 14 o 20px).

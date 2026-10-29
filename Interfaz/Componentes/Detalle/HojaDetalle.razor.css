@@ -185,6 +185,20 @@
 }
 .hoja__caja ::deep .opinion__cabeza { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .hoja__caja ::deep .opinion__estrellas { display: inline-flex; gap: 2px; }
+/* "Ver las N reseñas" debajo de las opiniones del lugar */
+.hoja__caja ::deep .hoja__ver-resenas {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-tinta);
+  cursor: pointer;
+}
+.hoja__caja ::deep .hoja__ver-resenas:hover { color: var(--color-cielo-texto); }
+.hoja__caja ::deep .hoja__ver-resenas:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; border-radius: 4px; }
 
 /* ---- Te podría interesar / También te puede gustar ---- */
 .hoja__caja ::deep .hoja__recomendados {

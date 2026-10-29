@@ -22,7 +22,7 @@
 @inject Sesion Sesion
 
 <PortadaHoja Tipo="TipoFavorito.Evento" Id="E.Id" Titulo="@E.Titulo" ImagenUrl="@E.ImagenUrl" Favorito="Datos.Favorito"
-             AlCompartir='() => Acciones.Proximamente("Compartir eventos")' />
+             AlCompartir="() => Acciones.Compartir(TipoResena.Evento, E.Id, E.Titulo)" />
 
 <div class="hoja__cuerpo">
     <div class="hoja__info">
@@ -77,8 +77,8 @@
                 @Comprar
                 break;
             case EstadoBoleto.Finalizado:
-                <Boton Texto="Escribir reseña" Icono="estrella-18" OnClick='() => Acciones.RequiereSesion("Escribir reseñas")' />
-                <Boton Texto="@($"Ver reseñas ({Datos.NumResenas ?? 0})")" Variante="secundario" OnClick='() => Acciones.Proximamente("Las reseñas")' />
+                <Boton Texto="Escribir reseña" Icono="estrella-18" OnClick="EscribirResenaAsync" />
+                <Boton Texto="@($"Ver reseñas ({Datos.NumResenas ?? 0})")" Variante="secundario" OnClick="() => Acciones.VerResenas(TipoResena.Evento, E.Id)" />
                 break;
             case EstadoBoleto.Cancelado when !string.IsNullOrEmpty(E.MotivoCancelacion):
                 <div class="boleto__motivo t-small">
@@ -167,6 +167,13 @@
     private async Task CancelarInscripcionAsync()
     {
         if (!await Modales.ConfirmarCancelacionAsync(E)) CambiarInscripcion(false, "Cancelaste tu inscripción");
+    }
+
+    /// <summary>"Escribir reseña" (evento terminado): al publicarla se va a la pantalla Reseñas, donde ya aparece.</summary>
+    private async Task EscribirResenaAsync()
+    {
+        if (await Acciones.EscribirResenaAsync(TipoResena.Evento, E.Id, E.Titulo) && _visible)
+            Acciones.VerResenas(TipoResena.Evento, E.Id);
     }
 
     private void CambiarInscripcion(bool inscrito, string aviso)

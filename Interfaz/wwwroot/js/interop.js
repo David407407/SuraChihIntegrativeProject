@@ -184,3 +184,42 @@ export function mapaMostrar(mapa, puntos, ajustar) {
 export function mapaSeleccionar(mapa, punto, mover) {
   mapa.seleccionar(punto, { mover });
 }
+
+// ---------------------------------------------------------------------
+// Compartir (ModalCompartir)
+// ---------------------------------------------------------------------
+
+/** Copia el enlace al portapapeles. Si el navegador no lo permite, prueba con execCommand. */
+export async function copiarTexto(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+    return true;
+  } catch {
+    const caja = document.createElement('textarea');
+    caja.value = texto;
+    caja.setAttribute('readonly', '');
+    caja.style.position = 'fixed';
+    caja.style.opacity = '0';
+    document.body.appendChild(caja);
+    caja.select();
+    const copiado = document.execCommand('copy');
+    caja.remove();
+    return copiado;
+  }
+}
+
+/** Selecciona todo el texto de una caja (el enlace de Compartir). */
+export function seleccionarTexto(caja) {
+  caja?.select();
+}
+
+// ---------------------------------------------------------------------
+// Navegación
+// ---------------------------------------------------------------------
+
+/** Regresa a la página anterior ("Volver al evento" de Reseñas). false si no hay historial. */
+export function atras() {
+  if (history.length <= 1) return false;
+  history.back();
+  return true;
+}

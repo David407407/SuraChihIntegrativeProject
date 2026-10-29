@@ -1,0 +1,49 @@
+@*
+  "Modal / Compartir" de Figma: el enlace del evento o lugar en una caja gris y "Copiar".
+  Lo abre el botón Compartir de la portada del detalle (PortadaHoja) con Modales.Compartir(...).
+  Al copiar, el botón cambia a "Copiado" un momento.
+*@
+@inject Modales Modales
+@inject InteropJs Js
+@inject Avisos Avisos
+
+<header class="compartir__encabezado">
+    <h2 class="modal__titulo t-h3" id="modal-titulo">Compartir</h2>
+</header>
+<p class="solo-lectores">Enlace para compartir @Titulo</p>
+<div class="compartir__enlace">
+    <input class="compartir__caja t-small" readonly value="@Visible" aria-label="Enlace" @onfocus="SeleccionarAsync" @ref="_caja" />
+    <Boton Texto="@(_copiado ? "Copiado" : "Copiar")" Variante="oscuro" Tamano="s" Icono="copiar-blanco" OnClick="CopiarAsync" />
+</div>
+
+@code {
+    /// <summary>Nombre del evento o lugar (para lectores de pantalla).</summary>
+    [Parameter] public string Titulo { get; set; } = "";
+    /// <summary>Enlace completo que se copia ("https://surachih.com/e/12").</summary>
+    [Parameter, EditorRequired] public string Url { get; set; } = "";
+
+    private ElementReference _caja;
+    private bool _copiado;
+
+    /// <summary>Como en Figma, sin "https://".</summary>
+    private string Visible => Url.Replace("https://", "").Replace("http://", "");
+
+    private ValueTask SeleccionarAsync() => Js.LlamarAsync("seleccionarTexto", _caja);
+
+    private async Task CopiarAsync()
+    {
+        if (await Js.LlamarAsync<bool>("copiarTexto", Url))
+        {
+            _copiado = true;
+            Avisos.Mostrar("Enlace copiado");
+            StateHasChanged();
+            await Task.Delay(1800);
+            _copiado = false;
+        }
+        else
+        {
+            await SeleccionarAsync();
+            Avisos.Mostrar("No se pudo copiar: selecciona el enlace y cópialo con Ctrl+C.", TipoAviso.Error);
+        }
+    }
+}
