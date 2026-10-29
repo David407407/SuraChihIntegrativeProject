@@ -1,0 +1,11 @@
+@*
+  "Modal / Redirigiendo" de Figma (WBS 4.4): sale después de "Continuar al sitio oficial" de la modal
+  Boletos, mientras la página oficial se abre en el navegador. "Entendido" (o la X) la cierra.
+*@
+@inject Modales Modales
+
+<EncabezadoModal Titulo="Te estamos llevando al sitio oficial" Icono="boleto-cielo-24"
+                 Texto="Si no se abre en unos segundos, vuelve a intentarlo desde el evento." />
+<div class="modal__botones">
+    <Boton Texto="Entendido" Variante="oscuro" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+</div>

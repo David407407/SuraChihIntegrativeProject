@@ -1,0 +1,234 @@
+@*
+  "Mis planes" de Figma (WBS 4.4): frames "Mis planes (próximos)", "(pasados)" y "(cancelados)".
+  - Pestañas Próximos / Pasados / Cancelados (indicador amarillo de 3px) → ServicioPlanes.ListarAsync.
+  - Cada plan: foto de 104px, fecha, título y lugar; toda la fila abre el detalle del evento.
+    Próximos: "Vas a ir" + "Cancelar inscripción" (modal "¿Cancelar tu inscripción?").
+    Pasados: "Asististe" + "Escribir reseña". Cancelados: "Cancelado por el organizador" o "Cancelaste",
+    con una X para quitarlo de la lista (borra la inscripción cancelada).
+  - Sin planes en la pestaña sale la caja de ayuda ("Cuando toques “Voy a ir” en un evento, aparecerá aquí.").
+  - Al cerrar el detalle se vuelve a pedir la pestaña (ahí también se puede inscribir o cancelar).
+*@
+@page "/mis-planes"
+@implements IDisposable
+@inject Sesion Sesion
+@inject ServicioPlanes Servicio
+@inject Modales Modales
+@inject Hojas Hojas
+@inject Avisos Avisos
+@inject Acciones Acciones
+@inject ILogger<MisPlanes> Registro
+
+<PageTitle>SuraChih · Mis planes</PageTitle>
+
+<main class="pantalla-planes contenedor">
+    <h1 class="t-h1">Mis planes</h1>
+
+    <div class="pestanas" role="tablist" aria-label="Mis planes">
+        @foreach (var (pestana, texto) in Pestanas)
+        {
+            bool activa = pestana == _pestana;
+            <button type="button" role="tab" id="@($"pestana-{pestana}")" aria-selected="@(activa ? "true" : "false")"
+                    aria-controls="lista-planes" tabindex="@(activa ? 0 : -1)"
+                    class="pestana t-body-fuerte @(activa ? "pestana--activa" : "")" @onclick="() => CambiarAsync(pestana)">
+                @texto
+            </button>
+        }
+    </div>
+
+    <div class="planes" id="lista-planes" role="tabpanel" aria-labelledby="@($"pestana-{_pestana}")" aria-live="polite">
+        @if (!Sesion.Iniciada)
+        {
+            @Ayuda("Inicia sesión para ver los eventos a los que vas a ir.")
+        }
+        else if (_planes == null)
+        {
+            @for (int i = 0; i < 3; i++)
+            {
+                <div class="esqueleto planes__esqueleto" aria-hidden="true"></div>
+            }
+        }
+        else if (_planes.Count == 0)
+        {
+            @Ayuda(Vacios[_pestana])
+        }
+        else
+        {
+            @foreach (var plan in _planes)
+            {
+                var e = plan.Evento;
+                <article @key="e.Id" class="plan">
+                    <div class="plan__imagen"><Imagen Src="@e.ImagenUrl" Alt="" Ancho="104" Alto="104" /></div>
+                    <div class="plan__info">
+                        <p class="t-small-fuerte plan__fecha">@Formato.FechaEvento(e)</p>
+                        <h2 class="t-h3 plan__titulo">
+                            <button type="button" class="plan__enlace" @onclick="() => Acciones.VerEvento(e.Id)">@e.Titulo</button>
+                        </h2>
+                        @if (Formato.UbicacionEvento(e) is { Length: > 0 } lugar)
+                        {
+                            <p class="t-small texto-2 plan__linea">@lugar</p>
+                        }
+                    </div>
+                    <div class="plan__acciones">
+                        @switch (_pestana)
+                        {
+                            case PestanaPlanes.Proximos:
+                                @Estado("Vas a ir", "check-exito", "plan__estado--exito")
+                                <Boton Texto="Cancelar inscripción" Variante="secundario" Tamano="s" OnClick="() => CancelarAsync(plan)" />
+                                break;
+                            case PestanaPlanes.Pasados:
+                                @Estado("Asististe", "check-circulo-gris-14", null)
+                                <Boton Texto="Escribir reseña" Variante="secundario" Tamano="s" Icono="estrella-tinta-16"
+                                       OnClick='() => Acciones.RequiereSesion("Escribir reseñas")' />
+                                break;
+                            default:
+                                @if (e.Estado == EstadoEvento.Cancelado)
+                                {
+                                    @Estado("Cancelado por el organizador", "prohibido-error-14", "plan__estado--error")
+                                }
+                                else
+                                {
+                                    @Estado("Cancelaste tu inscripción", null, null)
+                                }
+                                <button type="button" class="plan__quitar" aria-label="@($"Quitar {e.Titulo} de Mis planes")" title="Quitar de Mis planes"
+                                        disabled="@(_quitando == e.Id)" @onclick="() => QuitarAsync(plan)">
+                                    <Icono Nombre="cerrar" Caja="14" />
+                                </button>
+                                break;
+                        }
+                    </div>
+                </article>
+            }
+        }
+    </div>
+</main>
+
+<VolverArriba />
+
+@code {
+    private static readonly (PestanaPlanes, string)[] Pestanas =
+        [(PestanaPlanes.Proximos, "Próximos"), (PestanaPlanes.Pasados, "Pasados"), (PestanaPlanes.Cancelados, "Cancelados")];
+
+    private static readonly Dictionary<PestanaPlanes, string> Vacios = new()
+    {
+        [PestanaPlanes.Proximos] = "Cuando toques “Voy a ir” en un evento, aparecerá aquí.",
+        [PestanaPlanes.Pasados] = "Aquí verás los eventos a los que fuiste. Después podrás dejarles una reseña.",
+        [PestanaPlanes.Cancelados] = "Aquí aparecen las inscripciones que cancelaste y los eventos que cancelaron sus organizadores.",
+    };
+
+    private PestanaPlanes _pestana = PestanaPlanes.Proximos;
+    /// <summary>Planes de la pestaña, o null mientras carga.</summary>
+    private List<PlanUsuario>? _planes;
+    private int? _usuarioId;
+    /// <summary>Evento cuyo plan cancelado se está quitando (su X se deshabilita mientras tanto).</summary>
+    private int? _quitando;
+    /// <summary>Para ignorar respuestas viejas si se cambia de pestaña rápido.</summary>
+    private int _consulta;
+
+    /// <summary>"Ayuda" de Figma: caja gris con el icono de información.</summary>
+    private static RenderFragment Ayuda(string texto) =>
+        @<p class="planes__ayuda t-small texto-2"><Icono Nombre="info-gris-16" Caja="16" /><span>@texto</span></p>;
+
+    /// <summary>"Estado" de la fila: píldora de 14px de icono ("Vas a ir", "Asististe", "Cancelado...").</summary>
+    private static RenderFragment Estado(string texto, string? icono, string? clase) =>
+        @<span class="plan__estado t-small-fuerte @clase">
+            @if (icono != null)
+            {
+                <Icono Nombre="@icono" Caja="14" />
+            }
+            <span>@texto</span>
+        </span>;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Sesion.Cambio += AlCambiarSesion;
+        Hojas.Cambio += AlCambiarHoja;
+        if (Sesion.Iniciada) await CargarAsync();
+        else Modales.RequiereSesion("Inicia sesión para ver los eventos a los que vas a ir.");
+    }
+
+    private async Task CambiarAsync(PestanaPlanes pestana)
+    {
+        if (pestana == _pestana) return;
+        _pestana = pestana;
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _usuarioId = Sesion.Usuario?.Id;
+        _planes = null;
+        int consulta = ++_consulta;
+        try
+        {
+            var planes = await Servicio.ListarAsync(_pestana);
+            if (consulta == _consulta) _planes = planes;
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            if (consulta != _consulta) return;
+            Registro.LogError(ex, "No se pudieron cargar los planes ({Pestana})", _pestana);
+            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
+            _planes = [];
+        }
+    }
+
+    /// <summary>"Cancelar inscripción": confirma en su modal y la fila sale de Próximos.</summary>
+    private async Task CancelarAsync(PlanUsuario plan)
+    {
+        if (await Modales.ConfirmarCancelacionAsync(plan.Evento)) return;   // "Mantener mi lugar" o cerró
+        _planes?.Remove(plan);
+        Avisos.Mostrar("Cancelaste tu inscripción");
+    }
+
+    /// <summary>La X de Cancelados: borra la inscripción y la fila sale de la lista.</summary>
+    private async Task QuitarAsync(PlanUsuario plan)
+    {
+        _quitando = plan.Evento.Id;
+        try
+        {
+            await Servicio.EliminarCanceladoAsync(plan.Evento.Id);
+            _planes?.Remove(plan);
+            Avisos.Mostrar("Quitaste el plan");
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            if (ex is not BackendLogica.Datos.SuraChihException) Registro.LogError(ex, "No se pudo quitar el plan {Id}", plan.Evento.Id);
+            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
+        }
+        finally
+        {
+            _quitando = null;
+        }
+    }
+
+    private void AlCambiarSesion() => InvokeAsync(async () =>
+    {
+        int? id = Sesion.Usuario?.Id;
+        if (id == _usuarioId) return;
+        if (_usuarioId != null && id == null) { Acciones.IrA(Acciones.Rutas.Home); return; }   // cerró sesión aquí
+        await CargarAsync();
+        StateHasChanged();
+    });
+
+    /// <summary>Se cerró el detalle de un evento: pudo inscribirse o cancelar ahí.</summary>
+    private void AlCambiarHoja() => InvokeAsync(async () =>
+    {
+        if (Hojas.Tipo != null || !Sesion.Iniciada) return;
+        await CargarAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        Sesion.Cambio -= AlCambiarSesion;
+        Hojas.Cambio -= AlCambiarHoja;
+    }
+}

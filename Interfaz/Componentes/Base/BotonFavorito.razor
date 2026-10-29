@@ -6,8 +6,11 @@
 
   Al hacer clic cambia de inmediato (respuesta optimista) y lo guarda ServicioFavoritos. Si falla
   regresa al estado anterior; sin sesión abre "Inicia sesión para continuar".
+  Todos los corazones del mismo evento o lugar se mantienen iguales: escuchan ServicioFavoritos.Guardado
+  y, al pintarse con datos viejos de su pantalla, usan el último valor guardado (EstadoGuardado).
   El botón es un FluentToggleButton (su forma y colores están en css/controles.css).
 *@
+@implements IDisposable
 @inject ServicioFavoritos Favoritos
 @inject Avisos Avisos
 @inject Modales Modales
@@ -40,12 +43,29 @@
     private bool? _activoRecibido;
     private int _latidos;
 
+    private (TipoFavorito, int)? _clave;
+
+    protected override void OnInitialized() => Favoritos.Guardado += AlGuardar;
+
     protected override void OnParametersSet()
     {
-        // Solo cuando el padre manda otro valor (p. ej. el Home recargado tras iniciar sesión), no en cada pintado.
-        if (_activoRecibido != Activo) _activo = Activo;
+        // Solo cuando el padre manda otro valor (p. ej. el Home recargado tras iniciar sesión) o es otro
+        // evento, no en cada pintado. Si este corazón ya se cambió en otra tarjeta, gana ese valor.
+        if (_activoRecibido != Activo || _clave != (Tipo, Id))
+            _activo = Favoritos.EstadoGuardado(Tipo, Id) ?? Activo;
         _activoRecibido = Activo;
+        _clave = (Tipo, Id);
     }
+
+    /// <summary>Se guardó un corazón (aquí o en otra tarjeta): si es el mismo evento o lugar, se iguala.</summary>
+    private void AlGuardar(TipoFavorito tipo, int id, bool activo)
+    {
+        if (tipo != Tipo || id != Id || activo == _activo) return;
+        _activo = activo;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => Favoritos.Guardado -= AlGuardar;
 
     private async Task AlternarAsync()
     {

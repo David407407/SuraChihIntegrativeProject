@@ -4,12 +4,16 @@ using BackendLogica.Configuracion;
 using BackendLogica.Contratos;
 using BackendLogica.Datos;
 using BackendLogica.Falso;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace Interfaz.Servicios
 {
     /// <summary>
-    /// Sube las fotos de "Publicar evento" a Cloudinary y devuelve su <c>secure_url</c>, que es lo que
-    /// guarda la BD (<c>event.main_image_url</c> y <c>event_image.url</c>).
+    /// Fotos de los formularios de publicación ("Publicar evento" y, cuando exista, "Registrar lugar").
+    /// Al elegirlas solo se leen en memoria (<see cref="PrepararAsync"/>); se suben a Cloudinary hasta que
+    /// el organizador guarda (<see cref="SubirPendientesAsync"/>), y su <c>secure_url</c> es lo que guarda la BD
+    /// (<c>event.main_image_url</c> y <c>event_image.url</c>). Así no quedan fotos sueltas de eventos que
+    /// nunca se publicaron.
     /// </summary>
     /// <remarks>
     /// Usa un <b>upload preset unsigned</b>: en <c>dbsettings.local.json</c> van las llaves
@@ -45,8 +49,52 @@ namespace Interfaz.Servicios
                 throw new DatosInvalidosException("Cada foto puede pesar hasta 5 MB.");
         }
 
+        /// <summary>Tamaño de la miniatura que se muestra mientras la foto no se sube (la portada mide 320×180).</summary>
+        private const int AnchoVista = 640, AltoVista = 360;
+
+        /// <summary>
+        /// Lee la foto elegida (o arrastrada) sin subirla: guarda el archivo en memoria y arma una miniatura
+        /// (la reduce el navegador) para verla en el formulario.
+        /// </summary>
+        public static async Task<FotoFormulario> PrepararAsync(IBrowserFile archivo, CancellationToken ct = default)
+        {
+            Validar(archivo.ContentType, archivo.Size);
+
+            using var original = new MemoryStream();
+            await using (Stream entrada = archivo.OpenReadStream(MaximoBytes, ct))
+                await entrada.CopyToAsync(original, ct);
+
+            IBrowserFile chica = await archivo.RequestImageFileAsync("image/jpeg", AnchoVista, AltoVista);
+            using var vista = new MemoryStream();
+            await using (Stream entrada = chica.OpenReadStream(MaximoBytes, ct))
+                await entrada.CopyToAsync(vista, ct);
+
+            return FotoFormulario.Nueva(original.ToArray(), archivo.Name, archivo.ContentType,
+                $"data:image/jpeg;base64,{Convert.ToBase64String(vista.ToArray())}");
+        }
+
+        /// <summary>
+        /// Sube a Cloudinary, en orden, las fotos que todavía no tienen URL. Se llama al guardar o publicar.
+        /// Si una falla, las que ya subieron conservan su URL y el error dice cuál fue.
+        /// </summary>
+        public async Task SubirPendientesAsync(IEnumerable<FotoFormulario> fotos, CancellationToken ct = default)
+        {
+            foreach (FotoFormulario foto in fotos.Where(f => f.Pendiente).ToList())
+            {
+                try
+                {
+                    using var contenido = new MemoryStream(foto.Contenido!, writable: false);
+                    foto.MarcarSubida(await SubirAsync(contenido, foto.Nombre!, foto.Tipo!, ct));
+                }
+                catch (SuraChihException ex)
+                {
+                    throw new ReglaNegocioException($"No se pudo subir la foto {foto.Nombre}. {ex.Message}", ex);
+                }
+            }
+        }
+
         /// <returns>La <c>secure_url</c> (https) de la foto subida.</returns>
-        public async Task<string> SubirAsync(Stream contenido, string nombre, string tipo, CancellationToken ct = default)
+        private async Task<string> SubirAsync(Stream contenido, string nombre, string tipo, CancellationToken ct = default)
         {
             if (!Configurado)
             {
@@ -86,6 +134,38 @@ namespace Interfaz.Servicios
                     ? segura
                     : throw new ReglaNegocioException("Cloudinary no devolvió la dirección de la foto.");
             }
+        }
+    }
+
+    /// <summary>
+    /// Una foto del formulario: ya guardada (<see cref="Url"/> de Cloudinary) o elegida pero aún sin subir
+    /// (<see cref="Pendiente"/>, con el archivo en memoria y una miniatura en <see cref="Vista"/>).
+    /// </summary>
+    public sealed class FotoFormulario
+    {
+        private FotoFormulario() { }
+
+        /// <summary><c>secure_url</c> de Cloudinary; null mientras no se sube.</summary>
+        public string? Url { get; private set; }
+        /// <summary>Lo que se pinta en el formulario: la URL o la miniatura (data:image/jpeg).</summary>
+        public string Vista { get; private set; } = "";
+        public byte[]? Contenido { get; private set; }
+        public string? Nombre { get; private init; }
+        public string? Tipo { get; private init; }
+
+        public bool Pendiente => Url == null;
+
+        /// <summary>Foto que ya estaba guardada en la BD (al editar).</summary>
+        public static FotoFormulario Existente(string url) => new() { Url = url, Vista = url };
+
+        public static FotoFormulario Nueva(byte[] contenido, string nombre, string tipo, string vista) =>
+            new() { Contenido = contenido, Nombre = nombre, Tipo = tipo, Vista = vista };
+
+        internal void MarcarSubida(string url)
+        {
+            Url = url;
+            Vista = url;
+            Contenido = null;   // ya no hace falta tenerla en memoria
         }
     }
 }

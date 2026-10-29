@@ -104,6 +104,13 @@ namespace Interfaz.Estado
         public async Task<bool> ConfirmarCancelacionAsync(EventoTarjeta evento) =>
             await Abrir<ModalInscripcion>(new Dictionary<string, object?> { ["Evento"] = evento, ["Cancelar"] = true }) as bool? ?? true;
 
+        /// <summary>"Modal / Boletos": la compra es en la página oficial (event.ticket_url); sin selector de cantidad.</summary>
+        public void Boletos(EventoTarjeta evento) =>
+            _ = Abrir<ModalBoletos>(new Dictionary<string, object?> { ["Evento"] = evento });
+
+        /// <summary>"Modal / Redirigiendo": la página oficial de boletos se está abriendo en el navegador.</summary>
+        public void Redirigiendo() => _ = Abrir<ModalRedirigiendo>();
+
         /// <summary>"Modal / Eliminar cuenta".</summary>
         /// <returns>true si la cuenta quedó desactivada; false si se cerró o canceló.</returns>
         public async Task<bool> ConfirmarEliminarCuentaAsync() =>

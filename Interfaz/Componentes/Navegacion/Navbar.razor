@@ -27,8 +27,7 @@
                 @Enlace(Acciones.Rutas.Mapa, "mapa", "Mapa", Acciones.Mapa)
                 @if (Usuario is { } usuario)
                 {
-                    <FluentButton Class="navbar__enlace t-small-fuerte" Appearance="ButtonAppearance.Transparent" Shape="ButtonShape.Circular"
-                                  OnClick="Acciones.MisPlanes"><span class="navbar__icono" slot="start"><Icono Nombre="mis-planes" /></span>Mis planes</FluentButton>
+                    @Enlace(Acciones.Rutas.MisPlanes, "mis-planes", "Mis planes", Acciones.MisPlanes)
                     <FluentButton Class="navbar__circulo navbar__favoritos" Shape="ButtonShape.Circular" IconOnly aria-label="Mis favoritos"
                                   aria-current="@(EsActual(Acciones.Rutas.Favoritos) ? "page" : null)" OnClick="Acciones.Favoritos">
                         <Icono Nombre="corazon-vacio" />

@@ -1,0 +1,130 @@
+/* Contenido: 48px arriba, 80px abajo y 24px entre bloques, como en Figma */
+.pantalla-planes {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-block: 48px 80px;
+}
+.pantalla-planes h1 { color: var(--color-tinta); }
+
+/* ---- Pestañas: 32px entre ellas, indicador amarillo de 3px y línea abajo ---- */
+.pestanas {
+  display: flex;
+  gap: 32px;
+  border-bottom: 1px solid var(--color-linea);
+  overflow-x: auto;
+}
+.pestana {
+  position: relative;
+  flex: none;
+  padding: 0 0 13px;   /* 10px de separación + 3px del indicador */
+  border: 0;
+  background: none;
+  color: var(--color-texto-2);
+  cursor: pointer;
+  transition: color var(--duracion-rapida);
+}
+.pestana::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 3px;
+  background: transparent;
+  transition: background var(--duracion-rapida);
+}
+.pestana:hover { color: var(--color-tinta); }
+.pestana--activa { color: var(--color-tinta); }
+.pestana--activa::after { background: var(--color-sol); }
+.pestana:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; border-radius: 4px; }
+
+/* ---- Lista ---- */
+.planes { display: flex; flex-direction: column; gap: 12px; }
+.planes__esqueleto { height: 138px; border-radius: var(--radio-m); }
+
+.planes__ayuda {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border-radius: var(--radio-m);
+  background: var(--color-fondo);
+}
+.planes__ayuda ::deep .icono { flex-shrink: 0; }
+
+/* "Plan": tarjeta blanca, borde, radio 16, 16 / 20 de relleno y 20px entre partes */
+.plan {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 20px 16px 16px;
+  border: 1px solid var(--color-linea);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  transition: box-shadow var(--duracion-rapida), border-color var(--duracion-rapida);
+}
+.plan:hover { border-color: #c9d3e3; box-shadow: var(--sombra-suave); }
+.plan:has(.plan__enlace:focus-visible) { outline: 2px solid var(--color-cielo); outline-offset: 2px; }
+
+.plan__imagen { flex: none; width: 104px; height: 104px; overflow: hidden; border-radius: var(--radio-s); }
+.plan__info { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+.plan__fecha { color: var(--color-cielo-texto); }
+.plan__titulo { color: var(--color-tinta); }
+.plan:hover .plan__titulo { color: var(--color-cielo-texto); }
+.plan__linea,
+.plan__enlace { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.plan__linea { display: block; }
+
+/* El título es el botón; su ::after cubre la fila para que toda abra el detalle */
+.plan__enlace {
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.plan__enlace:focus-visible { outline: none; }
+.plan__enlace::after { content: ""; position: absolute; inset: 0; z-index: 1; }
+
+/* Estado y botón quedan encima del enlace de la fila */
+.plan__acciones { position: relative; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; }
+
+.plan__estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radio-pildora);
+  background: var(--color-fondo);
+  color: var(--color-texto-2);
+  white-space: nowrap;
+}
+.plan__estado--exito { background: var(--color-exito-suave); color: var(--color-exito); }
+.plan__estado--error { background: var(--color-error-suave); color: var(--color-error); }
+
+/* X de los cancelados: círculo gris de 36px, como el cerrar de las modales */
+.plan__quitar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio-pildora);
+  background: var(--color-fondo);
+  cursor: pointer;
+  transition: background var(--duracion-rapida), transform var(--duracion-rapida);
+}
+.plan__quitar:hover:not(:disabled) { background: var(--color-error-suave); transform: scale(1.06); }
+.plan__quitar:disabled { opacity: 0.5; cursor: progress; }
+.plan__quitar:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; }
+
+@media (max-width: 720px) {
+  .plan { flex-wrap: wrap; gap: 14px; }
+  .plan__imagen { width: 72px; height: 72px; }
+  .plan__acciones { width: 100%; justify-content: flex-start; }
+}

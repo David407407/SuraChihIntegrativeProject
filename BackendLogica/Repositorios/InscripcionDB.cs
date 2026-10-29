@@ -29,6 +29,13 @@ namespace BackendLogica.Repositorios
                 WHERE user_id = @usuarioId AND event_id = @eventoId AND status = 'active'
                 """, new { usuarioId, eventoId }, ct) > 0;
 
+        public async Task<bool> EliminarCanceladaAsync(int usuarioId, int eventoId, CancellationToken ct = default) =>
+            await EjecutarAsync("""
+                DELETE i FROM inscription i JOIN event e ON e.id = i.event_id
+                WHERE i.user_id = @usuarioId AND i.event_id = @eventoId
+                  AND (i.status = 'cancelled' OR e.status = 'cancelled')
+                """, new { usuarioId, eventoId }, ct) > 0;
+
         public async Task<bool> EstaInscritoAsync(int usuarioId, int eventoId, CancellationToken ct = default) =>
             await EscalarAsync<int>("""
                 SELECT COUNT(*) FROM inscription

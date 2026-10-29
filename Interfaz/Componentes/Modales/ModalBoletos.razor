@@ -1,0 +1,44 @@
+@*
+  "Modal / Boletos" de Figma (WBS 4.4). SuraChih no vende boletos: la compra es en la página oficial del
+  organizador (event.ticket_url). Por eso se quitó el selector de cantidad del diseño (confirmado con el
+  cliente): la fila "General" muestra el precio y "Continuar al sitio oficial" abre la página en el
+  navegador y cambia la modal a "Te estamos llevando al sitio oficial" (ModalRedirigiendo).
+  Lo abre "Comprar boletos" del detalle de evento con Modales.Boletos(evento).
+*@
+@inject Modales Modales
+
+<header class="modal__encabezado">
+    <h2 class="modal__titulo t-h2" id="modal-titulo">Boletos</h2>
+    <p class="t-body texto-2">@Evento.Titulo</p>
+</header>
+
+<div class="boletos__fila">
+    <div class="boletos__tipo">
+        <p class="t-body-fuerte">General</p>
+        <p class="t-small texto-2">Precio según el sitio oficial</p>
+    </div>
+    @if (Formato.PrecioEvento(Evento) is { Length: > 0 } precio)
+    {
+        <p class="boletos__precio t-h3">@precio</p>
+    }
+</div>
+
+<p class="boletos__nota t-small texto-2">
+    <Icono Nombre="info-gris-14" Caja="14" />
+    <span>La compra se completa en el sitio oficial del organizador. Te llevaremos ahí.</span>
+</p>
+
+<div class="modal__botones">
+    @* El enlace abre la página en el navegador del sistema; el clic, de paso, cambia la modal. *@
+    <span class="boletos__continuar" @onclick="Redirigir">
+        <Boton Texto="Continuar al sitio oficial" Icono="boleto-18" Clase="modal__ancho" Href="@Evento.BoletosUrl" Externo />
+    </span>
+    <Boton Texto="Cancelar" Variante="secundario" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+</div>
+
+@code {
+    /// <summary>Evento con <c>BoletosUrl</c> (el botón "Comprar boletos" solo sale si la tiene).</summary>
+    [Parameter, EditorRequired] public EventoTarjeta Evento { get; set; } = default!;
+
+    private void Redirigir() => Modales.Redirigiendo();
+}

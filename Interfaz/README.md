@@ -22,6 +22,7 @@ Diseno/PlantillaPrincipal    navbar arriba + ventana modal, hoja de detalle y Fl
 Paginas/                     una página por pantalla, con su @page
   Landing.razor  /           Home.razor  /home        MapaPagina.razor  /mapa
   Perfil.razor   /perfil     Favoritos.razor  /favoritos                 Catalogo.razor  /componentes
+  MisPlanes.razor  /mis-planes
   Moderacion.razor  /moderacion              RevisarEvento.razor  /moderacion/evento/{id}
   PublicarEvento.razor  /organizador/evento/nuevo  y  /organizador/evento/{id}/editar
   Buscar.razor  /buscar?q=...  (resultados de búsqueda, filtros y calendario)
@@ -311,3 +312,14 @@ La misma página edita un evento propio: `Acciones.EditarEvento(id)`. Los datos 
 - **Fotos**: se suben a Cloudinary con un *upload preset unsigned*. Pon `"CloudinaryCloudName"` y
   `"CloudinaryUploadPreset"` en tu `dbsettings.local.json`. Con datos de prueba y sin esas llaves se guarda
   una foto de ejemplo para poder probar la pantalla.
+
+## Inscripción, boletos y Mis planes (WBS 4.4)
+
+- **"Voy a ir" / "Cancelar inscripción"** en el detalle de evento abren `ModalInscripcion` (tabla `inscription`,
+  estados active / cancelled).
+- **"Comprar boletos"** abre `ModalBoletos`. SuraChih no vende boletos: el cliente confirmó que se quita el
+  selector de cantidad, así que la modal muestra el precio y "Continuar al sitio oficial" abre `event.ticket_url`
+  en el navegador y cambia a `ModalRedirigiendo` ("Te estamos llevando al sitio oficial").
+- **Mis planes** (`/mis-planes`, navbar y menú de cuenta): pestañas Próximos / Pasados / Cancelados con
+  `Servicios/ServicioPlanes.cs` (→ `Inscripciones.ListarPlanesAsync`). Próximos permite cancelar la inscripción;
+  Pasados muestra "Asististe" + "Escribir reseña"; Cancelados distingue "Cancelado por el organizador".
