@@ -28,7 +28,8 @@
     /// <summary>Como en Figma, sin "https://".</summary>
     private string Visible => Url.Replace("https://", "").Replace("http://", "");
 
-    private ValueTask SeleccionarAsync() => Js.LlamarAsync("seleccionarTexto", _caja);
+    /// <summary>Task (no ValueTask): @onfocus solo acepta métodos que devuelven Task.</summary>
+    private async Task SeleccionarAsync() => await Js.LlamarAsync("seleccionarTexto", _caja);
 
     private async Task CopiarAsync()
     {
