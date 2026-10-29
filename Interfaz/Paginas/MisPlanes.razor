@@ -78,7 +78,7 @@
                             case PestanaPlanes.Pasados:
                                 @Estado("Asististe", "check-circulo-gris-14", null)
                                 <Boton Texto="Escribir reseña" Variante="secundario" Tamano="s" Icono="estrella-tinta-16"
-                                       OnClick='() => Acciones.RequiereSesion("Escribir reseñas")' />
+                                       OnClick="async () => await Acciones.EscribirResenaAsync(TipoResena.Evento, e.Id, e.Titulo)" />
                                 break;
                             default:
                                 @if (e.Estado == EstadoEvento.Cancelado)

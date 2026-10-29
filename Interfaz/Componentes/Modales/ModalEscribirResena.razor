@@ -1,0 +1,94 @@
+@*
+  "Modal / Escribir reseña" de Figma: "Escribe una reseña", el evento o lugar, la "Calificación" de cinco
+  estrellas, "Cuéntanos cómo te fue (opcional)" y "Publicar reseña" / "Cancelar".
+  Si el usuario ya tiene su reseña, se abre con ella para editarla ("Edita tu reseña").
+  Lo abren el detalle de evento o de lugar, la pantalla "Reseñas" y Mis planes (Pasados) con
+  Modales.EscribirResenaAsync(tipo, id, titulo); devuelve true si se guardó.
+*@
+@inject ServicioResenas Resenas
+@inject Modales Modales
+@inject ILogger<ModalEscribirResena> Registro
+
+<header class="modal__encabezado">
+    <h2 class="modal__titulo t-h2" id="modal-titulo">@(_mia != null ? "Edita tu reseña" : "Escribe una reseña")</h2>
+    <p class="t-body texto-2">@Titulo</p>
+</header>
+
+@if (_cargando)
+{
+    <div class="esqueleto resena__esqueleto" aria-hidden="true"></div>
+}
+else
+{
+    <Calificacion @bind-Valor="_estrellas" Etiqueta="@($"Calificación para {Titulo}")" Error="@_errores["estrellas"]" />
+    <AreaTexto Nombre="comentario" Etiqueta="Tu reseña" EtiquetaVisible="false" Clase="resena__comentario" Filas="4"
+               Maximo="ServicioResenas.MaximoComentario" Placeholder="Cuéntanos cómo te fue (opcional)"
+               @bind-Valor="_comentario" Errores="_errores" />
+}
+<AvisoModal Errores="_errores" />
+<div class="modal__botones">
+    <Boton Texto="@(_mia != null ? "Guardar cambios" : "Publicar reseña")" Icono="estrella-tinta-18" Clase="modal__ancho"
+           Ocupado="_enviando" Deshabilitado="_cargando" OnClick="PublicarAsync" />
+    <Boton Texto="Cancelar" Variante="secundario" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TipoResena Tipo { get; set; }
+    [Parameter, EditorRequired] public int ObjetivoId { get; set; }
+    /// <summary>Nombre del evento o lugar (subtítulo).</summary>
+    [Parameter] public string Titulo { get; set; } = "";
+
+    private readonly ErroresFormulario _errores = new();
+    private Resena? _mia;
+    private int _estrellas;
+    private string? _comentario;
+    private bool _cargando = true;
+    private bool _enviando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _mia = await Resenas.ObtenerMiaAsync(Tipo, ObjetivoId);
+            _estrellas = _mia?.Calificacion ?? 0;
+            _comentario = _mia?.Comentario;
+        }
+        catch (Exception ex)
+        {
+            Registro.LogWarning(ex, "No se pudo revisar si ya hay reseña de {Tipo} {Id}", Tipo, ObjetivoId);
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private async Task PublicarAsync()
+    {
+        _errores.Limpiar();
+        if (_estrellas == 0)
+        {
+            _errores.Poner("estrellas", "Elige de 1 a 5 estrellas.", enfocar: false);
+            return;
+        }
+        _enviando = true;
+        try
+        {
+            await Resenas.GuardarAsync(Tipo, ObjetivoId, _estrellas, _comentario, _mia?.Id);
+            Modales.Cerrar(true);
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion("Inicia sesión para escribir reseñas.");
+        }
+        catch (Exception ex)
+        {
+            if (ex is not BackendLogica.Datos.SuraChihException) Registro.LogError(ex, "No se pudo guardar la reseña de {Tipo} {Id}", Tipo, ObjetivoId);
+            _errores.PonerAviso(MensajesError.Para(ex));   // texto del trigger tal cual (evento sin terminar, lo propio...)
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+}

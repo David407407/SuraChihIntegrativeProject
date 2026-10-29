@@ -1,0 +1,52 @@
+/* Figma: encabezado con el título (H3) y el cerrar; caja gris de 40px y "Copiar" oscuro */
+.compartir__encabezado { padding-right: 40px; }
+.compartir__enlace { display: flex; align-items: center; gap: 8px; }
+.compartir__caja {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--color-fondo);
+  color: var(--color-texto-2);
+  text-overflow: ellipsis;
+}
+.compartir__caja:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 1px; }
+
+/* Redes: círculos de 48px del color de cada marca con su nombre debajo */
+.compartir__redes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 12px 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.compartir__red {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-tinta);
+  text-decoration: none;
+  cursor: pointer;
+}
+.compartir__logo {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radio-pildora);
+  background: var(--marca, var(--color-fondo));
+  transition: transform var(--duracion-rapida), box-shadow var(--duracion-rapida);
+}
+.compartir__logo--mas { background: var(--color-fondo); }
+.compartir__red:hover .compartir__logo { transform: translateY(-2px); box-shadow: var(--sombra-suave); }
+.compartir__red:active .compartir__logo { transform: scale(0.95); }
+.compartir__red:focus-visible { outline: none; }
+.compartir__red:focus-visible .compartir__logo { outline: 2px solid var(--color-cielo); outline-offset: 2px; }

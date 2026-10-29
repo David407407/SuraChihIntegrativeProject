@@ -5,7 +5,7 @@
   <AreaTexto Nombre="comentario" Etiqueta="Comentario para el organizador" Placeholder="..." @bind-Valor="_comentario" Errores="_errores" />
 *@
 <div class="area @(MensajeError != null ? "area--error" : "") @Clase">
-    <label class="t-small-fuerte" for="@_id">@Etiqueta</label>
+    <label class="@(EtiquetaVisible ? "t-small-fuerte" : "solo-lectores")" for="@_id">@Etiqueta</label>
     <textarea @ref="_caja" id="@_id" name="@Nombre" class="area__caja t-body" rows="@Filas" placeholder="@Placeholder"
               maxlength="@Maximo" aria-invalid="@(MensajeError != null ? "true" : null)"
               aria-describedby="@(MensajeError != null ? $"{_id}-error" : null)"
@@ -24,6 +24,8 @@
     /// <summary>Atributo name y clave en <see cref="Errores"/>.</summary>
     [Parameter, EditorRequired] public string Nombre { get; set; } = "";
     [Parameter, EditorRequired] public string Etiqueta { get; set; } = "";
+    /// <summary>false = la etiqueta solo la leen los lectores de pantalla (p. ej. "Escribe una reseña").</summary>
+    [Parameter] public bool EtiquetaVisible { get; set; } = true;
     [Parameter] public string? Placeholder { get; set; }
     [Parameter] public string? Valor { get; set; }
     [Parameter] public EventCallback<string> ValorChanged { get; set; }

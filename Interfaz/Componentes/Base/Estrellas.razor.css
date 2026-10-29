@@ -1,0 +1,1 @@
+.estrellas { display: inline-flex; flex: none; align-items: center; gap: var(--separacion, 2px); }

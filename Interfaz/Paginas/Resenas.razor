@@ -1,0 +1,203 @@
+@*
+  "Reseñas" de Figma: todas las reseñas de un evento (event_review) o de un lugar (place_review).
+  - "Volver al evento / al lugar" regresa a la pantalla de antes con la hoja de detalle abierta.
+  - Izquierda, "Resumen": promedio grande, estrellas, "12 reseñas", barras 5 → 1 y "Escribir reseña"
+    (los eventos solo se reseñan cuando ya terminaron).
+  - Derecha, la lista: inicial o foto, nombre, "Hace 2 semanas", estrellas, comentario, la respuesta del
+    organizador si la hay y "Reportar".
+  Se entra con "Ver reseñas (N)" del evento terminado y "Ver las N reseñas" del lugar (Acciones.VerResenas).
+*@
+@page "/resenas/{Tipo}/{Id:int}"
+@implements IDisposable
+@inject ServicioResenas Servicio
+@inject Acciones Acciones
+@inject Avisos Avisos
+@inject InteropJs Js
+@inject NavigationManager Nav
+@inject ILogger<Resenas> Registro
+
+<PageTitle>SuraChih · Reseñas</PageTitle>
+
+<main class="pantalla-resenas contenedor">
+    <button type="button" class="resenas__volver t-small-fuerte" @onclick="VolverAsync">
+        <Icono Nombre="flecha-volver-14" Caja="14" /><span>@(EsEvento ? "Volver al evento" : "Volver al lugar")</span>
+    </button>
+    <h1 class="t-h1">Reseñas</h1>
+
+    @if (_error != null)
+    {
+        <p class="t-body texto-2">@_error</p>
+    }
+    else if (_datos is not { } d)
+    {
+        <div class="esqueleto resenas__esqueleto-subtitulo" aria-hidden="true"></div>
+        <div class="resenas__columnas" aria-hidden="true">
+            <div class="esqueleto resenas__esqueleto-resumen"></div>
+            <div class="resenas__lista">
+                @for (int i = 0; i < 3; i++)
+                {
+                    <div class="esqueleto resenas__esqueleto-resena"></div>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <p class="t-body texto-2 resenas__subtitulo">@d.Subtitulo</p>
+        <div class="resenas__columnas">
+            <section class="resumen" aria-label="Resumen de calificaciones">
+                <p class="t-display resumen__promedio">@(d.Resumen.Promedio is { } promedio ? Formato.Calificacion(promedio) : "–")</p>
+                <Estrellas Valor="d.Resumen.Promedio ?? 0" Tamano="20" />
+                <p class="t-small texto-2">@(d.Resumen.Total == 1 ? "1 reseña" : $"{d.Resumen.Total} reseñas")</p>
+                <dl class="resumen__barras">
+                    @for (int estrellas = 5; estrellas >= 1; estrellas--)
+                    {
+                        int cuantas = d.Resumen.PorEstrellas.GetValueOrDefault(estrellas);
+                        <div class="resumen__barra">
+                            <dt class="t-small-fuerte">@estrellas<span class="solo-lectores"> estrellas</span></dt>
+                            <dd>
+                                <span class="resumen__pista" aria-hidden="true"><span class="resumen__relleno" style="width:@Porcentaje(cuantas, d.Resumen.Total)%"></span></span>
+                                <span class="solo-lectores">@cuantas</span>
+                            </dd>
+                        </div>
+                    }
+                </dl>
+                @if (d.PuedeEscribir)
+                {
+                    <Boton Texto="Escribir reseña" Icono="estrella-tinta-18" Clase="resumen__boton" OnClick="EscribirAsync" />
+                }
+                else
+                {
+                    <p class="t-caption texto-2">Podrás escribir tu reseña cuando termine el evento.</p>
+                }
+            </section>
+
+            <div class="resenas__lista" aria-live="polite">
+                @if (d.Lista.Count == 0)
+                {
+                    <p class="resenas__vacio t-small texto-2"><Icono Nombre="info-gris-16" Caja="16" /><span>Todavía no hay reseñas. ¡Sé la primera persona en escribir una!</span></p>
+                }
+                @foreach (var resena in d.Lista)
+                {
+                    <article @key="resena.Id" class="resena">
+                        <header class="resena__cabeza">
+                            <span class="resena__avatar t-body-fuerte" aria-hidden="true">
+                                @if (resena.AvatarUrl != null)
+                                {
+                                    <img src="@resena.AvatarUrl" alt="" width="40" height="40" />
+                                }
+                                else
+                                {
+                                    @Inicial(resena.NombreUsuario)
+                                }
+                            </span>
+                            <div class="resena__autor">
+                                <p class="t-body-fuerte">@resena.NombreUsuario</p>
+                                <p class="t-caption texto-2"><time datetime="@resena.CreadaEn.ToString("yyyy-MM-dd")">@Hace(resena.CreadaEn)</time></p>
+                            </div>
+                            <Estrellas Valor="resena.Calificacion" Tamano="14" />
+                        </header>
+                        @if (!string.IsNullOrWhiteSpace(resena.Comentario))
+                        {
+                            <p class="t-body texto-2 resena__comentario">@resena.Comentario</p>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(resena.Respuesta))
+                        {
+                            <div class="resena__respuesta">
+                                <p class="t-small-fuerte">@(EsEvento ? "Respuesta del organizador" : "Respuesta del lugar")</p>
+                                <p class="t-small texto-2">@resena.Respuesta</p>
+                            </div>
+                        }
+                        <button type="button" class="resena__reportar t-small texto-2" @onclick='() => Acciones.RequiereSesion("Reportar reseñas")'>
+                            <Icono Nombre="bandera" Caja="12" /><span>Reportar</span>
+                        </button>
+                    </article>
+                }
+            </div>
+        </div>
+    }
+</main>
+
+<VolverArriba />
+
+@code {
+    /// <summary>"evento" o "lugar".</summary>
+    [Parameter] public string Tipo { get; set; } = "";
+    [Parameter] public int Id { get; set; }
+
+    private DatosResenas? _datos;
+    private string? _error;
+    private (string, int)? _cargado;
+
+    private bool EsEvento => Tipo == "evento";
+    private TipoResena TipoActual => EsEvento ? TipoResena.Evento : TipoResena.Lugar;
+
+    protected override void OnInitialized() => Servicio.Publicada += AlPublicar;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_cargado == (Tipo, Id)) return;
+        _cargado = (Tipo, Id);
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _error = null;
+        if (Tipo is not ("evento" or "lugar"))
+        {
+            _error = "Esta página no existe.";
+            return;
+        }
+        try
+        {
+            _datos = await Servicio.ObtenerAsync(TipoActual, Id);
+        }
+        catch (Exception ex)
+        {
+            if (ex is not BackendLogica.Datos.SuraChihException) Registro.LogError(ex, "No se pudieron cargar las reseñas de {Tipo} {Id}", Tipo, Id);
+            _datos = null;
+            _error = MensajesError.Para(ex);
+        }
+    }
+
+    private async Task EscribirAsync()
+    {
+        if (_datos is { } d) await Acciones.EscribirResenaAsync(d.Tipo, d.ObjetivoId, d.Titulo);
+    }
+
+    /// <summary>Se publicó o editó una reseña de esto mismo: se vuelve a pedir la lista y el resumen.</summary>
+    private void AlPublicar(TipoResena tipo, int id) => InvokeAsync(async () =>
+    {
+        if (tipo != TipoActual || id != Id) return;
+        await CargarAsync();
+        StateHasChanged();
+    });
+
+    /// <summary>Regresa a la pantalla de antes, donde la hoja de detalle se vuelve a abrir (#evento-N / #lugar-N).</summary>
+    private async Task VolverAsync()
+    {
+        if (!await Js.LlamarAsync<bool>("atras")) Nav.NavigateTo($"{Acciones.Rutas.Home}#{Tipo}-{Id}");
+    }
+
+    private static int Porcentaje(int cuantas, int total) => total == 0 ? 0 : (int)Math.Round(cuantas * 100.0 / total);
+
+    private static string Inicial(string nombre) => string.IsNullOrWhiteSpace(nombre) ? "?" : nombre.Trim()[..1].ToUpperInvariant();
+
+    /// <summary>"Hoy", "Ayer", "Hace 3 días", "Hace 2 semanas", "Hace 1 mes", "Hace 2 años".</summary>
+    private static string Hace(DateTime fecha)
+    {
+        int dias = (DateTime.Today - fecha.Date).Days;
+        return dias switch
+        {
+            <= 0 => "Hoy",
+            1 => "Ayer",
+            < 7 => $"Hace {dias} días",
+            < 30 => dias / 7 == 1 ? "Hace 1 semana" : $"Hace {dias / 7} semanas",
+            < 365 => dias / 30 == 1 ? "Hace 1 mes" : $"Hace {dias / 30} meses",
+            _ => dias / 365 == 1 ? "Hace 1 año" : $"Hace {dias / 365} años",
+        };
+    }
+
+    public void Dispose() => Servicio.Publicada -= AlPublicar;
+}

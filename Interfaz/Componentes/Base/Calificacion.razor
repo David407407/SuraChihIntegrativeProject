@@ -1,0 +1,50 @@
+@*
+  "Calificación" de Figma: cinco estrellas de 40px (icono de 30) para elegir de 1 a 5. Al pasar el mouse
+  se ilumina hasta la estrella señalada. Va en la modal "Escribe una reseña".
+
+  <Calificacion @bind-Valor="_estrellas" Error="@_errores["estrellas"]" />
+
+  Es un grupo de radios: Tab entra al grupo y las flechas cambian el valor.
+*@
+<div class="calificacion" role="radiogroup" aria-label="@Etiqueta" aria-invalid="@(Error != null ? "true" : null)"
+     @onmouseleave="() => _encima = 0">
+    @for (int i = 1; i <= 5; i++)
+    {
+        int estrella = i;
+        bool llena = estrella <= (_encima > 0 ? _encima : Valor);
+        <button type="button" role="radio" class="calificacion__estrella" aria-checked="@(estrella == Valor ? "true" : "false")"
+                aria-label="@(estrella == 1 ? "1 estrella" : $"{estrella} estrellas")"
+                tabindex="@(estrella == Math.Max(Valor, 1) ? 0 : -1)"
+                @onclick="() => ElegirAsync(estrella)" @onmouseenter="() => _encima = estrella" @onkeydown="e => TeclaAsync(e)">
+            <Icono Nombre="@(llena ? "estrella-30" : "estrella-30-vacia")" Caja="30" />
+        </button>
+    }
+</div>
+@if (Error != null)
+{
+    <p class="calificacion__error t-caption" role="alert">@Error</p>
+}
+
+@code {
+    /// <summary>0 = sin elegir.</summary>
+    [Parameter] public int Valor { get; set; }
+    [Parameter] public EventCallback<int> ValorChanged { get; set; }
+    [Parameter] public string Etiqueta { get; set; } = "Calificación";
+    [Parameter] public string? Error { get; set; }
+
+    /// <summary>Estrella bajo el mouse (0 = ninguna).</summary>
+    private int _encima;
+
+    private Task ElegirAsync(int estrella)
+    {
+        Valor = estrella;
+        return ValorChanged.InvokeAsync(estrella);
+    }
+
+    private Task TeclaAsync(KeyboardEventArgs e) => e.Key switch
+    {
+        "ArrowRight" or "ArrowUp" => ElegirAsync(Math.Min(5, Valor + 1)),
+        "ArrowLeft" or "ArrowDown" => ElegirAsync(Math.Max(1, Valor - 1)),
+        _ => Task.CompletedTask,
+    };
+}

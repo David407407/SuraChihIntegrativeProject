@@ -1,0 +1,20 @@
+@*
+  Estrellas de solo lectura (12, 14 o 20px): "★★★★☆" de las opiniones y de la pantalla "Reseñas".
+  4.6 se ve como 4 estrellas, igual que en Figma (desde x.75 se redondea hacia arriba).
+
+  <Estrellas Valor="resena.Calificacion" Tamano="14" />
+*@
+<span class="estrellas" style="--separacion:@(Tamano >= 20 ? 4 : 2)px" role="img" aria-label="@($"{Formato.Calificacion(Valor)} de 5 estrellas")">
+    @for (int i = 1; i <= 5; i++)
+    {
+        <Icono Nombre="@(i <= Llenas ? $"estrella-{Tamano}" : $"estrella-{Tamano}-vacia")" Caja="Tamano" />
+    }
+</span>
+
+@code {
+    [Parameter] public decimal Valor { get; set; }
+    /// <summary>12, 14 o 20.</summary>
+    [Parameter] public int Tamano { get; set; } = 14;
+
+    private int Llenas => (int)Math.Floor(Valor + 0.25m);
+}
