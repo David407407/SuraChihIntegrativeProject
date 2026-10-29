@@ -139,9 +139,9 @@
         _ => null
     };
 
-    /// <summary>"Comprar boletos": solo si hay página oficial; se abre en el navegador.</summary>
+    /// <summary>"Comprar boletos": solo si hay página oficial. Abre la modal "Boletos", que lleva al sitio oficial.</summary>
     private RenderFragment? Comprar => Activo && !string.IsNullOrEmpty(E.BoletosUrl)
-        ? @<Boton Texto="Comprar boletos" Variante="secundario" Icono="boleto" Href="@E.BoletosUrl" Externo />
+        ? @<Boton Texto="Comprar boletos" Variante="secundario" Icono="boleto" OnClick="() => Modales.Boletos(E)" />
         : null;
 
     protected override void OnInitialized() => _inscrito = Datos.Inscrito;

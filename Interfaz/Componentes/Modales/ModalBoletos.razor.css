@@ -1,0 +1,18 @@
+/* "Fila cantidad" de Figma (sin el selector): caja gris, 14 × 16 de relleno, radio 16 */
+.boletos__fila {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radio-m);
+  background: var(--color-fondo);
+}
+.boletos__tipo { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.boletos__tipo .t-body-fuerte,
+.boletos__precio { color: var(--color-tinta); }
+.boletos__precio { white-space: nowrap; }
+
+.boletos__nota { display: flex; align-items: flex-start; gap: 8px; }
+.boletos__nota ::deep .icono { flex-shrink: 0; margin-top: 3px; }
+
+.boletos__continuar { display: block; width: 100%; }

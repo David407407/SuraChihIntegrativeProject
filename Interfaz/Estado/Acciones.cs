@@ -20,6 +20,8 @@ namespace Interfaz.Estado
             public const string Mapa = "mapa";
             public const string Perfil = "perfil";
             public const string Favoritos = "favoritos";
+            /// <summary>"Mis planes" (WBS 4.4).</summary>
+            public const string MisPlanes = "mis-planes";
             public const string Moderacion = "moderacion";
             /// <summary>"Resultados de búsqueda"; los filtros van en la consulta (ver <see cref="FiltroBusqueda.Ruta"/>).</summary>
             public const string Buscar = "buscar";
@@ -83,7 +85,7 @@ namespace Interfaz.Estado
             else modales.CrearCuenta();
         }
 
-        public void MisPlanes() => SoloConSesion(() => Proximamente("Mis planes"));
+        public void MisPlanes() => SoloConSesion(() => IrA(Rutas.MisPlanes));
         public void Favoritos() => SoloConSesion(() => IrA(Rutas.Favoritos));
         public void MiPerfil() => SoloConSesion(() => IrA(Rutas.Perfil));
         public void PanelOrganizador() => Proximamente("El panel de organizador");
