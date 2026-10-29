@@ -3,7 +3,8 @@
   - Pestañas Próximos / Pasados / Cancelados (indicador amarillo de 3px) → ServicioPlanes.ListarAsync.
   - Cada plan: foto de 104px, fecha, título y lugar; toda la fila abre el detalle del evento.
     Próximos: "Vas a ir" + "Cancelar inscripción" (modal "¿Cancelar tu inscripción?").
-    Pasados: "Asististe" + "Escribir reseña". Cancelados: "Cancelado por el organizador" o "Cancelaste".
+    Pasados: "Asististe" + "Escribir reseña". Cancelados: "Cancelado por el organizador" o "Cancelaste",
+    con una X para quitarlo de la lista (borra la inscripción cancelada).
   - Sin planes en la pestaña sale la caja de ayuda ("Cuando toques “Voy a ir” en un evento, aparecerá aquí.").
   - Al cerrar el detalle se vuelve a pedir la pestaña (ahí también se puede inscribir o cancelar).
 *@
@@ -88,6 +89,10 @@
                                 {
                                     @Estado("Cancelaste tu inscripción", null, null)
                                 }
+                                <button type="button" class="plan__quitar" aria-label="@($"Quitar {e.Titulo} de Mis planes")" title="Quitar de Mis planes"
+                                        disabled="@(_quitando == e.Id)" @onclick="() => QuitarAsync(plan)">
+                                    <Icono Nombre="cerrar" Caja="14" />
+                                </button>
                                 break;
                         }
                     </div>
@@ -114,6 +119,8 @@
     /// <summary>Planes de la pestaña, o null mientras carga.</summary>
     private List<PlanUsuario>? _planes;
     private int? _usuarioId;
+    /// <summary>Evento cuyo plan cancelado se está quitando (su X se deshabilita mientras tanto).</summary>
+    private int? _quitando;
     /// <summary>Para ignorar respuestas viejas si se cambia de pestaña rápido.</summary>
     private int _consulta;
 
@@ -175,6 +182,31 @@
         if (await Modales.ConfirmarCancelacionAsync(plan.Evento)) return;   // "Mantener mi lugar" o cerró
         _planes?.Remove(plan);
         Avisos.Mostrar("Cancelaste tu inscripción");
+    }
+
+    /// <summary>La X de Cancelados: borra la inscripción y la fila sale de la lista.</summary>
+    private async Task QuitarAsync(PlanUsuario plan)
+    {
+        _quitando = plan.Evento.Id;
+        try
+        {
+            await Servicio.EliminarCanceladoAsync(plan.Evento.Id);
+            _planes?.Remove(plan);
+            Avisos.Mostrar("Quitaste el plan");
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            if (ex is not BackendLogica.Datos.SuraChihException) Registro.LogError(ex, "No se pudo quitar el plan {Id}", plan.Evento.Id);
+            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
+        }
+        finally
+        {
+            _quitando = null;
+        }
     }
 
     private void AlCambiarSesion() => InvokeAsync(async () =>

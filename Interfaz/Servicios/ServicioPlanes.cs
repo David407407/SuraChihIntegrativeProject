@@ -19,5 +19,13 @@ namespace Interfaz.Servicios
             Usuario usuario = sesion.Requerir("ver tus planes");
             return bd.Inscripciones.ListarPlanesAsync(usuario.Id, pestana);
         }
+
+        /// <summary>La "X" de un plan cancelado: deja de aparecer en Mis planes.</summary>
+        public async Task EliminarCanceladoAsync(int eventoId)
+        {
+            Usuario usuario = sesion.Requerir("quitar tus planes");
+            if (!await bd.Inscripciones.EliminarCanceladaAsync(usuario.Id, eventoId))
+                throw new BackendLogica.Datos.ReglaNegocioException("Este plan ya no está en tus cancelados.");
+        }
     }
 }

@@ -105,6 +105,24 @@
 .plan__estado--exito { background: var(--color-exito-suave); color: var(--color-exito); }
 .plan__estado--error { background: var(--color-error-suave); color: var(--color-error); }
 
+/* X de los cancelados: círculo gris de 36px, como el cerrar de las modales */
+.plan__quitar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio-pildora);
+  background: var(--color-fondo);
+  cursor: pointer;
+  transition: background var(--duracion-rapida), transform var(--duracion-rapida);
+}
+.plan__quitar:hover:not(:disabled) { background: var(--color-error-suave); transform: scale(1.06); }
+.plan__quitar:disabled { opacity: 0.5; cursor: progress; }
+.plan__quitar:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; }
+
 @media (max-width: 720px) {
   .plan { flex-wrap: wrap; gap: 14px; }
   .plan__imagen { width: 72px; height: 72px; }

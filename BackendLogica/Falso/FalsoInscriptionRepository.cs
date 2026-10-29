@@ -38,6 +38,15 @@ namespace BackendLogica.Falso
                 return true;
             }, ct);
 
+        public Task<bool> EliminarCanceladaAsync(int usuarioId, int eventoId, CancellationToken ct = default) =>
+            Hacer(a =>
+            {
+                var fila = Buscar(a, usuarioId, eventoId);
+                if (fila == null) return false;
+                if (fila.Estado != EstadoInscripcion.Cancelada && a.Evento(eventoId)?.Estado != EstadoEvento.Cancelado) return false;
+                return a.Inscripciones.Remove(fila);
+            }, ct);
+
         public Task<bool> EstaInscritoAsync(int usuarioId, int eventoId, CancellationToken ct = default) =>
             Hacer(a => Buscar(a, usuarioId, eventoId) is { Estado: EstadoInscripcion.Activa }, ct);
 

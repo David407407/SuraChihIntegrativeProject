@@ -20,6 +20,13 @@ namespace BackendLogica.Contratos
 
         Task<bool> EstaInscritoAsync(int usuarioId, int eventoId, CancellationToken ct = default);
 
+        /// <summary>
+        /// La "X" de la pestaña Cancelados de "Mis planes": borra la inscripción para que deje de aparecer.
+        /// Solo si ya estaba cancelada o si el organizador canceló el evento (una activa no se borra).
+        /// </summary>
+        /// <returns>false si no había nada que borrar.</returns>
+        Task<bool> EliminarCanceladaAsync(int usuarioId, int eventoId, CancellationToken ct = default);
+
         /// <summary>Pantalla "Mis planes".</summary>
         Task<List<PlanUsuario>> ListarPlanesAsync(int usuarioId, PestanaPlanes pestana, CancellationToken ct = default);
 
