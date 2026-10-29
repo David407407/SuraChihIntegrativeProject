@@ -1,7 +1,7 @@
 @*
   "Publicar evento" de Figma (WBS 4.6). La misma pantalla sirve para editar un evento propio.
   - Izquierda, cinco secciones: 1. Información básica (título con contador, descripción y categorías),
-    2. Imágenes (la primera es la portada; se suben a Cloudinary con ServicioImagenes), 3. Fecha y hora,
+    2. Imágenes (la primera es la portada; se suben a Cloudinary hasta que se guarda o publica), 3. Fecha y hora,
     4. Ubicación ("Lugar registrado" u "Otra dirección" con el pin arrastrable del componente Mapa) y
     5. Precio y boletos ("Gratis" / "De pago" y el enlace oficial).
   - Derecha: "Vista previa" (cómo se verá la tarjeta), "Antes de enviar" (se palomea solo) y los botones
@@ -90,7 +90,7 @@
                         @foreach (var (foto, i) in _fotos.Select((f, i) => (f, i)))
                         {
                             <div @key="foto" class="foto @(i == 0 ? "foto--portada" : "")">
-                                <Imagen Src="@foto" Alt="@(i == 0 ? "Portada" : $"Foto {i + 1}")" Ancho="@(i == 0 ? 320 : 120)" Alto="180" />
+                                <Imagen Src="@foto.Vista" Alt="@(i == 0 ? "Portada" : $"Foto {i + 1}")" Ancho="@(i == 0 ? 320 : 120)" Alto="180" />
                                 @if (i == 0)
                                 {
                                     <span class="foto__portada t-caption"><Icono Nombre="estrella-tinta-12" Caja="12" />Portada</span>
@@ -111,12 +111,12 @@
                         @if (_fotos.Count < ServicioImagenes.MaximoFotos)
                         {
                             <label class="subir @(_subiendo > 0 ? "subir--ocupado" : "")">
-                                <InputFile class="subir__archivo" OnChange="SubirFotosAsync" multiple accept="@ServicioImagenes.Formatos"
+                                <InputFile class="subir__archivo" OnChange="AgregarFotosAsync" multiple accept="@ServicioImagenes.Formatos"
                                            disabled="@(_subiendo > 0)" aria-describedby="fotos-ayuda" />
                                 @if (_subiendo > 0)
                                 {
                                     <FluentSpinner Size="SpinnerSize.Tiny" />
-                                    <span class="t-small-fuerte">Subiendo @(_subiendo == 1 ? "1 foto" : $"{_subiendo} fotos")…</span>
+                                    <span class="t-small-fuerte">Preparando @(_subiendo == 1 ? "1 foto" : $"{_subiendo} fotos")…</span>
                                 }
                                 else
                                 {
@@ -133,7 +133,11 @@
                     }
                     else if (Imagenes.ModoPrueba)
                     {
-                        <p class="t-caption texto-2">Datos de prueba sin Cloudinary: las fotos que subas se guardan como una foto de ejemplo.</p>
+                        <p class="t-caption texto-2">Datos de prueba sin Cloudinary: al guardar, las fotos se guardan como una foto de ejemplo.</p>
+                    }
+                    else if (_fotos.Any(f => f.Pendiente))
+                    {
+                        <p class="t-caption texto-2">Las fotos nuevas se suben cuando guardes o envíes el evento.</p>
                     }
                 </section>
 
@@ -233,7 +237,7 @@
                 <section class="lateral__caja previa-caja" aria-labelledby="previa-titulo">
                     <p class="t-small-fuerte texto-2" id="previa-titulo">Vista previa</p>
                     <article class="previa">
-                        <div class="previa__imagen"><Imagen Src="@_fotos.FirstOrDefault()" Alt="" Ancho="332" Alto="200" /></div>
+                        <div class="previa__imagen"><Imagen Src="@_fotos.FirstOrDefault()?.Vista" Alt="" Ancho="332" Alto="200" /></div>
                         <div class="previa__info">
                             <p class="t-small-fuerte previa__fecha">@FechaPrevia</p>
                             <p class="t-card-titulo previa__titulo">@(string.IsNullOrWhiteSpace(_titulo) ? "Título del evento" : _titulo.Trim())</p>
@@ -311,7 +315,8 @@
     private string _titulo = "";
     private string _descripcion = "";
     private HashSet<int> _etiquetas = [];
-    private List<string> _fotos = [];
+    /// <summary>La primera es la portada. Las nuevas esperan en memoria hasta guardar (ServicioImagenes).</summary>
+    private List<FotoFormulario> _fotos = [];
     private string _inicioFecha = "", _inicioHora = "", _finFecha = "", _finHora = "";
     private bool _usarLugar;
     private int? _lugarId;
@@ -473,7 +478,9 @@
         _descripcion = e?.Descripcion ?? "";
         _etiquetas = e == null ? new HashSet<int>() : e.Etiquetas.Select(t => t.Id).ToHashSet();
         // La portada (main_image_url) va primero y luego la galería (event_image).
-        _fotos = e == null ? new List<string>() : new[] { e.ImagenUrl }.Concat(datos.Evento!.Galeria).OfType<string>().Distinct().ToList();
+        _fotos = e == null
+            ? new List<FotoFormulario>()
+            : new[] { e.ImagenUrl }.Concat(datos.Evento!.Galeria).OfType<string>().Distinct().Select(FotoFormulario.Existente).ToList();
         bool conFecha = e is { FechaPorConfirmar: false };
         _inicioFecha = conFecha ? e!.Inicio.ToString("yyyy-MM-dd") : "";
         _inicioHora = conFecha ? e!.Inicio.ToString("HH:mm") : "";
@@ -533,21 +540,24 @@
 
     private void HacerPortada(int i)
     {
-        string foto = _fotos[i];
+        FotoFormulario foto = _fotos[i];
         _fotos.RemoveAt(i);
         _fotos.Insert(0, foto);
     }
 
     private void QuitarFoto(int i) => _fotos.RemoveAt(i);
 
-    /// <summary>Sube a Cloudinary las fotos elegidas (o arrastradas), una por una, hasta llenar las 8.</summary>
-    private async Task SubirFotosAsync(InputFileChangeEventArgs e)
+    /// <summary>
+    /// Agrega las fotos elegidas (o arrastradas) hasta llenar las 8. Todavía no se suben: se quedan en memoria
+    /// y Cloudinary las recibe hasta que el organizador guarda o envía el evento (GuardarAsync).
+    /// </summary>
+    private async Task AgregarFotosAsync(InputFileChangeEventArgs e)
     {
         _errores.Quitar("fotos");
         int espacio = ServicioImagenes.MaximoFotos - _fotos.Count;
         var archivos = e.GetMultipleFiles(Math.Max(e.FileCount, 1)).ToList();
         if (archivos.Count > espacio)
-            _errores.Poner("fotos", $"Solo caben {ServicioImagenes.MaximoFotos} fotos: se subieron las primeras {espacio}.", enfocar: false);
+            _errores.Poner("fotos", $"Solo caben {ServicioImagenes.MaximoFotos} fotos: se agregaron las primeras {espacio}.", enfocar: false);
 
         var porSubir = archivos.Take(espacio).ToList();
         _subiendo = porSubir.Count;
@@ -555,14 +565,11 @@
         {
             try
             {
-                ServicioImagenes.Validar(archivo.ContentType, archivo.Size);
-                await using Stream contenido = archivo.OpenReadStream(ServicioImagenes.MaximoBytes);
-                string url = await Imagenes.SubirAsync(contenido, archivo.Name, archivo.ContentType);
-                if (!_fotos.Contains(url)) _fotos.Add(url);
+                _fotos.Add(await ServicioImagenes.PrepararAsync(archivo));
             }
             catch (Exception ex)
             {
-                if (ex is not BackendLogica.Datos.SuraChihException) Registro.LogError(ex, "No se pudo subir la foto {Nombre}", archivo.Name);
+                if (ex is not BackendLogica.Datos.SuraChihException) Registro.LogError(ex, "No se pudo leer la foto {Nombre}", archivo.Name);
                 _errores.Poner("fotos", $"{archivo.Name}: {MensajesError.Para(ex)}", enfocar: false);
             }
             finally
@@ -589,10 +596,17 @@
             return;
         }
 
-        DatosEvento datos = Datos();
         _guardando = como;
         try
         {
+            // Hasta aquí las fotos nuevas solo estaban en memoria: se suben a Cloudinary al guardar.
+            if (_fotos.Any(f => f.Pendiente))
+            {
+                StateHasChanged();
+                await Imagenes.SubirPendientesAsync(_fotos);
+            }
+            DatosEvento datos = Datos();
+
             if (Id is not { } id)
             {
                 int nuevo = await Servicio.CrearAsync(datos, enviarARevision: como == Guardado.Enviar);
@@ -738,9 +752,9 @@
             PrecioMin = min,
             PrecioMax = max,
             BoletosUrl = string.IsNullOrWhiteSpace(_boletos) ? null : _boletos.Trim(),
-            ImagenUrl = _fotos.FirstOrDefault(),
+            ImagenUrl = _fotos.FirstOrDefault()?.Url,
             EtiquetaIds = [.. _etiquetas],
-            Galeria = [.. _fotos.Skip(1)],
+            Galeria = [.. _fotos.Skip(1).Select(f => f.Url!)],
         };
     }
 
