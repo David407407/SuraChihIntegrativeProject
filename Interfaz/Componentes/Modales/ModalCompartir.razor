@@ -1,7 +1,12 @@
 @*
-  "Modal / Compartir" de Figma: el enlace del evento o lugar en una caja gris y "Copiar".
+  "Modal / Compartir" de Figma: el enlace del evento o lugar en una caja gris y "Copiar", y debajo las
+  redes más comunes (WhatsApp, Instagram, Facebook, X, Telegram y correo) y, si el sistema lo permite,
+  "Más" (el menú Compartir de Windows / del navegador).
   Lo abre el botón Compartir de la portada del detalle (PortadaHoja) con Modales.Compartir(...).
-  Al copiar, el botón cambia a "Copiado" un momento.
+
+  Cada red se abre en el navegador con su página para compartir y el texto ya escrito. Instagram no
+  tiene una para enlaces: se copia el enlace y se abre Instagram para pegarlo en un mensaje.
+  Los logos son de Simple Icons (CC0), en blanco sobre el color de cada marca.
 *@
 @inject Modales Modales
 @inject InteropJs Js
@@ -16,17 +21,71 @@
     <Boton Texto="@(_copiado ? "Copiado" : "Copiar")" Variante="oscuro" Tamano="s" Icono="copiar-blanco" OnClick="CopiarAsync" />
 </div>
 
+<ul class="compartir__redes" role="list" aria-label="Compartir en">
+    @foreach (var red in Redes)
+    {
+        <li>
+            <a class="compartir__red" href="@red.Url" target="_blank" rel="noopener noreferrer"
+               @onclick="() => AlElegirAsync(red)" aria-label="@($"Compartir en {red.Nombre}")">
+                <span class="compartir__logo" style="--marca:@red.Color"><Icono Nombre="@red.Icono" Caja="22" /></span>
+                <span class="t-caption">@red.Nombre</span>
+            </a>
+        </li>
+    }
+    @if (_sistema)
+    {
+        <li>
+            <button type="button" class="compartir__red" @onclick="CompartirSistemaAsync" aria-label="Más opciones para compartir">
+                <span class="compartir__logo compartir__logo--mas"><Icono Nombre="compartir" Caja="22" /></span>
+                <span class="t-caption">Más</span>
+            </button>
+        </li>
+    }
+</ul>
+
 @code {
-    /// <summary>Nombre del evento o lugar (para lectores de pantalla).</summary>
+    /// <summary>Nombre del evento o lugar (va en el mensaje).</summary>
     [Parameter] public string Titulo { get; set; } = "";
-    /// <summary>Enlace completo que se copia ("https://surachih.com/e/12").</summary>
+    /// <summary>Enlace completo que se comparte ("https://surachih.com/e/12").</summary>
     [Parameter, EditorRequired] public string Url { get; set; } = "";
+
+    private sealed record Red(string Nombre, string Icono, string Color, string Url, bool CopiarAntes = false);
 
     private ElementReference _caja;
     private bool _copiado;
+    /// <summary>El sistema tiene su propio menú Compartir (navigator.share).</summary>
+    private bool _sistema;
 
     /// <summary>Como en Figma, sin "https://".</summary>
     private string Visible => Url.Replace("https://", "").Replace("http://", "");
+
+    private string Mensaje => $"Mira {Titulo} en SuraChih";
+
+    private IEnumerable<Red> Redes
+    {
+        get
+        {
+            string url = Uri.EscapeDataString(Url);
+            string texto = Uri.EscapeDataString(Mensaje);
+            string conEnlace = Uri.EscapeDataString($"{Mensaje}: {Url}");
+            return
+            [
+                new("WhatsApp", "red-whatsapp", "#25D366", $"https://wa.me/?text={conEnlace}"),
+                new("Instagram", "red-instagram", "#FF0069", "https://www.instagram.com/direct/inbox/", CopiarAntes: true),
+                new("Facebook", "red-facebook", "#0866FF", $"https://www.facebook.com/sharer/sharer.php?u={url}"),
+                new("X", "red-x", "#000000", $"https://x.com/intent/tweet?text={texto}&url={url}"),
+                new("Telegram", "red-telegram", "#26A5E4", $"https://t.me/share/url?url={url}&text={texto}"),
+                new("Correo", "correo-blanco-20", "var(--color-cielo-texto)", $"mailto:?subject={Uri.EscapeDataString(Titulo)}&body={conEnlace}"),
+            ];
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (!primeraVez) return;
+        _sistema = await Js.LlamarAsync<bool>("puedeCompartir");
+        if (_sistema) StateHasChanged();
+    }
 
     /// <summary>Task (no ValueTask): @onfocus solo acepta métodos que devuelven Task.</summary>
     private async Task SeleccionarAsync() => await Js.LlamarAsync("seleccionarTexto", _caja);
@@ -46,5 +105,18 @@
             await SeleccionarAsync();
             Avisos.Mostrar("No se pudo copiar: selecciona el enlace y cópialo con Ctrl+C.", TipoAviso.Error);
         }
+    }
+
+    /// <summary>El enlace ya abre la red en el navegador; Instagram necesita además el enlace copiado.</summary>
+    private async Task AlElegirAsync(Red red)
+    {
+        if (!red.CopiarAntes) return;
+        if (await Js.LlamarAsync<bool>("copiarTexto", Url))
+            Avisos.Mostrar("Copiamos el enlace: pégalo en tu mensaje de Instagram", TipoAviso.Info);
+    }
+
+    private async Task CompartirSistemaAsync()
+    {
+        if (!await Js.LlamarAsync<bool>("compartirSistema", Titulo, Mensaje, Url)) await CopiarAsync();
     }
 }

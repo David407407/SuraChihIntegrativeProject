@@ -223,3 +223,18 @@ export function atras() {
   history.back();
   return true;
 }
+
+/** true si el sistema tiene su menú Compartir (navigator.share), para mostrar "Más" en Compartir. */
+export function puedeCompartir() {
+  return typeof navigator.share === 'function';
+}
+
+/** Abre el menú Compartir del sistema. false si no se pudo (el usuario lo cerró no cuenta como error). */
+export async function compartirSistema(titulo, texto, url) {
+  try {
+    await navigator.share({ title: titulo, text: texto, url });
+    return true;
+  } catch (error) {
+    return error?.name === 'AbortError';
+  }
+}
