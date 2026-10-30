@@ -35,6 +35,13 @@ namespace BackendLogica.Configuracion
         /// </summary>
         public string? CloudinaryPreset { get; init; }
 
+        /// <summary>
+        /// Llaves <c>"GoogleClientId"</c> y <c>"GoogleClientSecret"</c>: cliente OAuth de tipo "App de escritorio"
+        /// de Google Cloud (Google Auth Platform → Clientes) para "Continuar con Google". Nunca van en git.
+        /// </summary>
+        public string? GoogleClientId { get; init; }
+        public string? GoogleClientSecret { get; init; }
+
         /// <summary>Configuración cargada una sola vez y compartida por todos los repositorios.</summary>
         public static ConfiguracionBD Predeterminada => _predeterminada.Value;
         private static readonly Lazy<ConfiguracionBD> _predeterminada = new(Cargar);
@@ -76,7 +83,9 @@ namespace BackendLogica.Configuracion
                 BaseDeDatos = Leer(raiz, "Database") ?? config.BaseDeDatos,
                 UsarDatosFalsos = raiz.TryGetProperty("UseFakeData", out JsonElement falso) && falso.ValueKind == JsonValueKind.True,
                 CloudinaryNube = Leer(raiz, "CloudinaryCloudName"),
-                CloudinaryPreset = Leer(raiz, "CloudinaryUploadPreset")
+                CloudinaryPreset = Leer(raiz, "CloudinaryUploadPreset"),
+                GoogleClientId = Leer(raiz, "GoogleClientId"),
+                GoogleClientSecret = Leer(raiz, "GoogleClientSecret")
             };
         }
 

@@ -42,6 +42,9 @@ namespace BackendLogica.Falso
         public Task<Usuario?> ObtenerAsync(int usuarioId, CancellationToken ct = default) =>
             Hacer(a => a.Usuario(usuarioId)?.ADatos(), ct);
 
+        public Task<Usuario?> ObtenerPorCorreoAsync(string correo, CancellationToken ct = default) =>
+            Hacer(a => a.Usuarios.FirstOrDefault(u => AlmacenFalso.Igual(u.Correo, correo.Trim()))?.ADatos(), ct);
+
         public Task<bool> ExisteNombreUsuarioAsync(string nombreUsuario, CancellationToken ct = default) =>
             Hacer(a => a.Usuarios.Any(u => AlmacenFalso.Igual(u.NombreUsuario, nombreUsuario.Trim())), ct);
 

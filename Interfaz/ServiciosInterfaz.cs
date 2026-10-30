@@ -28,6 +28,7 @@ namespace Interfaz
             servicios.AddScoped<ServicioHome>();
             servicios.AddScoped<ServicioEvento>();
             servicios.AddScoped<ServicioLugar>();
+            servicios.AddScoped<ServicioGoogle>();
             servicios.AddScoped<ServicioCuenta>();
             servicios.AddScoped<ServicioPerfil>();
             servicios.AddScoped<ServicioFavoritos>();
