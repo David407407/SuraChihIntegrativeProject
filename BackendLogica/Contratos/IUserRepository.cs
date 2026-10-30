@@ -18,6 +18,12 @@ namespace BackendLogica.Contratos
         Task<Usuario?> IniciarSesionAsync(string identificador, string contrasena, CancellationToken ct = default);
 
         Task<Usuario?> ObtenerAsync(int usuarioId, CancellationToken ct = default);
+
+        /// <summary>
+        /// "Continuar con Google": la cuenta con ese correo (ya verificado por Google), activa o no.
+        /// Mientras no exista la tabla de cuentas externas, el correo es lo que une las dos cuentas.
+        /// </summary>
+        Task<Usuario?> ObtenerPorCorreoAsync(string correo, CancellationToken ct = default);
         Task<bool> ExisteNombreUsuarioAsync(string nombreUsuario, CancellationToken ct = default);
         Task<bool> ExisteCorreoAsync(string correo, CancellationToken ct = default);
 

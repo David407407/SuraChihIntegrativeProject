@@ -50,6 +50,10 @@ namespace BackendLogica.Repositorios
         public Task<Usuario?> ObtenerAsync(int usuarioId, CancellationToken ct = default) =>
             ConsultarUnoAsync($"SELECT {Columnas} FROM user WHERE id = @usuarioId", Mapear, new { usuarioId }, ct);
 
+        public Task<Usuario?> ObtenerPorCorreoAsync(string correo, CancellationToken ct = default) =>
+            ConsultarUnoAsync($"SELECT {Columnas} FROM user WHERE email = @correo LIMIT 1", Mapear,
+                new { correo = correo.Trim().ToLowerInvariant() }, ct);
+
         public async Task<bool> ExisteNombreUsuarioAsync(string nombreUsuario, CancellationToken ct = default) =>
             await EscalarAsync<int>("SELECT COUNT(*) FROM user WHERE username = @nombreUsuario", new { nombreUsuario = nombreUsuario.Trim() }, ct) > 0;
 

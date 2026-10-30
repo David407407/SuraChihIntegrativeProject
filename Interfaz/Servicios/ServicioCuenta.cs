@@ -15,7 +15,7 @@ namespace Interfaz.Servicios
     /// interfaz sepa en qué campo pintarlo, los de formato empiezan con el mismo texto que usa
     /// <c>Validar</c> de BackendLogica (ver <c>Utilidades/ReglasCuenta.cs</c>).
     /// </remarks>
-    public sealed class ServicioCuenta(ISuraChihBD bd, Sesion sesion, CorreoSimulado correo)
+    public sealed class ServicioCuenta(ISuraChihBD bd, Sesion sesion, CorreoSimulado correo, ServicioGoogle google)
     {
         // ---------------------------------------------------------------- Iniciar sesión
 
@@ -29,6 +29,71 @@ namespace Interfaz.Servicios
                 ?? throw new DatosInvalidosException("Usuario, correo o contraseña incorrectos.");
             return await AbrirSesionAsync(usuario);
         }
+
+        // ---------------------------------------------------------------- Continuar con Google
+
+        /// <summary>
+        /// "Continuar con Google" (iniciar sesión y crear cuenta): abre el navegador, y con el correo que Google
+        /// verificó inicia sesión en esa cuenta o crea una nueva.
+        /// </summary>
+        /// <remarks>
+        /// Mientras la BD no tenga una tabla de cuentas externas, la cuenta se une por el correo. La cuenta nueva
+        /// lleva un nombre de usuario sacado del correo y una contraseña aleatoria que nadie conoce (la BD la
+        /// exige); si después quiere entrar con contraseña, usa "¿Olvidaste tu contraseña?".
+        /// </remarks>
+        /// <returns>El usuario y si la cuenta se acaba de crear.</returns>
+        public async Task<(Usuario Usuario, bool Nueva)> ContinuarConGoogleAsync()
+        {
+            PerfilGoogle perfil = await google.IniciarAsync();
+            if (!perfil.CorreoVerificado)
+                throw new ReglaNegocioException("Tu cuenta de Google no tiene el correo verificado.");
+            string correoGoogle = perfil.Correo.Trim().ToLowerInvariant();
+
+            if (await bd.Usuarios.ObtenerPorCorreoAsync(correoGoogle) is { } existente)
+            {
+                if (!existente.Activo)
+                    throw new ReglaNegocioException("La cuenta con ese correo fue eliminada.");
+                return (await AbrirSesionAsync(existente), false);
+            }
+
+            string nombre = await NombreDisponibleAsync(correoGoogle);
+            Usuario nuevo = await bd.Usuarios.RegistrarAsync(nombre, correoGoogle, ContrasenaAleatoria());
+            if (perfil.FotoUrl is { Length: <= 500 } foto && foto.StartsWith("https://"))
+            {
+                // La foto es un extra: si no se guarda, la cuenta igual queda creada.
+                try
+                {
+                    if (await bd.Usuarios.ActualizarPerfilAsync(nuevo.Id, nuevo.NombreUsuario, nuevo.Correo, foto))
+                        nuevo = await bd.Usuarios.ObtenerAsync(nuevo.Id) ?? nuevo;
+                }
+                catch (SuraChihException ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Google] foto no guardada: {ex.Message}");
+                }
+            }
+            return (await AbrirSesionAsync(nuevo), true);
+        }
+
+        /// <summary>"betsy.nayeli2310@gmail.com" → "betsy.nayeli2310" (o "betsy.nayeli23102" si ya existe).</summary>
+        private async Task<string> NombreDisponibleAsync(string correoGoogle)
+        {
+            string local = correoGoogle.Split('@')[0];
+            string limpio = new(local.Where(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '.').ToArray());
+            if (limpio.Length < 3) limpio = $"usuario{limpio}";
+            if (limpio.Length > 26) limpio = limpio[..26];   // deja lugar para el número
+
+            if (!await bd.Usuarios.ExisteNombreUsuarioAsync(limpio)) return limpio;
+            for (int i = 2; i < 10000; i++)
+            {
+                string candidato = $"{limpio}{i}";
+                if (!await bd.Usuarios.ExisteNombreUsuarioAsync(candidato)) return candidato;
+            }
+            return $"{limpio[..Math.Min(limpio.Length, 20)]}{Random.Shared.Next(100000, 999999)}";
+        }
+
+        /// <summary>Contraseña que nadie conoce (letras y números, como pide la BD).</summary>
+        private static string ContrasenaAleatoria() =>
+            $"G{Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24))}a9";
 
         // ---------------------------------------------------------------- Crear cuenta
 

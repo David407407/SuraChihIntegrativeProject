@@ -6,5 +6,7 @@
   "Database": "surachih",
   "UseFakeData": false,
   "CloudinaryCloudName": "",
-  "CloudinaryUploadPreset": ""
+  "CloudinaryUploadPreset": "",
+  "GoogleClientId": "",
+  "GoogleClientSecret": ""
 }
