@@ -61,6 +61,26 @@
 }
 .perfil__formulario ::deep .perfil__bloque .campo { align-self: stretch; }
 
+/* Título del bloque con su lápiz a la derecha; el lápiz desbloquea los campos */
+.perfil__cabeza { display: flex; align-items: center; justify-content: space-between; align-self: stretch; gap: 12px; min-height: 40px; }
+.perfil__lapiz {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1.5px solid var(--color-linea);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  cursor: pointer;
+  transition: border-color var(--duracion-rapida), background var(--duracion-rapida);
+}
+.perfil__lapiz:hover { border-color: var(--color-tinta); background: var(--color-fondo); }
+.perfil__lapiz:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; }
+
+.perfil__botones { display: flex; flex-wrap: wrap; gap: 8px; }
+
 .perfil__divisor {
   width: 100%;
   height: 1px;

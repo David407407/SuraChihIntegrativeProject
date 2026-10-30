@@ -438,6 +438,20 @@ async Task PruebasFalso()
         Afirmar(!await f.Usuarios.ActualizarPerfilAsync(6, "diego.m", "diego.nuevo@example.com", null), "ni edita su perfil");
         return "";
     });
+    await Prueba("Eliminar moderadores: solo un supermoderador, y nadie elimina la suya", async () =>
+    {
+        var g = new SuraChihFalso();   // aparte: las demás pruebas usan a estos moderadores
+        Afirmar(!await g.Usuarios.DesactivarAsync(2), "un moderador no elimina su propia cuenta");
+        await EsperarError<ReglaNegocioException>(() => g.Usuarios.DesactivarModeradorAsync(2, 1));
+        await EsperarError<ReglaNegocioException>(() => g.Usuarios.DesactivarModeradorAsync(5, 2));
+        Afirmar(!await g.Usuarios.DesactivarModeradorAsync(1, 1), "la cuenta de un supermoderador no se elimina");
+        Afirmar(!await g.Usuarios.DesactivarModeradorAsync(1, 5), "mariana no es moderadora");
+        Afirmar((await g.Usuarios.ListarModeradoresAsync())[0] is { NombreUsuario: "mod_ana", EsSuperModerador: true }, "ana va primero");
+        Afirmar(await g.Usuarios.DesactivarModeradorAsync(1, 2), "ana elimina a luis");
+        Afirmar(await g.Usuarios.IniciarSesionAsync("mod_luis", "Test1234!") == null, "luis ya no entra");
+        Afirmar((await g.Usuarios.ListarModeradoresAsync()).Count == 1, "solo queda ana");
+        return "";
+    });
     await Prueba("Las reseñas de una cuenta eliminada no se muestran ni cuentan", async () =>
     {
         // diego (6) dejó 4★ en Dandelion (lugar 1) junto con 5★ de mariana: antes 4.5 de 2, ahora 5.0 de 1.

@@ -1,0 +1,45 @@
+@*
+  "¿Eliminar a este moderador?": lo abre "Equipo de moderación" con Modales.ConfirmarEliminarModeradorAsync(m).
+  Solo un supermoderador llega aquí. La cuenta se desactiva (is_active = FALSE): sus decisiones quedan en el
+  historial y ya no puede iniciar sesión. Misma forma que "Modal / Eliminar cuenta".
+*@
+@inject ServicioModeracion Moderacion
+@inject Modales Modales
+
+<EncabezadoModal Titulo="¿Eliminar a este moderador?" Icono="alerta-error" Peligro
+                 Texto="Ya no podrá iniciar sesión. Sus decisiones se conservan en el historial." />
+<div class="modal__resumen">
+    <p class="t-body-fuerte">@Moderador.NombreUsuario</p>
+    <p class="t-small texto-2">@Moderador.Correo</p>
+</div>
+<AvisoModal Errores="_errores" />
+<div class="modal__botones">
+    <Boton Texto="Eliminar cuenta" Variante="peligro" Icono="bote-blanco" Clase="modal__ancho" Ocupado="_enviando" OnClick="EliminarAsync" />
+    <Boton Texto="Cancelar" Variante="secundario" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Usuario Moderador { get; set; } = default!;
+
+    private readonly ErroresFormulario _errores = new();
+    private bool _enviando;
+
+    private async Task EliminarAsync()
+    {
+        _errores.Limpiar();
+        _enviando = true;
+        try
+        {
+            await Moderacion.EliminarModeradorAsync(Moderador.Id);
+            Modales.Cerrar(true);
+        }
+        catch (Exception ex)
+        {
+            _errores.PonerAviso(MensajesError.Para(ex));
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+}

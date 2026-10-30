@@ -1,17 +1,18 @@
 @*
-  Pantalla Mapa (frames "Mapa (visitante)" y "Mapa" de Figma): lista de lugares a la izquierda y el
-  mapa a la derecha, sincronizados.
+  Pantalla Mapa (frames "Mapa (visitante)" y "Mapa" de Figma): lista de lugares y eventos a la izquierda y
+  el mapa a la derecha, sincronizados.
 
-  1. Pide los lugares aprobados (ServicioLugar.ListarParaMapaAsync).
-  2. El buscador y las píldoras de tipo deciden qué lugares van al mapa.
-  3. La lista muestra solo los que se ven en el mapa ("N lugares en esta zona"): al moverlo o
+  1. Pide los lugares aprobados y los eventos vigentes con ubicación (pines azules).
+  2. El buscador y las píldoras de tipo deciden qué va al mapa.
+  3. La lista muestra solo lo que se ve en el mapa ("2 lugares y 1 evento en esta zona"): al moverlo o
      acercarlo, el mapa avisa (AlCambiarZona) y la lista se vuelve a pintar.
-  4. Elegir una fila resalta su pin y elegir un pin resalta su fila; los dos abren el detalle del lugar.
+  4. Elegir una fila resalta su pin y elegir un pin resalta su fila; los dos abren su detalle.
      Un clic en el mapa fuera de los pines quita la selección.
 *@
 @page "/mapa"
 @implements IDisposable
 @inject ServicioLugar Servicio
+@inject ServicioEvento Eventos
 @inject Hojas Hojas
 @inject Avisos Avisos
 @inject ILogger<MapaPagina> Registro
@@ -19,15 +20,19 @@
 <PageTitle>SuraChih · Mapa</PageTitle>
 
 <main class="explorar-mapa">
-    <aside class="panel-mapa" aria-label="Lugares en el mapa">
+    <aside class="panel-mapa" aria-label="Lugares y eventos en el mapa">
         <form class="panel-mapa__buscador" role="search" @onsubmit="() => { }">
             <Campo Nombre="buscar" Etiqueta="Buscar en el mapa" Tipo="search" Icono="buscar-gris" Autocompletar="off"
                    Valor="@_texto" ValorChanged="AlEscribir" />
         </form>
-        <div class="panel-mapa__segmentos" role="group" aria-label="Tipo de lugar">
+        <div class="panel-mapa__segmentos" role="group" aria-label="Qué mostrar">
             @if (_lugares != null)
             {
                 <Pildora Texto="Todo" Activa="_tipo == null" OnClick="() => ElegirTipoAsync(null)" />
+                @if (_eventos.Count > 0)
+                {
+                    <Pildora Texto="Eventos" Activa="_tipo == Lugares.TipoEvento" OnClick="() => ElegirTipoAsync(Lugares.TipoEvento)" />
+                }
                 @foreach (var (valor, texto) in Lugares.TiposPresentes(_lugares))
                 {
                     <Pildora Texto="@texto" Activa="_tipo == valor" OnClick="() => ElegirTipoAsync(valor)" />
@@ -49,15 +54,15 @@
             }
             else
             {
-                @foreach (var lugar in EnZona)
+                @foreach (var elemento in EnZona)
                 {
-                    <ItemLugar @key="lugar.Id" Lugar="lugar" Activo="lugar.Id == _seleccionado" Desplazar="_desdeElMapa"
-                               OnClick="() => ElegirFilaAsync(lugar.Id)" />
+                    <ItemLugar @key="Clave(elemento)" Lugar="elemento.Lugar" Evento="elemento.Evento" Activo="Clave(elemento) == _seleccionado"
+                               Desplazar="_desdeElMapa" OnClick="() => ElegirFilaAsync(elemento)" />
                 }
             }
         </ul>
     </aside>
-    <Mapa @ref="_mapa" Clase="explorar-mapa__mapa" AriaLabel="Mapa de lugares"
+    <Mapa @ref="_mapa" Clase="explorar-mapa__mapa" AriaLabel="Mapa de lugares y eventos"
           AlElegirPin="AlElegirPinAsync" AlDeseleccionar="() => _seleccionado = null" AlCambiarZona="AlCambiarZona" />
 </main>
 
@@ -67,27 +72,48 @@
     private Mapa _mapa = default!;
     /// <summary>Todos los lugares aprobados, tal como llegan de BackendLogica (null mientras carga).</summary>
     private List<LugarTarjeta>? _lugares;
+    /// <summary>Eventos vigentes con ubicación.</summary>
+    private List<EventoTarjeta> _eventos = [];
     private string _texto = "";
+    /// <summary>Píldora elegida: tipo de lugar, <see cref="Lugares.TipoEvento"/> o null (todo).</summary>
     private string? _tipo;
-    private int? _seleccionado;
+    /// <summary><see cref="PuntoMapa.Clave"/> de lo elegido.</summary>
+    private string? _seleccionado;
     /// <summary>La selección vino de un pin: la lista se desplaza hasta su fila.</summary>
     private bool _desdeElMapa;
-    /// <summary>Ids de los lugares que se ven ahora en el mapa (null hasta que el mapa avise).</summary>
-    private HashSet<int>? _visibles;
+    /// <summary>Claves de lo que se ve ahora en el mapa (null hasta que el mapa avise).</summary>
+    private HashSet<string>? _visibles;
     private CancellationTokenSource? _espera;
 
-    private List<LugarTarjeta> Filtrados => _lugares?.Where(Coincide).ToList() ?? [];
+    private static string Clave(ElementoCollage elemento) => Lugares.Punto(elemento).Clave;
 
-    private List<LugarTarjeta> EnZona => _visibles == null ? [] : Filtrados.Where(l => _visibles.Contains(l.Id)).ToList();
+    private List<ElementoCollage> Filtrados => _lugares == null ? [] :
+    [
+        .. _lugares.Select(ElementoCollage.DeLugar).Where(Coincide),
+        .. _eventos.Select(ElementoCollage.DeEvento).Where(Coincide),
+    ];
 
-    private string Conteo => _lugares == null ? "Buscando lugares…"
-        : EnZona.Count == 0 ? "Sin lugares en esta zona"
-        : $"{EnZona.Count} {(EnZona.Count == 1 ? "lugar" : "lugares")} en esta zona";
+    private List<ElementoCollage> EnZona => _visibles == null ? [] : Filtrados.Where(e => _visibles.Contains(Clave(e))).ToList();
+
+    private string Conteo
+    {
+        get
+        {
+            if (_lugares == null) return "Buscando en el mapa…";
+            var enZona = EnZona;
+            int lugares = enZona.Count(e => e.EsLugar), eventos = enZona.Count - lugares;
+            if (enZona.Count == 0) return "Nada en esta zona";
+            var partes = new List<string>();
+            if (lugares > 0) partes.Add($"{lugares} {(lugares == 1 ? "lugar" : "lugares")}");
+            if (eventos > 0) partes.Add($"{eventos} {(eventos == 1 ? "evento" : "eventos")}");
+            return $"{string.Join(" y ", partes)} en esta zona";
+        }
+    }
 
     private string MensajeVacio =>
-        _lugares!.Count == 0 ? "Todavía no hay lugares publicados."
-        : Filtrados.Count == 0 ? "Ningún lugar coincide con tu búsqueda."
-        : "No hay lugares en esta parte del mapa. Aléjalo o muévelo para ver más.";
+        _lugares!.Count + _eventos.Count == 0 ? "Todavía no hay lugares ni eventos publicados."
+        : Filtrados.Count == 0 ? "Nada coincide con tu búsqueda."
+        : "No hay nada en esta parte del mapa. Aléjalo o muévelo para ver más.";
 
     /// <summary>Minúsculas y sin acentos, para que "cafe" encuentre "Café".</summary>
     private static string Normalizar(string? texto) =>
@@ -95,13 +121,15 @@
             .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)
             .ToArray()).ToLowerInvariant();
 
-    private bool Coincide(LugarTarjeta lugar)
+    private bool Coincide(ElementoCollage elemento)
     {
-        if (_tipo != null && Lugares.TipoLugar(lugar) != _tipo) return false;
+        string? tipo = elemento.Lugar is { } lugar ? Lugares.TipoLugar(lugar) : Lugares.TipoEvento;
+        if (_tipo != null && tipo != _tipo) return false;
         string buscado = Normalizar(_texto.Trim());
         if (buscado.Length == 0) return true;
-        return new[] { lugar.Nombre, lugar.Direccion }.Concat(lugar.Etiquetas.Select(t => t.Nombre))
-            .Any(t => Normalizar(t).Contains(buscado));
+        string?[] textos = elemento.Evento is { } e ? [e.Titulo, e.LugarNombre, e.Direccion] : [elemento.Lugar!.Nombre, elemento.Lugar.Direccion];
+        var etiquetas = elemento.Evento?.Etiquetas ?? elemento.Lugar!.Etiquetas;
+        return textos.Concat(etiquetas.Select(t => t.Nombre)).Any(t => Normalizar(t).Contains(buscado));
     }
 
     protected override async Task OnAfterRenderAsync(bool primeraVez)
@@ -109,25 +137,29 @@
         if (!primeraVez) return;
         try
         {
-            _lugares = await Servicio.ListarParaMapaAsync();
+            var lugares = Servicio.ListarParaMapaAsync();
+            var eventos = Eventos.ListarParaMapaAsync();
+            await Task.WhenAll(lugares, eventos);
+            _lugares = lugares.Result;
+            _eventos = eventos.Result;
         }
         catch (Exception ex)
         {
-            Registro.LogError(ex, "No se pudieron cargar los lugares del mapa");
-            Avisos.Mostrar(ex is BackendLogica.Datos.SuraChihException ? ex.Message : "No se pudieron cargar los lugares.", TipoAviso.Error);
+            Registro.LogError(ex, "No se pudieron cargar los lugares y eventos del mapa");
+            Avisos.Mostrar(ex is BackendLogica.Datos.SuraChihException ? ex.Message : "No se pudo cargar el mapa.", TipoAviso.Error);
             _lugares = [];
         }
-        if (_lugares.Count == 0) _visibles = [];   // sin pines el mapa no se mueve y no avisaría
+        if (_lugares.Count + _eventos.Count == 0) _visibles = [];   // sin pines el mapa no se mueve y no avisaría
         StateHasChanged();
         await AplicarFiltroAsync();
     }
 
-    /// <summary>Manda al mapa los lugares que pasan el filtro y lo encuadra para verlos todos.</summary>
+    /// <summary>Manda al mapa lo que pasa el filtro y lo encuadra para verlo todo.</summary>
     private async Task AplicarFiltroAsync()
     {
-        var visibles = Filtrados;
-        if (!visibles.Any(l => l.Id == _seleccionado)) _seleccionado = null;
-        await _mapa.MostrarAsync(visibles.Select(Lugares.Punto), ajustar: true);
+        var puntos = Filtrados.Select(Lugares.Punto).ToList();
+        if (!puntos.Any(p => p.Clave == _seleccionado)) _seleccionado = null;
+        await _mapa.MostrarAsync(puntos, ajustar: true);
     }
 
     private async Task ElegirTipoAsync(string? tipo)
@@ -154,25 +186,30 @@
         }
     }
 
-    private void AlCambiarZona(int[] visibles) => _visibles = [.. visibles];
+    private void AlCambiarZona(string[] visibles) => _visibles = [.. visibles];
 
-    private async Task ElegirFilaAsync(int id)
+    private async Task ElegirFilaAsync(ElementoCollage elemento)
     {
-        _seleccionado = id;
+        PuntoMapa punto = Lugares.Punto(elemento);
+        _seleccionado = punto.Clave;
         _desdeElMapa = false;
-        await _mapa.SeleccionarAsync(Punto(id), mover: true);
-        Hojas.AbrirLugar(id);
+        await _mapa.SeleccionarAsync(punto, mover: true);
+        AbrirDetalle(punto.Id, punto.Tipo);
     }
 
     private Task AlElegirPinAsync((int Id, string Tipo) pin)
     {
-        _seleccionado = pin.Id;
+        _seleccionado = $"{pin.Tipo}:{pin.Id}";
         _desdeElMapa = true;
-        if (pin.Tipo == "lugar") Hojas.AbrirLugar(pin.Id);
+        AbrirDetalle(pin.Id, pin.Tipo);
         return Task.CompletedTask;
     }
 
-    private PuntoMapa? Punto(int id) => _lugares?.FirstOrDefault(l => l.Id == id) is { } lugar ? Lugares.Punto(lugar) : null;
+    private void AbrirDetalle(int id, string tipo)
+    {
+        if (tipo == Lugares.TipoEvento) Hojas.AbrirEvento(id);
+        else Hojas.AbrirLugar(id);
+    }
 
     public void Dispose() => _espera?.Cancel();
 }

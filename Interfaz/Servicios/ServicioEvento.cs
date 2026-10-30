@@ -18,6 +18,13 @@ namespace Interfaz.Servicios
     {
         /// <summary>Tarjetas de "Te podría interesar" (una fila de tres en Figma).</summary>
         private const int Recomendados = 3;
+        /// <summary>Pines de evento como máximo en la pantalla Mapa.</summary>
+        private const int EnMapa = 200;
+
+        /// <summary>Pantalla Mapa: eventos publicados que no han terminado y tienen ubicación.</summary>
+        public async Task<List<EventoTarjeta>> ListarParaMapaAsync() =>
+            (await bd.Eventos.FiltrarAsync(new FiltroEventos { Limite = EnMapa }))
+                .Where(e => e.Latitud != null && e.Longitud != null).ToList();
 
         public async Task<DatosDetalleEvento> ObtenerAsync(int eventoId)
         {

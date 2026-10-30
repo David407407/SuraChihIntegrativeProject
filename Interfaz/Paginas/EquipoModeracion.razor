@@ -1,0 +1,104 @@
+@*
+  "Equipo de moderación": los moderadores activos y el botón para eliminar sus cuentas. Es el único lugar
+  donde se elimina una cuenta de moderador (ellos no pueden hacerlo desde Mi perfil). No está en Figma: usa
+  las mismas piezas que la bandeja de moderación. Solo entran supermoderadores (Usuario.EsSuperModerador);
+  las cuentas de supermoderador no se eliminan desde aquí.
+*@
+@page "/moderacion/equipo"
+@implements IDisposable
+@inject Sesion Sesion
+@inject ServicioModeracion Servicio
+@inject Modales Modales
+@inject Avisos Avisos
+@inject Acciones Acciones
+@inject ILogger<EquipoModeracion> Registro
+
+<PageTitle>SuraChih · Equipo de moderación</PageTitle>
+
+<main class="equipo contenedor">
+    <button type="button" class="equipo__volver t-small-fuerte texto-2" @onclick="() => Acciones.IrA(Acciones.Rutas.Moderacion)">
+        <Icono Nombre="flecha-volver-gris-12" Caja="12" /><span>Volver a moderación</span>
+    </button>
+    <header class="equipo__titulo">
+        <h1 class="t-h1">Equipo de moderación</h1>
+        <p class="t-body texto-2">Los moderadores no pueden eliminar su propia cuenta: solo un supermoderador puede hacerlo.</p>
+    </header>
+
+    @if (Sesion.Usuario?.EsSuperModerador != true)
+    {
+        <p class="t-body texto-2">Esta sección es solo para supermoderadores.</p>
+    }
+    else if (_equipo == null)
+    {
+        @for (int i = 0; i < 3; i++)
+        {
+            <div class="esqueleto equipo__esqueleto" aria-hidden="true"></div>
+        }
+    }
+    else
+    {
+        <ul class="equipo__lista">
+            @foreach (var moderador in _equipo)
+            {
+                <li @key="moderador.Id" class="miembro">
+                    <span class="miembro__avatar" aria-hidden="true">@Navbar.Inicial(moderador)</span>
+                    <div class="miembro__datos">
+                        <p class="t-card-titulo">@moderador.NombreUsuario</p>
+                        <p class="t-small texto-2">@moderador.Correo</p>
+                    </div>
+                    @if (moderador.EsSuperModerador)
+                    {
+                        <Chip Texto="Supermoderador" Variante="sol-suave" />
+                    }
+                    else
+                    {
+                        <Boton Texto="Eliminar cuenta" Variante="peligro" Tamano="s" Icono="bote-blanco" aria-label="@($"Eliminar la cuenta de {moderador.NombreUsuario}")"
+                               OnClick="() => EliminarAsync(moderador)" />
+                    }
+                </li>
+            }
+        </ul>
+    }
+</main>
+
+@code {
+    private List<Usuario>? _equipo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Sesion.Cambio += AlCambiarSesion;
+        if (!Sesion.Iniciada) Modales.RequiereSesion("Inicia sesión con tu cuenta de supermoderador.");
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        if (Sesion.Usuario?.EsSuperModerador != true) return;
+        try
+        {
+            _equipo = await Servicio.ListarEquipoAsync();
+        }
+        catch (Exception ex)
+        {
+            Registro.LogError(ex, "No se pudo cargar el equipo de moderación");
+            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
+            _equipo = [];
+        }
+    }
+
+    private async Task EliminarAsync(Usuario moderador)
+    {
+        if (!await Modales.ConfirmarEliminarModeradorAsync(moderador)) return;
+        _equipo?.RemoveAll(m => m.Id == moderador.Id);
+        Avisos.Mostrar($"Se eliminó la cuenta de {moderador.NombreUsuario}");
+    }
+
+    private void AlCambiarSesion() => InvokeAsync(async () =>
+    {
+        _equipo = null;
+        await CargarAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
+}

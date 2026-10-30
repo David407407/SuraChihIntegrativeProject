@@ -26,12 +26,14 @@ CREATE TABLE user (
     password_hash  CHAR(60)     NOT NULL,              -- BCrypt (BCrypt.Net-Next)
     avatar_url     VARCHAR(500) NULL,                  -- URL en la nube
     is_mod         BOOLEAN      NOT NULL DEFAULT FALSE,
+    is_super_mod   BOOLEAN      NOT NULL DEFAULT FALSE, -- elimina cuentas de moderador; siempre es moderador
     is_active      BOOLEAN      NOT NULL DEFAULT TRUE, -- "borrar cuenta" = FALSE
     created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uq_user_username UNIQUE (username),
     CONSTRAINT uq_user_email    UNIQUE (email),
-    CONSTRAINT ck_user_username CHECK (REGEXP_LIKE(username, '^[A-Za-z0-9_.]{3,30}$', 'c'))
+    CONSTRAINT ck_user_username CHECK (REGEXP_LIKE(username, '^[A-Za-z0-9_.]{3,30}$', 'c')),
+    CONSTRAINT ck_user_super_mod CHECK (NOT is_super_mod OR is_mod)
 );
 
 -- Solicitud y perfil de organizador (1 fila por usuario).
@@ -588,14 +590,14 @@ INSERT INTO tag (name, icon, color_hex, scope, sort_order) VALUES
  ('Parque',                    'tree',       '#065F46', 'place', 15);
 
 SET @pw = '$2b$11$C4rR0iUKQKbnm.V0sIsKHeyxIUqVR7g8aqJbWo48UbbeVbh/PeDsC';
-INSERT INTO user (id, username, email, password_hash, is_mod) VALUES
- (1, 'mod_ana',      'ana.mod@example.com',     @pw, TRUE),
- (2, 'mod_luis',     'luis.mod@example.com',    @pw, TRUE),
- (3, 'cafe_dande',   'dandelion@example.com',   @pw, FALSE),
- (4, 'misiones_cuu', 'misiones@example.com',    @pw, FALSE),
- (5, 'mariana_r',    'mariana.r@example.com',   @pw, FALSE),
- (6, 'diego_m',      'diego.m@example.com',     @pw, FALSE),
- (7, 'sofia_c',      'sofia.c@example.com',     @pw, FALSE);
+INSERT INTO user (id, username, email, password_hash, is_mod, is_super_mod) VALUES
+ (1, 'mod_ana',      'ana.mod@example.com',     @pw, TRUE,  TRUE),
+ (2, 'mod_luis',     'luis.mod@example.com',    @pw, TRUE,  FALSE),
+ (3, 'cafe_dande',   'dandelion@example.com',   @pw, FALSE, FALSE),
+ (4, 'misiones_cuu', 'misiones@example.com',    @pw, FALSE, FALSE),
+ (5, 'mariana_r',    'mariana.r@example.com',   @pw, FALSE, FALSE),
+ (6, 'diego_m',      'diego.m@example.com',     @pw, FALSE, FALSE),
+ (7, 'sofia_c',      'sofia.c@example.com',     @pw, FALSE, FALSE);
 
 -- Solicitudes de organizador (3 y 4 se aprueban; 7 queda pendiente para probar el flujo).
 INSERT INTO organizer_profile (user_id, business_name, social_url, whatsapp) VALUES

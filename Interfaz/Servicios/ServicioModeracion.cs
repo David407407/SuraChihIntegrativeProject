@@ -156,6 +156,23 @@ namespace Interfaz.Servicios
             return bd.Moderacion.RechazarAsync(moderador.Id, TipoObjetivoModeracion.Evento, eventoId, texto);
         }
 
+        // ---------------------------------------------------------------- Equipo (solo supermoderadores)
+
+        /// <summary>Moderadores activos para Paginas/EquipoModeracion.razor.</summary>
+        public Task<List<Usuario>> ListarEquipoAsync()
+        {
+            SuperModerador();
+            return bd.Usuarios.ListarModeradoresAsync();
+        }
+
+        /// <summary>Elimina (desactiva) la cuenta de un moderador. BackendLogica vuelve a revisar el permiso.</summary>
+        public async Task EliminarModeradorAsync(int moderadorId)
+        {
+            Usuario super = SuperModerador();
+            if (!await bd.Usuarios.DesactivarModeradorAsync(super.Id, moderadorId))
+                throw new ReglaNegocioException("Esa cuenta ya no se puede eliminar.");
+        }
+
         // ----------------------------------------------------------------
 
         /// <summary>Aprobado y vigente, terminado o cancelado: alguna vez se publicó.</summary>
@@ -169,6 +186,12 @@ namespace Interfaz.Servicios
         {
             Usuario usuario = sesion.Requerir("moderar publicaciones");
             return usuario.EsModerador ? usuario : throw new ReglaNegocioException("Solo los moderadores pueden entrar a Moderación.");
+        }
+
+        private Usuario SuperModerador()
+        {
+            Usuario usuario = sesion.Requerir("administrar el equipo de moderación");
+            return usuario.EsSuperModerador ? usuario : throw new ReglaNegocioException("Solo un supermoderador puede administrar el equipo.");
         }
     }
 

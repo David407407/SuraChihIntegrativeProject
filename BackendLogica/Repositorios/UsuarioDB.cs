@@ -10,7 +10,7 @@ namespace BackendLogica.Repositorios
     /// <summary>Cuentas de usuario: registro, inicio de sesión y perfil.</summary>
     public sealed class UsuarioDB : ConexionDB, IUserRepository
     {
-        private const string Columnas = "id, username, email, avatar_url, is_mod, is_active, created_at";
+        private const string Columnas = "id, username, email, avatar_url, is_mod, is_super_mod, is_active, created_at";
 
         public UsuarioDB(ConfiguracionBD? configuracion = null) : base(configuracion) { }
 
@@ -88,13 +88,37 @@ namespace BackendLogica.Repositorios
 
         /// <summary>
         /// "Eliminar cuenta": <c>is_active = FALSE</c> (nunca DELETE, para conservar reseñas y eventos) e
-        /// invalida los enlaces de "Recuperar contraseña" que estuvieran pendientes.
+        /// invalida los enlaces de "Recuperar contraseña" que estuvieran pendientes. Un moderador no puede
+        /// eliminar su propia cuenta: la elimina un supermoderador (<see cref="DesactivarModeradorAsync"/>).
         /// </summary>
-        /// <returns>false si la cuenta no existe o ya estaba desactivada.</returns>
+        /// <returns>false si la cuenta no existe, ya estaba desactivada o es de un moderador.</returns>
         public Task<bool> DesactivarAsync(int usuarioId, CancellationToken ct = default) =>
+            DesactivarDondeAsync(usuarioId, "NOT is_mod", ct);
+
+        /// <summary>"Equipo de moderación": moderadores activos, primero los supermoderadores.</summary>
+        public Task<List<Usuario>> ListarModeradoresAsync(CancellationToken ct = default) =>
+            ConsultarAsync($"""
+                SELECT {Columnas} FROM user WHERE is_mod AND is_active ORDER BY is_super_mod DESC, username
+                """, Mapear, ct: ct);
+
+        /// <summary>Un supermoderador elimina la cuenta de un moderador. Las de supermoderador no se eliminan aquí.</summary>
+        /// <exception cref="ReglaNegocioException"><paramref name="superModeradorId"/> no es supermoderador.</exception>
+        /// <returns>false si no es la cuenta activa de un moderador.</returns>
+        public async Task<bool> DesactivarModeradorAsync(int superModeradorId, int moderadorId, CancellationToken ct = default)
+        {
+            if (await ObtenerAsync(superModeradorId, ct) is not { EsSuperModerador: true, Activo: true })
+                throw new ReglaNegocioException(SoloSuperModeradores);
+            return await DesactivarDondeAsync(moderadorId, "is_mod AND NOT is_super_mod", ct);
+        }
+
+        /// <summary>Mismo mensaje en <c>FalsoUserRepository</c>.</summary>
+        internal const string SoloSuperModeradores = "Solo un supermoderador puede eliminar cuentas de moderador.";
+
+        /// <param name="condicion">Texto constante del código (nunca viene del usuario).</param>
+        private Task<bool> DesactivarDondeAsync(int usuarioId, string condicion, CancellationToken ct) =>
             EnTransaccionAsync(async tx =>
             {
-                int filas = await tx.EjecutarAsync("UPDATE user SET is_active = FALSE WHERE id = @usuarioId AND is_active", new { usuarioId });
+                int filas = await tx.EjecutarAsync($"UPDATE user SET is_active = FALSE WHERE id = @usuarioId AND is_active AND {condicion}", new { usuarioId });
                 if (filas == 0) return false;
 
                 await tx.EjecutarAsync("""
@@ -110,6 +134,7 @@ namespace BackendLogica.Repositorios
             r.TextoONulo("avatar_url"),
             r.Bool("is_mod"),
             r.Bool("is_active"),
-            r.Fecha("created_at"));
+            r.Fecha("created_at"),
+            r.Bool("is_super_mod"));
     }
 }

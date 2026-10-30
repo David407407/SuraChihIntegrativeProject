@@ -1,9 +1,8 @@
 @*
-  Botones "Continuar con Google / Apple" del diseño (modales Iniciar sesión y Crear cuenta).
-  - Google: abre el navegador del sistema para elegir la cuenta (ServicioCuenta.ContinuarConGoogleAsync).
-    Con la cuenta lista, cierra la modal y saluda. Si algo falla, el mensaje sale en Errores.
-  - Apple: todavía no (necesita cuenta de desarrollador de Apple y un servidor con dominio); pone un aviso.
-  AlAvisar es para que la modal que los contiene se vuelva a pintar y muestre el aviso.
+  Botón "Continuar con Google" del diseño (modales Iniciar sesión y Crear cuenta).
+  Abre el navegador del sistema para elegir la cuenta (ServicioCuenta.ContinuarConGoogleAsync). Con la
+  cuenta lista, cierra la modal y saluda. Si algo falla, el mensaje sale en Errores.
+  AlAvisar es para que la modal que lo contiene se vuelva a pintar y muestre el aviso.
 *@
 @inject ServicioCuenta Cuenta
 @inject Modales Modales
@@ -11,33 +10,22 @@
 @inject ILogger<BotonesSociales> Registro
 
 <div class="modal__sociales">
-    @foreach (var proveedor in Proveedores)
-    {
-        <Boton Texto="@(_esperando == proveedor ? "Termina en tu navegador…" : $"Continuar con {proveedor}")" Variante="secundario" Clase="modal__ancho"
-               Ocupado="@(_esperando == proveedor)" Deshabilitado="@(_esperando != null)" OnClick="() => ContinuarAsync(proveedor)" />
-    }
+    <Boton Texto="@(_esperando ? "Termina en tu navegador…" : "Continuar con Google")" Variante="secundario" Clase="modal__ancho"
+           Ocupado="_esperando" OnClick="ContinuarAsync" />
 </div>
 <p class="modal__separador t-caption">o con tu correo</p>
 
 @code {
-    [Parameter, EditorRequired] public string[] Proveedores { get; set; } = [];
     [Parameter, EditorRequired] public ErroresFormulario Errores { get; set; } = default!;
     [Parameter] public EventCallback AlAvisar { get; set; }
 
-    /// <summary>Proveedor con el navegador abierto (null = ninguno).</summary>
-    private string? _esperando;
+    /// <summary>El navegador está abierto esperando la cuenta.</summary>
+    private bool _esperando;
 
-    private async Task ContinuarAsync(string proveedor)
+    private async Task ContinuarAsync()
     {
         Errores.Limpiar();
-        if (proveedor != "Google")
-        {
-            Errores.PonerAviso($"El acceso con {proveedor} llega en la siguiente versión. Por ahora usa tu correo o Google.", informativo: true);
-            await AlAvisar.InvokeAsync();
-            return;
-        }
-
-        _esperando = proveedor;
+        _esperando = true;
         try
         {
             var (usuario, nueva) = await Cuenta.ContinuarConGoogleAsync();
@@ -52,7 +40,7 @@
         }
         finally
         {
-            _esperando = null;
+            _esperando = false;
         }
     }
 }

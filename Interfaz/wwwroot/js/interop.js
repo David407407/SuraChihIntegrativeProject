@@ -173,7 +173,9 @@ export function mapaConectar(mapa, puente) {
   });
   mapa.addEventListener('sc:mapa-deseleccion', () => llamar('AlDeseleccionarJs'));
   // El pin único de los detalles tiene id "unico" (no es un lugar): solo se mandan los ids numéricos.
-  mapa.addEventListener('sc:mapa-zona', ({ detail }) => llamar('AlCambiarZonaJs', detail.visibles.map((p) => p.id).filter(Number.isInteger)));
+  // Va como "lugar:3" / "evento:3" (PuntoMapa.Clave): un evento y un lugar pueden tener el mismo id.
+  mapa.addEventListener('sc:mapa-zona', ({ detail }) => llamar('AlCambiarZonaJs',
+    detail.visibles.filter((p) => Number.isInteger(p.id)).map((p) => `${p.tipo}:${p.id}`)));
   mapa.addEventListener('sc:mapa-ubicacion', ({ detail }) => llamar('AlMoverUbicacionJs', detail.lat, detail.lng));
 }
 

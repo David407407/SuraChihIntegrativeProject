@@ -9,7 +9,7 @@
 @inject Avisos Avisos
 
 <EncabezadoModal Titulo="Crea tu cuenta" Texto="Es gratis y toma menos de un minuto." />
-<BotonesSociales Proveedores="@(["Google"])" Errores="_errores" AlAvisar="StateHasChanged" />
+<BotonesSociales Errores="_errores" AlAvisar="StateHasChanged" />
 <EditForm Model="_datos" OnSubmit="EnviarAsync" class="modal__formulario" novalidate>
     <AvisoModal Errores="_errores" />
     <Campo Nombre="nombreUsuario" Etiqueta="Nombre de usuario" Icono="usuario" @bind-Valor="_datos.NombreUsuario"

@@ -130,6 +130,11 @@ namespace Interfaz.Estado
         /// <summary>Cuánto se ve "Decisión registrada" antes de cerrarse sola.</summary>
         private static readonly TimeSpan DuracionRegistrada = TimeSpan.FromSeconds(1.8);
 
+        /// <summary>"¿Eliminar a este moderador?" (solo supermoderadores).</summary>
+        /// <returns>true si la cuenta se eliminó.</returns>
+        public async Task<bool> ConfirmarEliminarModeradorAsync(Usuario moderador) =>
+            await Abrir<ModalEliminarModerador>(new Dictionary<string, object?> { ["Moderador"] = moderador }) as bool? ?? false;
+
         /// <summary>"Modal / Aprobar publicación" (¿Aprobar y publicar?). Aprueba y, si se pidió, destaca.</summary>
         /// <returns>true si se aprobó.</returns>
         public async Task<bool> AprobarEventoAsync(EventoTarjeta evento, string? comentario, bool destacar) =>

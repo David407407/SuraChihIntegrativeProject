@@ -3,6 +3,7 @@ namespace BackendLogica.Modelos
     /// <summary>
     /// Cuenta de usuario. Nunca incluye el hash de la contraseña: ese dato no sale de <c>UsuarioDB</c>.
     /// </summary>
+    /// <param name="EsSuperModerador">Es el único que elimina cuentas de moderador. Siempre es también moderador.</param>
     public sealed record Usuario(
         int Id,
         string NombreUsuario,
@@ -10,7 +11,8 @@ namespace BackendLogica.Modelos
         string? AvatarUrl,
         bool EsModerador,
         bool Activo,
-        DateTime CreadoEn);
+        DateTime CreadoEn,
+        bool EsSuperModerador = false);
 
     /// <summary>Perfil (y solicitud) de organizador. Organizador = usuario con estado Aprobado.</summary>
     public sealed record PerfilOrganizador(

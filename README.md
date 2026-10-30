@@ -82,7 +82,7 @@ Abre <http://localhost:5180>. Con `--DatosFalsos true` usa los datos de prueba e
 Recargar la pestaña cierra la sesión.
 
 Usuarios de prueba (contraseña `Test1234!`): `mariana_r`, `diego_m`, `sofia_c` (normales),
-`cafe_dande` y `misiones_cuu` (organizadores), `mod_ana` y `mod_luis` (moderadores).
+`cafe_dande` y `misiones_cuu` (organizadores), `mod_luis` (moderador) y `mod_ana` (supermoderadora).
 
 ## Diseño
 

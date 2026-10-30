@@ -1,4 +1,5 @@
 using BackendLogica.Modelos;
+using Interfaz.Servicios;
 
 namespace Interfaz.Utilidades
 {
@@ -20,6 +21,8 @@ namespace Interfaz.Utilidades
             ("tree", "Parques", "pin-parque"),
         ];
         private const string PinGenerico = "ubicacion";
+        /// <summary><see cref="PuntoMapa.Tipo"/> de los eventos.</summary>
+        public const string TipoEvento = "evento";
 
         /// <summary>Etiqueta que define el tipo del lugar o, si ninguna es de un tipo conocido, la primera.</summary>
         private static Etiqueta? EtiquetaPrincipal(LugarTarjeta lugar) =>
@@ -43,6 +46,14 @@ namespace Interfaz.Utilidades
             return Tipos.Where(t => presentes.Contains(t.Icono)).Select(t => (t.Icono, t.Plural)).ToList();
         }
 
+        /// <summary>Punto del mapa para un evento (pin azul; ver <c>.pin--evento</c> en css/mapa.css).</summary>
+        public static PuntoMapa Punto(EventoTarjeta evento) =>
+            new(evento.Id, TipoEvento, evento.Latitud, evento.Longitud, evento.Titulo, "calendario-16-tinta");
+
+        /// <summary>Punto del mapa para un lugar o un evento.</summary>
+        public static PuntoMapa Punto(ElementoCollage elemento) =>
+            elemento.Lugar is { } lugar ? Punto(lugar) : Punto(elemento.Evento!);
+
         /// <summary>Punto del mapa para un lugar.</summary>
         public static PuntoMapa Punto(LugarTarjeta lugar)
         {
@@ -56,5 +67,9 @@ namespace Interfaz.Utilidades
     /// Un pin del mapa. <paramref name="Tipo"/> distingue un evento de un lugar con el mismo id;
     /// <paramref name="Icono"/> es un archivo de assets/iconos sin extensión.
     /// </summary>
-    public sealed record PuntoMapa(int Id, string Tipo, decimal? Lat, decimal? Lng, string? Titulo, string Icono);
+    public sealed record PuntoMapa(int Id, string Tipo, decimal? Lat, decimal? Lng, string? Titulo, string Icono)
+    {
+        /// <summary>"lugar:3" / "evento:3": identifica al punto (un lugar y un evento pueden tener el mismo id).</summary>
+        public string Clave => $"{Tipo}:{Id}";
+    }
 }

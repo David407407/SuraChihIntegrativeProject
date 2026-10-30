@@ -1,5 +1,6 @@
 @*
-  "Item" de la lista del mapa: foto de 72px, nombre, tipo + dirección, calificación y precio.
+  "Item" de la lista del mapa: foto de 72px, nombre, tipo + dirección, calificación y precio. También pinta
+  un evento (con Evento en vez de Lugar): título, fecha + lugar y precio.
   Va dentro de un <ul>; quien pinta la lista decide qué pasa al elegirlo (OnClick).
 
   <ItemLugar Lugar="l" Activo="l.Id == seleccionado" Desplazar="desdeElMapa" OnClick="() => Elegir(l.Id)" />
@@ -9,28 +10,41 @@
 <li>
     <button @ref="_boton" type="button" class="item-lugar" aria-current="@(Activo ? "true" : "false")" @onclick="OnClick">
         <span class="item-lugar__imagen">
-            <Imagen Src="@Lugar.ImagenUrl" Ancho="72" Alto="72" />
+            <Imagen Src="@(Evento != null ? Evento.ImagenUrl : Lugar?.ImagenUrl)" Ancho="72" Alto="72" />
         </span>
         <span class="item-lugar__textos">
-            <span class="t-body-fuerte item-lugar__linea">@Lugar.Nombre</span>
-            <span class="t-small texto-2 item-lugar__linea">@Lugares.Subtitulo(Lugar)</span>
-            <span class="t-small item-lugar__meta">
-                @if (Lugar.Calificacion != null)
+            @if (Evento is { } evento)
+            {
+                <span class="t-body-fuerte item-lugar__linea">@evento.Titulo</span>
+                <span class="t-small texto-2 item-lugar__linea">@string.Join(" · ", new[] { Formato.FechaEvento(evento), Formato.UbicacionEvento(evento) }.Where(t => !string.IsNullOrEmpty(t)))</span>
+                @if (Formato.PrecioEvento(evento) is { Length: > 0 } precioEvento)
                 {
-                    <Icono Nombre="estrella-12" Caja="12" /><span class="t-small-fuerte">@Formato.Calificacion(Lugar.Calificacion)</span>
+                    <span class="t-small texto-2">@precioEvento</span>
                 }
-                @if (Formato.PrecioLugar(Lugar) is { Length: > 0 } precio)
-                {
-                    <span class="texto-2 @(Lugar.Calificacion != null ? " item-lugar__precio" : "")">@precio</span>
-                }
-            </span>
+            }
+            else if (Lugar is { } lugar)
+            {
+                <span class="t-body-fuerte item-lugar__linea">@lugar.Nombre</span>
+                <span class="t-small texto-2 item-lugar__linea">@Lugares.Subtitulo(lugar)</span>
+                <span class="t-small item-lugar__meta">
+                    @if (lugar.Calificacion != null)
+                    {
+                        <Icono Nombre="estrella-12" Caja="12" /><span class="t-small-fuerte">@Formato.Calificacion(lugar.Calificacion)</span>
+                    }
+                    @if (Formato.PrecioLugar(lugar) is { Length: > 0 } precio)
+                    {
+                        <span class="texto-2 @(lugar.Calificacion != null ? " item-lugar__precio" : "")">@precio</span>
+                    }
+                </span>
+            }
         </span>
     </button>
 </li>
 
 @code {
-    [Parameter, EditorRequired] public LugarTarjeta Lugar { get; set; } = default!;
-    /// <summary>Es el lugar elegido en el mapa.</summary>
+    [Parameter] public LugarTarjeta? Lugar { get; set; }
+    [Parameter] public EventoTarjeta? Evento { get; set; }
+    /// <summary>Es el elegido en el mapa.</summary>
     [Parameter] public bool Activo { get; set; }
     /// <summary>Al volverse activo, la lista se desplaza hasta esta fila (cuando se eligió su pin en el mapa).</summary>
     [Parameter] public bool Desplazar { get; set; }

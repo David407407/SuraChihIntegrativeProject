@@ -41,6 +41,10 @@ sc-mapa {
 .mapa__pin:hover .pin { transform: scale(1.08); }
 .mapa__pin:focus-visible .pin { outline: 3px solid var(--color-cielo); outline-offset: 2px; }
 
+/* Evento: azul con icono blanco, para distinguirlo de los lugares (sol) */
+.pin--evento { background: var(--color-cielo); }
+.pin--evento img { filter: brightness(0) invert(1); }
+
 .pin--activo { background: var(--color-tinta); }
 /* Los SVG de Figma vienen en tinta; sobre tinta se pintan blancos (igual que en el botón oscuro). */
 .pin--activo img { filter: brightness(0) invert(1); }

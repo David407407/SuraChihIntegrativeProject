@@ -26,6 +26,8 @@ namespace Interfaz.Estado
             /// <summary>Pantalla "Reseñas" de un evento o lugar.</summary>
             public static string Resenas(TipoResena tipo, int id) => $"resenas/{(tipo == TipoResena.Evento ? "evento" : "lugar")}/{id}";
             public const string Moderacion = "moderacion";
+            /// <summary>"Equipo de moderación" (solo supermoderadores).</summary>
+            public const string EquipoModeracion = "moderacion/equipo";
             /// <summary>"Resultados de búsqueda"; los filtros van en la consulta (ver <see cref="FiltroBusqueda.Ruta"/>).</summary>
             public const string Buscar = "buscar";
             /// <summary>"Moderación / Revisar evento" de un evento pendiente.</summary>
