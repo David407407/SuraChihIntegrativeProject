@@ -127,7 +127,7 @@ variante con el código para usarla.
 | Card recomendada | `<TarjetaRecomendada Elemento="ElementoCollage.DeEvento(e)" />` en `.rejilla-recomendadas` | Normal / Hover. Evento o lugar |
 | Botón favorito | `<BotonFavorito Tipo="TipoFavorito.Evento" Id="e.Id" Activo="..." />` | Vacío / Hover / Lleno × `s` · `m`. Guarda solo (ServicioFavoritos) |
 | Pildora | `<Pildora Texto="Cafés" Activa="..." OnClick="..." />` | Normal / Activa. Una activa por grupo |
-| Item (lista del mapa) | `<ItemLugar Lugar="l" Activo="..." OnClick="..." />` | Normal / Activo |
+| Item (lista del mapa) | `<ItemLugar Lugar="l" Activo="..." OnClick="..." />` · `Evento="e"` para un evento | Normal / Activo |
 | Mapa, Pin, Zoom | `<Mapa ... />` (ver "Mapa") | Pin Normal / Activo; detalle · explorar · pin arrastrable |
 | Interruptor | `<Interruptor @bind-Activo="x" Etiqueta="Destacar en el inicio" />` | Apagado (gris) / Encendido (verde). Es un `<button role="switch">` |
 | Opción | `<Opcion Texto="Otro" Seleccionada="..." OnClick="..." />` dentro de `role="radiogroup"` | Normal / Seleccionada (sol suave). Una por grupo |
@@ -188,7 +188,7 @@ Botones que todavía no tienen pantalla muestran "llega en la siguiente versión
   abrir. Al iniciar sesión con la hoja abierta se recarga (inscripción y corazón de ese usuario).
 - **Correo:** el proyecto aún no tiene servidor de correo. `Servicios/CorreoSimulado.cs` guarda el enlace y el
   botón "Abrir enlace del correo" lo abre directo. Cuando haya SMTP solo cambia esa clase (ver sus comentarios).
-- "Continuar con Google / Apple" están como en Figma pero todavía no hacen login (muestran un aviso).
+- "Continuar con Google" abre el navegador del sistema (`ServicioCuenta.ContinuarConGoogleAsync`). Apple se quitó del diseño a propósito: requiere cuenta de desarrollador de pago.
 
 Estados del detalle de evento (columnas `status`, `is_finished` y `cancel_reason` de `v_event_card`):
 
@@ -235,6 +235,11 @@ el menú de cuenta → "Moderación". Los datos los da `Servicios/ServicioModera
   organizador, "Lista de revisión" (solo visual, no se guarda) y la decisión. Aprobar puede destacar el
   evento en el carrusel (`is_featured`, al final del orden). Rechazar pide motivo y comentario; el
   organizador recibe "Motivo: comentario". Después de "Decisión registrada" pasa al siguiente pendiente.
+- **Equipo** (`/moderacion/equipo`, pestaña que solo ven los supermoderadores: `Usuario.EsSuperModerador`,
+  columna `user.is_super_mod`): lista a los moderadores y elimina sus cuentas. Un moderador no puede eliminar
+  su propia cuenta desde Mi perfil, y las cuentas de supermoderador no se eliminan desde la app. Eliminar es
+  desactivar (`is_active = FALSE`): se deshace en la BD. El primer supermoderador se pone con
+  `BaseDeDatos/agregar_super_moderador.sql`.
 - **No pruebes aprobando o rechazando contra la BD compartida** sin avisar: cambia eventos reales del
   equipo. Usa `--DatosFalsos true` (el evento 4 está pendiente).
 
@@ -250,13 +255,18 @@ El alto lo da el contenedor o la clase que le pases con `Clase`.
 <Mapa Clase="hoja__mapa" Lat="evento.Latitud" Lng="evento.Longitud" Titulo="@evento.LugarNombre" />
 
 @* Explorar (varios pines, como la pantalla Mapa) *@
-<Mapa @ref="_mapa" AlElegirPin="AlElegirPin" AlCambiarZona="ids => _visibles = [.. ids]" />
+<Mapa @ref="_mapa" AlElegirPin="AlElegirPin" AlCambiarZona="claves => _visibles = [.. claves]" />
 await _mapa.MostrarAsync(lugares.Select(Lugares.Punto), ajustar: true);
 await _mapa.SeleccionarAsync(punto, mover: true);
 
 @* Publicar evento (pin arrastrable): llega con 6 decimales y dentro del estado de Chihuahua *@
 <Mapa Arrastrable Lat="_datos.Latitud" Lng="_datos.Longitud" AlMoverUbicacion="u => { _datos.Latitud = u.Lat; _datos.Longitud = u.Lng; }" />
 ```
+
+**Pantalla Mapa.** Muestra lugares (pin sol) y eventos vigentes con ubicación (pin azul, `Lugares.Punto(evento)`).
+`AlCambiarZona` entrega `PuntoMapa.Clave` ("lugar:3", "evento:3") porque un lugar y un evento pueden tener el
+mismo id. Los pines con las mismas coordenadas (un evento en un lugar del mapa) se abren en abanico para poder
+elegir cada uno.
 
 **Estilo del mapa.** Se usa el estilo Voyager de CARTO con la llave gratuita del equipo (`js/claves.js`).
 Si deja de funcionar, se pide otra en <https://carto.com/basemaps/apikey/>; con `CARTO_KEY` vacía usa

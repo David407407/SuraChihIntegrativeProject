@@ -40,8 +40,8 @@
     [Parameter] public EventCallback<(int Id, string Tipo)> AlElegirPin { get; set; }
     /// <summary>Clic en el mapa fuera de los pines con un pin activo (el pin ya se desmarcó solo).</summary>
     [Parameter] public EventCallback AlDeseleccionar { get; set; }
-    /// <summary>Cambió lo que se ve (al mover, acercar o cambiar los puntos): ids de los puntos visibles.</summary>
-    [Parameter] public EventCallback<int[]> AlCambiarZona { get; set; }
+    /// <summary>Cambió lo que se ve (al mover, acercar o cambiar los puntos): <see cref="PuntoMapa.Clave"/> de los puntos visibles.</summary>
+    [Parameter] public EventCallback<string[]> AlCambiarZona { get; set; }
     /// <summary>Se movió el pin arrastrable.</summary>
     [Parameter] public EventCallback<(decimal Lat, decimal Lng)> AlMoverUbicacion { get; set; }
 
@@ -82,7 +82,7 @@
 
     [JSInvokable] public Task AlElegirPinJs(int id, string tipo) => AlElegirPin.InvokeAsync((id, tipo));
     [JSInvokable] public Task AlDeseleccionarJs() => AlDeseleccionar.InvokeAsync();
-    [JSInvokable] public Task AlCambiarZonaJs(int[] visibles) => AlCambiarZona.InvokeAsync(visibles);
+    [JSInvokable] public Task AlCambiarZonaJs(string[] visibles) => AlCambiarZona.InvokeAsync(visibles);
     [JSInvokable] public Task AlMoverUbicacionJs(decimal lat, decimal lng) => AlMoverUbicacion.InvokeAsync((lat, lng));
 
     public void Dispose() => _puente?.Dispose();

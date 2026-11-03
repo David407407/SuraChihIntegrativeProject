@@ -182,9 +182,9 @@ namespace BackendLogica.Falso
             Etiqueta(10, "Museo y galería", "museum", "#155E75", AlcanceEtiqueta.Lugar, 14);
             Etiqueta(11, "Parque", "tree", "#065F46", AlcanceEtiqueta.Lugar, 15);
 
-            void Usuario(int id, string nombre, string correo, bool esMod) =>
-                Usuarios.Add(new FilaUsuario { Id = id, NombreUsuario = nombre, Correo = correo, Hash = HashTest1234, EsModerador = esMod, Activo = true, CreadoEn = ahora });
-            Usuario(1, "mod_ana", "ana.mod@example.com", true);
+            void Usuario(int id, string nombre, string correo, bool esMod, bool esSuper = false) =>
+                Usuarios.Add(new FilaUsuario { Id = id, NombreUsuario = nombre, Correo = correo, Hash = HashTest1234, EsModerador = esMod, EsSuperModerador = esSuper, Activo = true, CreadoEn = ahora });
+            Usuario(1, "mod_ana", "ana.mod@example.com", true, esSuper: true);
             Usuario(2, "mod_luis", "luis.mod@example.com", true);
             Usuario(3, "cafe_dande", "dandelion@example.com", false);
             Usuario(4, "misiones_cuu", "misiones@example.com", false);
@@ -306,10 +306,10 @@ namespace BackendLogica.Falso
         public int Id;
         public string NombreUsuario = "", Correo = "", Hash = "";
         public string? AvatarUrl;
-        public bool EsModerador, Activo;
+        public bool EsModerador, EsSuperModerador, Activo;
         public DateTime CreadoEn;
 
-        public Usuario ADatos() => new(Id, NombreUsuario, Correo, AvatarUrl, EsModerador, Activo, CreadoEn);
+        public Usuario ADatos() => new(Id, NombreUsuario, Correo, AvatarUrl, EsModerador, Activo, CreadoEn, EsSuperModerador);
     }
 
     internal sealed class FilaOrganizador

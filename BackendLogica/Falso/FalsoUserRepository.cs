@@ -79,16 +79,31 @@ namespace BackendLogica.Falso
             }, ct);
 
         public Task<bool> DesactivarAsync(int usuarioId, CancellationToken ct = default) =>
+            Hacer(a => Desactivar(a, usuarioId, f => !f.EsModerador), ct);
+
+        public Task<List<Usuario>> ListarModeradoresAsync(CancellationToken ct = default) =>
+            Hacer(a => a.Usuarios.Where(u => u.EsModerador && u.Activo)
+                .OrderByDescending(u => u.EsSuperModerador).ThenBy(u => u.NombreUsuario)
+                .Select(u => u.ADatos()).ToList(), ct);
+
+        public Task<bool> DesactivarModeradorAsync(int superModeradorId, int moderadorId, CancellationToken ct = default) =>
             Hacer(a =>
             {
-                var fila = a.Usuario(usuarioId);
-                if (fila == null || !fila.Activo) return false;
-                fila.Activo = false;
-                // Igual que UsuarioDB: los enlaces de "Recuperar contraseña" pendientes dejan de servir.
-                foreach (var pendiente in a.Recuperaciones.Where(r => r.UsuarioId == usuarioId && r.UsadoEn == null))
-                    pendiente.UsadoEn = Ahora;
-                return true;
+                if (a.Usuario(superModeradorId) is not { EsSuperModerador: true, Activo: true })
+                    throw new ReglaNegocioException(Repositorios.UsuarioDB.SoloSuperModeradores);
+                return Desactivar(a, moderadorId, f => f.EsModerador && !f.EsSuperModerador);
             }, ct);
+
+        private bool Desactivar(AlmacenFalso a, int usuarioId, Func<FilaUsuario, bool> condicion)
+        {
+            var fila = a.Usuario(usuarioId);
+            if (fila == null || !fila.Activo || !condicion(fila)) return false;
+            fila.Activo = false;
+            // Igual que UsuarioDB: los enlaces de "Recuperar contraseña" pendientes dejan de servir.
+            foreach (var pendiente in a.Recuperaciones.Where(r => r.UsuarioId == usuarioId && r.UsadoEn == null))
+                pendiente.UsadoEn = Ahora;
+            return true;
+        }
 
         /// <summary>Llaves UNIQUE uq_user_username y uq_user_email (con los mismos mensajes que TraductorErrores).</summary>
         private static void RevisarDuplicados(AlmacenFalso a, string nombreUsuario, string correo, int? excepto)

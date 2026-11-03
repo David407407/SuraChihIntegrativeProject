@@ -67,6 +67,12 @@
             <button type="button" class="pestana" @onclick='() => Acciones.Proximamente("El historial de moderación")'>
                 <span class="pestana__etiqueta">Historial</span>
             </button>
+            @if (Sesion.Usuario?.EsSuperModerador == true)
+            {
+                <button type="button" class="pestana" @onclick="() => Acciones.IrA(Acciones.Rutas.EquipoModeracion)">
+                    <span class="pestana__etiqueta">Equipo</span>
+                </button>
+            }
         </nav>
 
         <section class="metricas" aria-label="Resumen">

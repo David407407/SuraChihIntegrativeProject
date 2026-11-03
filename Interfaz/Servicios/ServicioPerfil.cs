@@ -55,6 +55,8 @@ namespace Interfaz.Servicios
         public async Task EliminarAsync(string? contrasena)
         {
             Usuario usuario = sesion.Requerir("eliminar tu cuenta");
+            if (usuario.EsModerador)
+                throw new ReglaNegocioException("Las cuentas de moderador solo las puede eliminar un supermoderador.");
             if (string.IsNullOrEmpty(contrasena))
                 throw new DatosInvalidosException("Escribe tu contraseña para confirmar.");
 

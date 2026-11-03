@@ -36,8 +36,20 @@ namespace BackendLogica.Contratos
         /// <summary>
         /// "Eliminar cuenta": se desactiva (<c>is_active = FALSE</c>) para conservar el historial (reseñas,
         /// eventos) y se invalidan sus enlaces de "Recuperar contraseña" pendientes.
+        /// Un moderador no puede usarlo: su cuenta se elimina con <see cref="DesactivarModeradorAsync"/>.
         /// </summary>
-        /// <returns>false si la cuenta no existe o ya estaba desactivada.</returns>
+        /// <returns>false si la cuenta no existe, ya estaba desactivada o es de un moderador.</returns>
         Task<bool> DesactivarAsync(int usuarioId, CancellationToken ct = default);
+
+        /// <summary>"Equipo de moderación": moderadores activos, primero los supermoderadores.</summary>
+        Task<List<Usuario>> ListarModeradoresAsync(CancellationToken ct = default);
+
+        /// <summary>
+        /// Un supermoderador elimina la cuenta de un moderador (igual que <see cref="DesactivarAsync"/>:
+        /// se desactiva). Las cuentas de supermoderador no se eliminan desde la app.
+        /// </summary>
+        /// <exception cref="Datos.ReglaNegocioException"><paramref name="superModeradorId"/> no es supermoderador.</exception>
+        /// <returns>false si no es la cuenta activa de un moderador.</returns>
+        Task<bool> DesactivarModeradorAsync(int superModeradorId, int moderadorId, CancellationToken ct = default);
     }
 }

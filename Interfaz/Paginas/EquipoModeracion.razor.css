@@ -1,0 +1,49 @@
+/* Mismas medidas que "Moderación / Publicaciones" */
+.equipo {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-block: 40px var(--espacio-seccion);
+}
+
+.equipo__volver {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.equipo__volver:hover { color: var(--color-tinta); }
+
+.equipo__titulo { display: flex; flex-direction: column; gap: 8px; }
+.equipo__lista { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.equipo__esqueleto { height: 82px; border-radius: var(--radio-l); }
+
+.miembro {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border: 1px solid var(--color-linea);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+}
+.miembro__avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--color-sol-suave);
+  color: var(--color-cielo-texto);
+  font: 700 20px/26px var(--fuente-titulos);
+}
+.miembro__datos { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 560px) {
+  .miembro { flex-wrap: wrap; }
+}

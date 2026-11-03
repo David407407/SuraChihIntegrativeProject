@@ -3,7 +3,10 @@
   - Columna izquierda: avatar (foto o inicial), nombre, correo y "Cambiar foto".
   - "Datos de la cuenta": nombre de usuario y correo → ServicioPerfil.ActualizarAsync y "Cambios guardados".
   - "Contraseña": actual y nueva → ServicioPerfil.CambiarContrasenaAsync.
-  - "Eliminar cuenta": abre la modal (ModalEliminarCuenta) → desactiva la cuenta y cierra la sesión.
+  - Los dos bloques están bloqueados: los campos no se pueden tocar hasta picarle a su lápiz, y "Cancelar"
+    deja todo como estaba. Así nadie cambia datos por accidente.
+  - "Eliminar cuenta": abre la modal (ModalEliminarCuenta) → desactiva la cuenta y cierra la sesión. Un
+    moderador no la ve: su cuenta solo la elimina un supermoderador (Paginas/EquipoModeracion.razor).
   Sin sesión pide iniciarla; si la cierra estando aquí, vuelve al Home.
 *@
 @page "/perfil"
@@ -39,33 +42,64 @@
 
             <div class="perfil__formulario">
                 <EditForm Model="_datos" OnSubmit="GuardarDatosAsync" class="perfil__bloque" novalidate>
-                    <h2 class="t-h3">Datos de la cuenta</h2>
+                    <div class="perfil__cabeza">
+                        <h2 class="t-h3">Datos de la cuenta</h2>
+                        @if (!_editandoDatos)
+                        {
+                            @Lapiz("Editar datos de la cuenta", EditarDatos)
+                        }
+                    </div>
                     <Campo Nombre="nombreUsuario" Etiqueta="Nombre de usuario" EtiquetaVisible Icono="persona" @bind-Valor="_datos.NombreUsuario"
-                           Requerido Autocompletar="username" Maximo="30" Errores="_erroresDatos" />
+                           Requerido Autocompletar="username" Maximo="30" Errores="_erroresDatos" Deshabilitado="!_editandoDatos" />
                     <Campo Nombre="correo" Etiqueta="Correo electrónico" EtiquetaVisible Tipo="email" Icono="correo" @bind-Valor="_datos.Correo"
-                           Requerido Autocompletar="email" Maximo="254" Errores="_erroresDatos" />
-                    <Boton Texto="Guardar cambios" Variante="oscuro" Tipo="submit" Ocupado="_guardandoDatos" />
+                           Requerido Autocompletar="email" Maximo="254" Errores="_erroresDatos" Deshabilitado="!_editandoDatos" />
+                    @if (_editandoDatos)
+                    {
+                        <div class="perfil__botones">
+                            <Boton Texto="Guardar cambios" Variante="oscuro" Tipo="submit" Ocupado="_guardandoDatos" />
+                            <Boton Texto="Cancelar" Variante="fantasma" Deshabilitado="_guardandoDatos" OnClick="CancelarDatos" />
+                        </div>
+                    }
                 </EditForm>
 
                 <hr class="perfil__divisor" />
 
                 <EditForm Model="_contrasena" OnSubmit="CambiarContrasenaAsync" class="perfil__bloque" novalidate>
-                    <h2 class="t-h3">Contraseña</h2>
+                    <div class="perfil__cabeza">
+                        <h2 class="t-h3">Contraseña</h2>
+                        @if (!_editandoContrasena)
+                        {
+                            @Lapiz("Cambiar contraseña", EditarContrasena)
+                        }
+                    </div>
                     @* Para que el gestor de contraseñas del navegador sepa de qué cuenta es *@
                     <input type="text" name="usuario" value="@usuario.NombreUsuario" autocomplete="username" hidden />
                     <Campo Nombre="actual" Etiqueta="Contraseña actual" EtiquetaVisible Tipo="password" Icono="candado-16" Placeholder="••••••••"
-                           @bind-Valor="_contrasena.Actual" Requerido Autocompletar="current-password" Errores="_erroresContrasena" />
+                           @bind-Valor="_contrasena.Actual" Requerido Autocompletar="current-password" Errores="_erroresContrasena" Deshabilitado="!_editandoContrasena" />
                     <Campo Nombre="nueva" Etiqueta="Contraseña nueva" EtiquetaVisible Tipo="password" Icono="llave" Placeholder="Mínimo 8 caracteres"
-                           @bind-Valor="_contrasena.Nueva" Requerido Autocompletar="new-password" Errores="_erroresContrasena" />
-                    <Boton Texto="Actualizar contraseña" Variante="secundario" Tipo="submit" Ocupado="_guardandoContrasena" />
+                           @bind-Valor="_contrasena.Nueva" Requerido Autocompletar="new-password" Errores="_erroresContrasena" Deshabilitado="!_editandoContrasena" />
+                    @if (_editandoContrasena)
+                    {
+                        <div class="perfil__botones">
+                            <Boton Texto="Actualizar contraseña" Variante="oscuro" Tipo="submit" Ocupado="_guardandoContrasena" />
+                            <Boton Texto="Cancelar" Variante="fantasma" Deshabilitado="_guardandoContrasena" OnClick="CancelarContrasena" />
+                        </div>
+                    }
                 </EditForm>
 
                 <hr class="perfil__divisor" />
 
                 <section class="perfil__bloque" aria-labelledby="titulo-eliminar">
                     <h2 class="t-h3" id="titulo-eliminar">Eliminar cuenta</h2>
-                    <p class="t-small texto-2">Se borrarán tu perfil, tus planes, favoritos y reseñas.</p>
-                    <Boton Texto="Eliminar mi cuenta" Variante="peligro" Icono="bote-blanco" OnClick="EliminarCuentaAsync" />
+                    @if (usuario.EsModerador)
+                    {
+                        <p class="t-small texto-2">Las cuentas de moderador no se eliminan desde aquí: solo un supermoderador puede hacerlo.</p>
+                    }
+                    else
+                    {
+                        <p class="t-small texto-2">Se borrarán tu perfil, tus planes, favoritos y reseñas.</p>
+                        <Boton Texto="Eliminar mi cuenta" Variante="peligro" Icono="bote-blanco" OnClick="EliminarCuentaAsync" />
+                    }
                 </section>
             </div>
         }
@@ -85,6 +119,8 @@
     private readonly ErroresFormulario _erroresDatos = new();
     private readonly ErroresFormulario _erroresContrasena = new();
     private bool _guardandoDatos, _guardandoContrasena;
+    /// <summary>Se le picó al lápiz de ese bloque: sus campos se pueden editar.</summary>
+    private bool _editandoDatos, _editandoContrasena;
     /// <summary>true después de mostrar a un usuario: si luego se cierra la sesión es que la cerró aquí.</summary>
     private bool _huboSesion;
     /// <summary>Al eliminar la cuenta se espera a que se lea el aviso antes de ir al Home.</summary>
@@ -124,10 +160,44 @@
         StateHasChanged();
     });
 
+    /// <summary>Lápiz de un bloque: desbloquea sus campos.</summary>
+    private RenderFragment Lapiz(string etiqueta, Action accion) =>
+        @<button type="button" class="perfil__lapiz" title="@etiqueta" aria-label="@etiqueta" @onclick="accion">
+            <Icono Nombre="editar-18" Caja="18" />
+        </button>;
+
+    private void EditarDatos()
+    {
+        _editandoDatos = true;
+        _erroresDatos.PedirFoco("nombreUsuario");
+    }
+
+    /// <summary>Deja los campos como estaban y los vuelve a bloquear.</summary>
+    private void CancelarDatos()
+    {
+        _erroresDatos.Limpiar();
+        LlenarDatos();
+        _editandoDatos = false;
+    }
+
+    private void EditarContrasena()
+    {
+        _editandoContrasena = true;
+        _erroresContrasena.PedirFoco("actual");
+    }
+
+    private void CancelarContrasena()
+    {
+        _erroresContrasena.Limpiar();
+        _contrasena.Actual = _contrasena.Nueva = null;
+        _editandoContrasena = false;
+    }
+
     // Mismas reglas que BackendLogica (Utilidades/ReglasCuenta.cs); C# las vuelve a revisar.
 
     private async Task GuardarDatosAsync()
     {
+        if (!_editandoDatos) return;   // bloqueado: Enter no guarda nada
         _erroresDatos.Limpiar();
         string nombre = _datos.NombreUsuario?.Trim() ?? "";
         string correo = _datos.Correo?.Trim() ?? "";
@@ -138,6 +208,7 @@
         try
         {
             await Servicio.ActualizarAsync(nombre, correo);   // la sesión cambia: navbar, menú y esta pantalla
+            _editandoDatos = false;
             Avisos.Mostrar("Cambios guardados");
         }
         catch (Exception ex)
@@ -152,6 +223,7 @@
 
     private async Task CambiarContrasenaAsync()
     {
+        if (!_editandoContrasena) return;
         _erroresContrasena.Limpiar();
         if (string.IsNullOrEmpty(_contrasena.Actual)) { _erroresContrasena.Poner("actual", "Escribe tu contraseña actual."); return; }
         if (ReglasCuenta.ErrorContrasena(_contrasena.Nueva ?? "") is { } debil) { _erroresContrasena.Poner("nueva", debil); return; }
@@ -161,6 +233,7 @@
         {
             await Servicio.CambiarContrasenaAsync(_contrasena.Actual, _contrasena.Nueva);
             _contrasena.Actual = _contrasena.Nueva = null;
+            _editandoContrasena = false;
             Avisos.Mostrar("Contraseña actualizada");
         }
         catch (Exception ex)

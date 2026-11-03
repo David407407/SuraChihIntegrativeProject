@@ -72,6 +72,7 @@ const ATRIBUCION = CARTO_KEY
   ? `${OSM} &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>`
   : OSM;
 const ID_UNICO = 'unico';
+const SEPARACION_PINES = 40;   // px entre pines con las mismas coordenadas (el pin mide 40)
 
 const clave = (punto) => `${punto.tipo ?? 'punto'}:${punto.id}`;
 const limitar = (valor, minimo, maximo) => Math.min(Math.max(valor, minimo), maximo);
@@ -258,9 +259,13 @@ class Mapa extends HTMLElement {
     this.#marcadores.clear();
     if (!this.#puntos.some((p) => clave(p) === this.#activo)) this.#activo = null;
 
+    const enElMismoSitio = new Map();
     for (const punto of this.#puntos) {
+      const sitio = `${punto.lat},${punto.lng}`;
+      const repetidos = enElMismoSitio.get(sitio) ?? 0;
+      enElMismoSitio.set(sitio, repetidos + 1);
       const marcador = L.marker([punto.lat, punto.lng], {
-        icon: this.#icono(punto),
+        icon: this.#icono(punto, repetidos),
         draggable: this.arrastrable,
         autoPan: this.arrastrable,
         riseOnHover: true,
@@ -288,12 +293,18 @@ class Mapa extends HTMLElement {
     }
   }
 
-  #icono(punto) {
-    const clases = `pin${clave(punto) === this.#activo ? ' pin--activo' : ''}${this.arrastrable ? ' pin--arrastrable' : ''}`;
+  /** @param {number} repetidos Cuántos puntos ya hay en estas mismas coordenadas (un evento en un lugar del mapa). */
+  #icono(punto, repetidos = 0) {
+    const clases = `pin${clave(punto) === this.#activo ? ' pin--activo' : ''}${this.arrastrable ? ' pin--arrastrable' : ''}${punto.tipo === 'evento' ? ' pin--evento' : ''}`;
+    // Los que caen en el mismo sitio se abren en abanico para poder elegir cada uno. Se mueve solo el dibujo
+    // (en píxeles): se separan igual con cualquier zoom y las coordenadas no cambian.
+    const angulo = (repetidos - 1) * (Math.PI / 3);
+    const [x, y] = repetidos === 0 ? [0, 0] : [Math.round(Math.cos(angulo) * SEPARACION_PINES), Math.round(Math.sin(angulo) * SEPARACION_PINES)];
     return L.divIcon({
       className: 'mapa__pin',
       iconSize: [40, 40],
-      iconAnchor: [20, 20],
+      iconAnchor: [20 - x, 20 - y],
+      tooltipAnchor: [x, y],
       html: `<span class="${clases}"><img src="${escapar(rutaIcono(punto.icono ?? 'ubicacion'))}" alt=""></span>`,
     });
   }
