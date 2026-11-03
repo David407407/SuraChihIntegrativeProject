@@ -49,6 +49,27 @@ sc-mapa {
 /* Los SVG de Figma vienen en tinta; sobre tinta se pintan blancos (igual que en el botón oscuro). */
 .pin--activo img { filter: brightness(0) invert(1); }
 
+/* Grupo de pines cercanos (atributo `agrupar`): círculo con el número, mixto en tinta,
+   solo lugares en sol y solo eventos en cielo, como sus pines */
+.mapa__grupo .grupo {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border: 3px solid var(--color-superficie);
+  border-radius: var(--radio-pildora);
+  background: var(--color-tinta);
+  color: var(--color-superficie);
+  box-shadow: 0 0 0 6px rgba(11, 27, 58, 0.18), 0 2px 8px rgba(11, 27, 58, 0.3);
+  font: 700 16px/1 var(--fuente-titulos);
+  cursor: pointer;
+  transition: transform var(--duracion-rapida);
+}
+.mapa__grupo .grupo--lugares { background: var(--color-sol); color: var(--color-tinta); box-shadow: 0 0 0 6px rgba(255, 212, 59, 0.35), 0 2px 8px rgba(11, 27, 58, 0.3); }
+.mapa__grupo .grupo--eventos { background: var(--color-cielo); box-shadow: 0 0 0 6px rgba(47, 123, 255, 0.25), 0 2px 8px rgba(11, 27, 58, 0.3); }
+.mapa__grupo:hover .grupo { transform: scale(1.08); }
+.mapa__grupo:focus-visible .grupo { outline: 3px solid var(--color-cielo); outline-offset: 2px; }
+
 .pin--arrastrable { cursor: grab; }
 .leaflet-dragging .pin--arrastrable { cursor: grabbing; transform: scale(1.12); }
 

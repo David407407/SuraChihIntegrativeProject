@@ -3,7 +3,9 @@
 /* Al saltar a una fila desde un tile, que el navbar fijo no tape el título */
 .fila { padding-top: 40px; scroll-margin-top: var(--altura-navbar); }
 .fila__encabezado { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
+.fila__acciones { display: flex; flex: none; align-items: center; gap: 8px; }
 .fila__ver-todo {
+  margin-right: 8px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -12,6 +14,27 @@
   transition: color var(--duracion-rapida);
 }
 .fila__ver-todo:hover { color: var(--color-cielo-texto); }
+
+/* Flechas ‹ ›: círculos de 36px; en la orilla se apagan (data-inicio / data-fin los pone js/interop.js) */
+.fila__flecha {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1.5px solid var(--color-linea);
+  border-radius: var(--radio-pildora);
+  background: var(--color-superficie);
+  cursor: pointer;
+  transition: border-color var(--duracion-rapida), opacity var(--duracion-rapida), transform var(--duracion-rapida);
+}
+.fila__flecha:hover { border-color: var(--color-tinta); }
+.fila__flecha:active { transform: scale(0.94); }
+.fila__flecha:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; }
+.fila[data-inicio] .fila__flecha--anterior,
+.fila[data-fin] .fila__flecha--siguiente { opacity: 0.35; pointer-events: none; }
+/* Todo cabe: no hay a dónde moverse */
+.fila[data-inicio][data-fin] .fila__flecha { display: none; }
 
 /* Se sale por la derecha y se desliza */
 .fila__pista {
@@ -25,11 +48,15 @@
   padding: 4px var(--margen-lateral) 16px 4px;
   margin-left: -4px;
   overflow-x: auto;
+  overscroll-behavior-x: contain;   /* deslizar en el touchpad no hace "Atrás" al llegar a la orilla */
   scroll-snap-type: x proximity;
   scroll-padding-left: 4px;
   scrollbar-width: thin;
   scrollbar-color: var(--color-linea) transparent;
 }
+/* Arrastrando con el mouse: sin "imán" ni selección de texto, y las fotos no se arrastran solas */
+.fila__pista.fila__pista--arrastrando { scroll-snap-type: none; cursor: grabbing; user-select: none; }
+.fila__pista ::deep img { -webkit-user-drag: none; }
 .fila__pista > *,
 .fila__pista ::deep .tarjeta { scroll-snap-align: start; }
 .home__esqueleto-tarjeta { height: 389px; border-radius: var(--radio-m); }
