@@ -29,7 +29,19 @@ namespace Interfaz.Servicios
             "Otro",
         ];
 
+        /// <summary>Motivos del modal "Rechazar" cuando es una solicitud de organizador.</summary>
+        public static readonly string[] MotivosRechazoOrganizador =
+        [
+            "La red social no existe o no tiene actividad",
+            "El nombre no coincide con la red social",
+            "No se pudo verificar que sea real",
+            "Otro",
+        ];
+
         public const string MotivoOtro = "Otro";
+
+        /// <summary>Filas de "Decididas recientemente" en Moderación / Organizadores.</summary>
+        private const int DecididasRecientes = 5;
 
         // ---------------------------------------------------------------- Bandeja
 
@@ -151,10 +163,43 @@ namespace Interfaz.Servicios
         public Task RechazarAsync(int eventoId, string motivo, string comentario)
         {
             Usuario moderador = Moderador();
-            comentario = comentario.Trim();
-            string texto = motivo == MotivoOtro ? comentario : $"{motivo}: {comentario}";
-            return bd.Moderacion.RechazarAsync(moderador.Id, TipoObjetivoModeracion.Evento, eventoId, texto);
+            return bd.Moderacion.RechazarAsync(moderador.Id, TipoObjetivoModeracion.Evento, eventoId, TextoRechazo(motivo, comentario));
         }
+
+        // ---------------------------------------------------------------- Solicitudes de organizador
+
+        /// <summary>"Moderación / Organizadores": las solicitudes pendientes (las más antiguas primero) y las decididas.</summary>
+        public async Task<DatosOrganizadores> ObtenerOrganizadoresAsync()
+        {
+            Usuario moderador = Moderador();
+            var pendientes = bd.Organizadores.ListarPorEstadoAsync(EstadoOrganizador.Pendiente);
+            var historial = bd.Moderacion.ListarHistorialAsync(HistorialHoy);
+            var envios = bd.Moderacion.ListarEnviosPendientesAsync();
+            var reportes = bd.Reportes.ListarAsync(EstadoReporte.Abierto);
+            await Task.WhenAll(pendientes, historial, envios, reportes);
+
+            var solicitudes = await Task.WhenAll(pendientes.Result.Select(async p =>
+            {
+                Usuario? usuario = await bd.Usuarios.ObtenerAsync(p.UsuarioId);
+                return new SolicitudPendiente(p, usuario?.NombreUsuario ?? "", usuario?.CreadoEn, EsPropia: p.UsuarioId == moderador.Id);
+            }));
+            var decididas = await Task.WhenAll(historial.Result
+                .Where(r => r.Tipo == TipoObjetivoModeracion.Organizador)
+                .Take(DecididasRecientes)
+                .Select(async r => new DecisionOrganizador(
+                    (await bd.Organizadores.ObtenerAsync(r.ObjetivoId))?.NombreNegocio ?? "Organizador",
+                    r.DecididoEn, r.ModeradorNombre, r.Decision)));
+
+            return new DatosOrganizadores(solicitudes, decididas, envios.Result.Count, reportes.Result.Count);
+        }
+
+        /// <summary>Aprueba la solicitud: el usuario ya puede publicar eventos y registrar lugares.</summary>
+        public Task AprobarOrganizadorAsync(int usuarioId) =>
+            bd.Moderacion.AprobarAsync(Moderador().Id, TipoObjetivoModeracion.Organizador, usuarioId);
+
+        /// <summary>Rechaza la solicitud. El solicitante ve el texto en "Hazte organizador" y puede reenviarla.</summary>
+        public Task RechazarOrganizadorAsync(int usuarioId, string motivo, string comentario) =>
+            bd.Moderacion.RechazarAsync(Moderador().Id, TipoObjetivoModeracion.Organizador, usuarioId, TextoRechazo(motivo, comentario));
 
         // ---------------------------------------------------------------- Equipo (solo supermoderadores)
 
@@ -174,6 +219,13 @@ namespace Interfaz.Servicios
         }
 
         // ----------------------------------------------------------------
+
+        /// <summary>Lo que ve el autor: el motivo elegido y el comentario, salvo "Otro", que deja solo el comentario.</summary>
+        private static string TextoRechazo(string motivo, string comentario)
+        {
+            comentario = comentario.Trim();
+            return motivo == MotivoOtro ? comentario : $"{motivo}: {comentario}";
+        }
 
         /// <summary>Aprobado y vigente, terminado o cancelado: alguna vez se publicó.</summary>
         private static bool Publicado(EventoTarjeta e) => e.Estado is EstadoEvento.Aprobado or EstadoEvento.Cancelado;
@@ -204,6 +256,24 @@ namespace Interfaz.Servicios
         int OrganizadoresPendientes,
         int ReportesAbiertos,
         int DecisionesHoy);
+
+    /// <param name="Decididas">"Decididas recientemente": las más recientes primero.</param>
+    /// <param name="PublicacionesPendientes">Pestaña "Publicaciones".</param>
+    /// <param name="ReportesAbiertos">Pestaña "Reportes".</param>
+    public sealed record DatosOrganizadores(
+        IReadOnlyList<SolicitudPendiente> Pendientes,
+        IReadOnlyList<DecisionOrganizador> Decididas,
+        int PublicacionesPendientes,
+        int ReportesAbiertos);
+
+    /// <summary>Tarjeta de "Moderación / Organizadores".</summary>
+    /// <param name="NombreUsuario">"@sofia_c".</param>
+    /// <param name="CuentaCreada">"Cuenta creada: hace 3 meses".</param>
+    /// <param name="EsPropia">"Es tu solicitud: la revisa otro moderador" (sin botones).</param>
+    public sealed record SolicitudPendiente(PerfilOrganizador Perfil, string NombreUsuario, DateTime? CuentaCreada, bool EsPropia);
+
+    /// <summary>Renglón de "Decididas recientemente".</summary>
+    public sealed record DecisionOrganizador(string Negocio, DateTime DecididoEn, string ModeradorNombre, DecisionModeracion Decision);
 
     /// <summary>Un renglón de la bandeja: un evento (<see cref="Evento"/>) o un lugar (<see cref="Lugar"/>).</summary>
     /// <param name="Autor">Organizador del evento o negocio dueño del lugar.</param>

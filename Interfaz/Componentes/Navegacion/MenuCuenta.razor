@@ -1,7 +1,7 @@
 @*
   Menú de cuenta (frame "Menú de cuenta" de Figma): se despliega bajo el avatar del navbar.
   Encabezado con avatar, nombre y correo; opciones según el usuario y "Cerrar sesión".
-  "Panel de organizador" solo sale a organizadores aprobados y "Moderación" solo a moderadores.
+  "Panel de organizador" solo sale a organizadores aprobados, "Hazte organizador" a los demás y "Moderación" solo a moderadores.
 
   Es un popover nativo: el avatar lo abre con popovertarget="menu-cuenta"; el navegador lo cierra con
   Esc o con un clic fuera, y lo coloca bajo el avatar con anclaje CSS (sin JavaScript).
@@ -45,7 +45,7 @@
     [Parameter] public bool EsOrganizador { get; set; }
     [Inject] private Acciones Acciones { get; set; } = default!;
 
-    private readonly ElementReference[] _botones = new ElementReference[6];
+    private readonly ElementReference[] _botones = new ElementReference[7];
     private int _foco;
     private bool _abierto;
 
@@ -66,6 +66,10 @@
                 lista.Add(new("Panel de organizador", "tienda-16", Acciones.PanelOrganizador));
                 // Mientras no exista el panel, este es el camino a "Publicar evento" (WBS 4.6).
                 lista.Add(new("Publicar evento", "calendario", Acciones.PublicarEvento));
+            }
+            else
+            {
+                lista.Add(new("Hazte organizador", "tienda-16", Acciones.HazteOrganizador));
             }
             if (Usuario.EsModerador) lista.Add(new("Moderación", "escudo", Acciones.Moderacion));
             lista.Add(new("Cerrar sesión", "salir", Acciones.CerrarSesion, Peligro: true));

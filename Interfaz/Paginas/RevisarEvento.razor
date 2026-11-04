@@ -194,7 +194,7 @@
 
     /// <summary>"https://instagram.com/fuegalab/" → "instagram.com/fuegalab".</summary>
     private static string? SinProtocolo(string? url) =>
-        string.IsNullOrWhiteSpace(url) ? null : url.Replace("https://", "").Replace("http://", "").Replace("www.", "").TrimEnd('/');
+        string.IsNullOrWhiteSpace(url) ? null : Formato.SinProtocolo(url);
 
     /// <summary>"526142220190" → "614 222 0190" (los últimos 10 dígitos, como se escriben en México).</summary>
     private static string? Telefono(string? whatsApp)

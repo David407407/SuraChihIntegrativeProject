@@ -221,6 +221,8 @@ fluent-toggle-button.chip-categoria[pressed]:hover { box-shadow: inset 0 0 0 1.5
 .chip--fondo { background: var(--color-fondo); }   /* "Chip tipo" del detalle de lugar */
 .chip--sol { background: var(--color-sol); padding: 5px 12px 5px 10px; }
 .chip--cielo-suave { background: var(--color-cielo-suave); color: var(--color-cielo-texto); }   /* "Lugar", "Editado" (moderación) */
+.chip--exito-suave { background: var(--color-exito-suave); color: var(--color-exito); }   /* "Aprobado" (moderación) */
+.chip--error-suave { background: var(--color-error-suave); color: var(--color-error); }   /* "Rechazado" (moderación) */
 /* "Estado ..." de moderación: chip con icono de 12px ("Pendiente", "Primer evento") */
 .chip--estado { padding: 5px 12px 5px 10px; }
 

@@ -1,0 +1,22 @@
+@*
+  Mensaje centrado de las pantallas de moderación ("Todo al día", "Solo para moderadores"...): círculo de 88px
+  con icono, título, texto y un botón opcional.
+*@
+<div class="vacio">
+    <span class="vacio__icono @(Exito ? "vacio__icono--exito" : "")"><Icono Nombre="@Icono" Caja="32" /></span>
+    <h2 class="t-h2">@Titulo</h2>
+    <p class="t-body texto-2">@Texto</p>
+    @if (ChildContent != null)
+    {
+        <div>@ChildContent</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Icono { get; set; } = "";
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    [Parameter, EditorRequired] public string Texto { get; set; } = "";
+    /// <summary>Círculo verde en vez de azul.</summary>
+    [Parameter] public bool Exito { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

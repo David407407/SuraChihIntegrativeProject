@@ -1,0 +1,284 @@
+@*
+  "Organizador / Hazte organizador" de Figma: a la izquierda el mensaje y los beneficios, a la derecha la solicitud
+  y abajo los tres pasos. Al enviarla se abre "Modal / Solicitud enviada". Figma solo dibuja el formulario; lo que
+  cambia según organizer_profile.status:
+  - Sin solicitud: el formulario.
+  - Pendiente: "Solicitud en revisión" en lugar del formulario.
+  - Rechazada: el motivo del moderador y el formulario con sus datos, para reenviarla.
+  - Aprobada: "Ya eres organizador" y "Publicar evento".
+  - Suspendida: un aviso.
+*@
+@page "/organizador/solicitud"
+@implements IDisposable
+@inject Sesion Sesion
+@inject ServicioOrganizador Servicio
+@inject Modales Modales
+@inject Avisos Avisos
+@inject Acciones Acciones
+@inject ILogger<HazteOrganizador> Registro
+
+<PageTitle>SuraChih · Hazte organizador</PageTitle>
+
+<div class="pagina-fondo">
+    <main class="hazte contenedor">
+        <div class="hazte__principal">
+            <div class="mensaje">
+                <Chip Texto="Para negocios y colectivos de Chihuahua" Icono="tienda" Clase="chip--estado" />
+                <h1 class="t-display">Publica tus eventos donde la gente ya está buscando qué hacer</h1>
+                <p class="t-body texto-2">Crea tu perfil de organizador una sola vez. Un moderador confirma que eres real y después puedes publicar eventos; cada uno se revisa antes de salir.</p>
+                <ul class="beneficios">
+                    @Beneficio("grupo-cielo-18", "cielo-suave", "Visibilidad local", "Aparece junto a los planes de la ciudad, no enterrado en redes sociales.")
+                    @Beneficio("barras-exito-18", "exito-suave", "Mide tu demanda", "Vistas, interesados e inscritos de cada evento en tu panel.")
+                    @Beneficio("escudo-tinta-18", "sol-suave", "Confianza", "81.6% de las personas que encuestamos quiere que los eventos se revisen antes de publicarse.")
+                </ul>
+            </div>
+
+            <section class="tarjeta-solicitud" aria-live="polite" aria-label="Solicitud de organizador">
+                @if (_cargando)
+                {
+                    <div class="esqueleto hazte__esqueleto" aria-hidden="true"></div>
+                }
+                else if (Estado == EstadoOrganizador.Pendiente)
+                {
+                    @EstadoSolicitud("reloj-arena-tinta-24", "sol-suave", "Solicitud en revisión",
+                        $"Un moderador está revisando el perfil de {_datos!.Perfil!.NombreNegocio}. Mientras tanto puedes seguir usando SuraChih como siempre.")
+                    @ResumenPerfil(_datos.Perfil)
+                    <Boton Texto="Seguir explorando" Variante="secundario" Clase="tarjeta-solicitud__ancho" OnClick="Acciones.Inicio" />
+                }
+                else if (Estado == EstadoOrganizador.Aprobado)
+                {
+                    @EstadoSolicitud("check-circulo-exito-24", "exito-suave", "Ya eres organizador",
+                        $"Aprobamos el perfil de {_datos!.Perfil!.NombreNegocio}. Cada evento que publiques pasa por revisión antes de salir.")
+                    <Boton Texto="Publicar evento" Icono="subir" Clase="tarjeta-solicitud__ancho" OnClick="Acciones.PublicarEvento" />
+                }
+                else if (Estado == EstadoOrganizador.Suspendido)
+                {
+                    @EstadoSolicitud("alerta-error", "error-suave", "Tu perfil está suspendido",
+                        "Por ahora no puedes publicar eventos. Si crees que es un error, escríbele al equipo de moderación.")
+                }
+                else
+                {
+                    <div class="tarjeta-solicitud__cabeza">
+                        <h2 class="t-h2">Solicitud de organizador</h2>
+                        <p class="t-small texto-2">Tarda unos minutos en llenarse.</p>
+                    </div>
+
+                    @if (Estado == EstadoOrganizador.Rechazado)
+                    {
+                        <div class="rechazo">
+                            <p class="rechazo__autor t-caption">
+                                <Icono Nombre="comentario-error-14" Caja="14" />
+                                <span>Moderación rechazó tu solicitud@(_datos?.Decision is { } d ? $" el {Formato.RangoFechas(d.DecididoEn)}" : "")</span>
+                            </p>
+                            <p class="t-small">@(_datos?.Decision?.Comentario ?? "Sin comentario.")</p>
+                            <p class="t-caption texto-2">Corrige tus datos y vuelve a enviarla.</p>
+                        </div>
+                    }
+
+                    <EditForm Model="this" OnSubmit="EnviarAsync" class="formulario" novalidate>
+                        <Campo Nombre="nombre" Etiqueta="Nombre del negocio o colectivo" EtiquetaVisible Icono="tienda-gris-16" Placeholder="Misiones Chihuahua"
+                               Requerido Maximo="ServicioOrganizador.MaximoNombre" @bind-Valor="_nombre" Errores="_errores" />
+                        <AreaTexto Nombre="descripcion" Etiqueta="Descripción" Filas="3" Maximo="ServicioOrganizador.MaximoDescripcion"
+                                   Placeholder="Juegos callejeros por equipos en el Centro Histórico, guiados desde el celular."
+                                   Ayuda="Opcional · 500 caracteres máximo" @bind-Valor="_descripcion" Errores="_errores" />
+                        <Campo Nombre="redSocial" Etiqueta="Red social o sitio público" EtiquetaVisible Icono="enlace-gris-16" Placeholder="instagram.com/misiones_cuu"
+                               Ayuda="El moderador la revisa para confirmar que el negocio existe." Requerido Maximo="ServicioOrganizador.MaximoRedSocial"
+                               @bind-Valor="_redSocial" Errores="_errores" />
+                        <Campo Nombre="whatsApp" Etiqueta="WhatsApp de contacto" EtiquetaVisible Tipo="tel" Icono="telefono-gris-16" Placeholder="52 614 111 0002"
+                               Ayuda="Con lada. Se mostrará en tus eventos para dudas de asistentes." Requerido Maximo="20"
+                               @bind-Valor="_whatsApp" Errores="_errores" />
+
+                        <div class="reglas">
+                            <label class="reglas__fila">
+                                <input type="checkbox" class="reglas__entrada solo-lectores" checked="@_acepta"
+                                       aria-invalid="@(_errorReglas != null ? "true" : null)" @onchange="AlAceptar" />
+                                <span class="reglas__casilla" aria-hidden="true">
+                                    @if (_acepta)
+                                    {
+                                        <Icono Nombre="check-blanco-11" Caja="11" />
+                                    }
+                                </span>
+                                <span class="t-small texto-2">Acepto las reglas de publicación: solo eventos reales en Chihuahua, con información verdadera.</span>
+                            </label>
+                            @if (_errorReglas != null)
+                            {
+                                <p class="reglas__error t-caption" role="alert">@_errorReglas</p>
+                            }
+                        </div>
+
+                        @if (_errores.Aviso != null)
+                        {
+                            <p class="formulario__aviso t-small" role="alert">@_errores.Aviso</p>
+                        }
+                        <Boton Texto="@(Estado == EstadoOrganizador.Rechazado ? "Reenviar solicitud" : "Enviar solicitud")" Icono="subir" Tipo="submit"
+                               Clase="tarjeta-solicitud__ancho" Ocupado="_enviando" />
+                    </EditForm>
+                }
+            </section>
+        </div>
+
+        <ol class="pasos" aria-label="Cómo funciona">
+            @Paso(1, "Envías tu solicitud", "Nombre, red social y WhatsApp.", conFlecha: true)
+            @Paso(2, "Moderación la revisa", "Aprobada o rechazada con un motivo.", conFlecha: true)
+            @Paso(3, "Publicas eventos", "Cada evento pasa por revisión antes de salir.", conFlecha: false)
+        </ol>
+    </main>
+</div>
+
+<VolverArriba />
+
+@code {
+    private DatosSolicitud? _datos;
+    private bool _cargando = true;
+    private bool _enviando;
+    private int? _usuarioId;
+
+    private readonly ErroresFormulario _errores = new();
+    private string? _nombre;
+    private string? _descripcion;
+    private string? _redSocial;
+    private string? _whatsApp;
+    private bool _acepta;
+    private string? _errorReglas;
+
+    private EstadoOrganizador? Estado => _datos?.Perfil?.Estado;
+
+    /// <summary>El paso en el que va (círculo amarillo): 1 sin enviar o rechazada, 2 en revisión, 3 aprobada.</summary>
+    private int PasoActual => Estado switch
+    {
+        EstadoOrganizador.Pendiente => 2,
+        EstadoOrganizador.Aprobado => 3,
+        _ => 1,
+    };
+
+    private static RenderFragment Beneficio(string icono, string color, string titulo, string texto) =>
+        @<li class="beneficio">
+            <span class="beneficio__insignia beneficio__insignia--@color"><Icono Nombre="@icono" Caja="18" /></span>
+            <div class="beneficio__texto">
+                <p class="t-card-titulo">@titulo</p>
+                <p class="t-small texto-2">@texto</p>
+            </div>
+        </li>;
+
+    private static RenderFragment EstadoSolicitud(string icono, string color, string titulo, string texto) =>
+        @<div class="estado">
+            <span class="estado__insignia beneficio__insignia--@color"><Icono Nombre="@icono" Caja="24" /></span>
+            <h2 class="t-h2">@titulo</h2>
+            <p class="t-body texto-2">@texto</p>
+        </div>;
+
+    private static RenderFragment ResumenPerfil(PerfilOrganizador perfil) =>
+        @<dl class="resumen">
+            <div><dt class="t-small texto-2">Red social</dt><dd class="t-small-fuerte">@Formato.SinProtocolo(perfil.RedSocialUrl)</dd></div>
+            <div><dt class="t-small texto-2">WhatsApp</dt><dd class="t-small-fuerte">@Formato.Telefono(perfil.WhatsApp)</dd></div>
+            <div><dt class="t-small texto-2">Enviada</dt><dd class="t-small-fuerte">@Formato.RangoFechas(perfil.SolicitadoEn)</dd></div>
+        </dl>;
+
+    private RenderFragment Paso(int numero, string titulo, string texto, bool conFlecha) =>
+        @<li class="paso" aria-current="@(numero == PasoActual ? "step" : null)">
+            <span class="paso__numero t-body-fuerte @(numero == PasoActual ? "paso__numero--actual" : "")">@numero</span>
+            <div class="paso__texto">
+                <p class="t-body-fuerte">@titulo</p>
+                <p class="t-small texto-2">@texto</p>
+            </div>
+            @if (conFlecha)
+            {
+                <Icono Nombre="chevron-derecha-14" Caja="14" />
+            }
+        </li>;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Sesion.Cambio += AlCambiarSesion;
+        _usuarioId = Sesion.Usuario?.Id;
+        if (Sesion.Iniciada) await CargarAsync();
+        else
+        {
+            _cargando = false;
+            Modales.RequiereSesion("Inicia sesión para solicitar ser organizador.");
+        }
+    }
+
+    private async Task CargarAsync()
+    {
+        _cargando = true;
+        try
+        {
+            _datos = await Servicio.ObtenerAsync();
+            // Rechazada: el formulario llega con lo que ya había escrito.
+            if (_datos.Perfil is { Estado: EstadoOrganizador.Rechazado } p)
+            {
+                _nombre = p.NombreNegocio;
+                _descripcion = p.Descripcion;
+                _redSocial = Formato.SinProtocolo(p.RedSocialUrl);
+                _whatsApp = p.WhatsApp;
+            }
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            Registro.LogError(ex, "No se pudo cargar la solicitud de organizador");
+            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private void AlAceptar(ChangeEventArgs e)
+    {
+        _acepta = e.Value is true;
+        if (_acepta) _errorReglas = null;
+    }
+
+    private async Task EnviarAsync()
+    {
+        _errores.Limpiar();
+        _errorReglas = null;
+        if (!Sesion.Iniciada)
+        {
+            Modales.RequiereSesion("Inicia sesión para solicitar ser organizador.");
+            return;
+        }
+
+        foreach (var (campo, mensaje) in ServicioOrganizador.Revisar(_nombre, _descripcion, _redSocial, _whatsApp).Reverse())
+            _errores.Poner(campo, mensaje);   // al revés: el foco se queda en el primero con error
+        if (!_acepta) _errorReglas = "Acepta las reglas de publicación para enviar tu solicitud.";
+        if (_errores.HayErrores || _errorReglas != null) return;
+
+        _enviando = true;
+        try
+        {
+            await Servicio.EnviarAsync(_nombre!, _descripcion, _redSocial!, _whatsApp!);
+            await CargarAsync();
+            await Modales.SolicitudEnviadaAsync(_nombre!.Trim());
+        }
+        catch (Exception ex)
+        {
+            _errores.PonerAviso(MensajesError.Para(ex));   // p. ej. "Ya enviaste una solicitud de organizador."
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+
+    private void AlCambiarSesion() => InvokeAsync(async () =>
+    {
+        int? id = Sesion.Usuario?.Id;
+        if (id == _usuarioId) { StateHasChanged(); return; }
+        if (_usuarioId != null && id == null) { Acciones.Inicio(); return; }   // cerró sesión aquí
+        _usuarioId = id;
+        _datos = null;
+        _nombre = _descripcion = _redSocial = _whatsApp = null;
+        _acepta = false;
+        if (id != null) await CargarAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
+}

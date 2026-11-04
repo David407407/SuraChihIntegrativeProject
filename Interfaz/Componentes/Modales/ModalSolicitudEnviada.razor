@@ -1,0 +1,13 @@
+@*
+  "Modal / Solicitud enviada" de Figma: insignia amarilla con el reloj de arena, el negocio y "Entendido".
+  La abre Hazte organizador con Modales.SolicitudEnviadaAsync(negocio) después de guardar la solicitud.
+*@
+@inject Modales Modales
+
+<EncabezadoModal Titulo="Solicitud enviada" Icono="reloj-arena-tinta-24"
+                 Texto="@($"Un moderador revisará el perfil de {Negocio}. Mientras tanto puedes seguir usando SuraChih como siempre.")" />
+<Boton Texto="Entendido" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+
+@code {
+    [Parameter, EditorRequired] public string Negocio { get; set; } = "";
+}

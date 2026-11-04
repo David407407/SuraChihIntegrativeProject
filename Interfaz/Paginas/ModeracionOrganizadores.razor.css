@@ -1,0 +1,35 @@
+/* "Moderación / Organizadores": 40px arriba, 96px abajo y 24px entre bloques, como en Figma */
+.organizadores {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-block: 40px var(--espacio-seccion);
+}
+
+.organizadores__aviso {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: var(--color-cielo-suave);
+  color: var(--color-tinta);
+}
+
+/* Dos tarjetas por fila, 20px entre ellas */
+.organizadores__solicitudes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.organizadores__esqueleto { height: 320px; border-radius: var(--radio-l); }
+
+.decididas {
+  overflow: hidden;
+  border: 1px solid var(--color-linea);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+}
+.decididas__titulo { padding: 18px 24px; }
+.decidida { display: flex; align-items: center; gap: 16px; padding: 14px 24px; border-top: 1px solid var(--color-linea); }
+.decidida__negocio { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 860px) {
+  .organizadores__solicitudes { grid-template-columns: 1fr; }
+}

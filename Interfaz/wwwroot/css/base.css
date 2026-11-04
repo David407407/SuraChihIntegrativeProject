@@ -70,6 +70,9 @@ input { font: inherit; color: inherit; }
 .seccion { padding-block: var(--espacio-seccion); }
 .seccion--fondo { background: var(--color-fondo); }
 
+/* Pantallas con fondo gris hasta abajo (Moderación, Hazte organizador); el contenido va en .contenedor */
+.pagina-fondo { min-height: calc(100vh - var(--altura-navbar)); background: var(--color-fondo); }
+
 .solo-lectores {
   position: absolute; width: 1px; height: 1px; overflow: hidden;
   clip: rect(0 0 0 0); white-space: nowrap;

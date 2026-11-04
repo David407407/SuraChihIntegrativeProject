@@ -42,7 +42,7 @@ namespace BackendLogica.Falso
             Hacer(a => a.EsOrganizadorAprobado(usuarioId), ct);
 
         public Task<List<PerfilOrganizador>> ListarPorEstadoAsync(EstadoOrganizador estado, CancellationToken ct = default) =>
-            Hacer(a => a.Organizadores.Where(o => o.Estado == estado).OrderBy(o => o.SolicitadoEn).Select(o => o.ADatos()).ToList(), ct);
+            Hacer(a => a.Organizadores.Where(o => o.Estado == estado && a.Usuario(o.UsuarioId) is { Activo: true }).OrderBy(o => o.SolicitadoEn).Select(o => o.ADatos()).ToList(), ct);
 
         public Task<bool> ActualizarPerfilAsync(int usuarioId, string nombreNegocio, string? descripcion, string whatsApp, CancellationToken ct = default) =>
             Hacer(a =>

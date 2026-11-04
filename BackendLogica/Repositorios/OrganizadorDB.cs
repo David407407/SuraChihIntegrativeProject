@@ -63,9 +63,13 @@ namespace BackendLogica.Repositorios
                 "SELECT COUNT(*) FROM organizer_profile WHERE user_id = @usuarioId AND status = 'approved'",
                 new { usuarioId }, ct) > 0;
 
-        /// <summary>Solicitudes en un estado (ej. Pendiente para la pantalla de moderación).</summary>
+        /// <summary>Solicitudes en un estado (ej. Pendiente para la pantalla de moderación), sin las de cuentas eliminadas.</summary>
         public Task<List<PerfilOrganizador>> ListarPorEstadoAsync(EstadoOrganizador estado, CancellationToken ct = default) =>
-            ConsultarAsync("SELECT * FROM organizer_profile WHERE status = @estado ORDER BY requested_at",
+            ConsultarAsync("""
+                SELECT op.* FROM organizer_profile op JOIN user u ON u.id = op.user_id
+                WHERE op.status = @estado AND u.is_active
+                ORDER BY op.requested_at
+                """,
                 Mapear, new { estado }, ct);
 
         /// <summary>Edita los datos públicos del organizador (no cambia su estado).</summary>
