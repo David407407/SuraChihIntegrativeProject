@@ -30,6 +30,7 @@ namespace BackendLogica.Falso
         public readonly List<FilaVista> Vistas = [];
         public readonly List<FilaResena> Resenas = [];
         public readonly List<FilaReporte> Reportes = [];
+        public readonly List<FilaAccionResena> AccionesResenas = [];
 
         // Contadores AUTO_INCREMENT
         private int _imagenEvento, _imagenLugar, _recuperacion, _vista;
@@ -293,6 +294,13 @@ namespace BackendLogica.Falso
             Resenas.Add(new FilaResena { Id = 2, Tipo = TipoResena.Lugar, ObjetivoId = 1, UsuarioId = 6, Calificacion = 4, CreadaEn = ahora });
             Resenas.Add(new FilaResena { Id = 3, Tipo = TipoResena.Lugar, ObjetivoId = 2, UsuarioId = 7, Calificacion = 4, Comentario = "Buen ambiente.", CreadaEn = ahora });
 
+            // Los tres casos de la pantalla "Moderación / Reportes".
+            void Reporte(int id, int reportanteId, TipoObjetivoReporte tipo, int objetivoId, MotivoReporte motivo, string? detalles, TimeSpan hace) =>
+                Reportes.Add(new FilaReporte { Id = id, ReportanteId = reportanteId, Tipo = tipo, ObjetivoId = objetivoId, Motivo = motivo, Detalles = detalles, Estado = EstadoReporte.Abierto, CreadoEn = ahora - hace });
+            Reporte(1, 6, TipoObjetivoReporte.ResenaLugar, 3, MotivoReporte.Spam, null, TimeSpan.FromHours(3));
+            Reporte(2, 5, TipoObjetivoReporte.Evento, 1, MotivoReporte.InformacionFalsa, "La fecha que aparece ya pasó y el enlace de boletos lleva a otra ciudad.", TimeSpan.FromDays(1));
+            Reporte(3, 7, TipoObjetivoReporte.Lugar, 2, MotivoReporte.Otro, "El local cerró hace meses; ya no está en esa dirección.", TimeSpan.FromDays(2));
+
             foreach (var e in Eventos) e.ActualizadoEn = e.CreadoEn;
         }
     }
@@ -373,6 +381,8 @@ namespace BackendLogica.Falso
 
     internal sealed record FilaModeracion(int Id, int ModeradorId, TipoObjetivoModeracion Tipo, int ObjetivoId,
         DecisionModeracion Decision, string? Comentario, DateTime DecididoEn);
+
+    internal sealed record FilaAccionResena(int Id, int ModeradorId, TipoResena Tipo, int ResenaId, AccionResena Accion, DateTime DecididoEn);
 
     internal sealed record FilaFavorito(int UsuarioId, int EventoId, DateTime CreadoEn);
 

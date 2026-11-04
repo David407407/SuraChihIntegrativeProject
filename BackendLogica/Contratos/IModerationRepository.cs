@@ -18,8 +18,19 @@ namespace BackendLogica.Contratos
         Task<int> AprobarAsync(int moderadorId, TipoObjetivoModeracion tipo, int objetivoId, string? comentario = null, CancellationToken ct = default);
         Task<int> RechazarAsync(int moderadorId, TipoObjetivoModeracion tipo, int objetivoId, string motivo, CancellationToken ct = default);
 
-        /// <summary>"Moderación / Historial": las decisiones más recientes primero.</summary>
-        Task<List<RegistroModeracion>> ListarHistorialAsync(int limite = 50, CancellationToken ct = default);
+        /// <summary>"Moderación / Historial": las decisiones más recientes primero. Sin filtro (null) trae todas.</summary>
+        Task<List<RegistroModeracion>> ListarHistorialAsync(int limite = 50, DecisionModeracion? decision = null, TipoObjetivoModeracion? tipo = null, CancellationToken ct = default);
+
+        /// <summary>Total del historial con esos filtros ("Mostrando 7 de 214").</summary>
+        Task<int> ContarHistorialAsync(DecisionModeracion? decision = null, TipoObjetivoModeracion? tipo = null, CancellationToken ct = default);
+
+        /// <summary>Historial de reseñas ocultadas o vueltas a mostrar, las más recientes primero.</summary>
+        /// <exception cref="Datos.ReglaNegocioException">No es supermoderador.</exception>
+        Task<List<RegistroResena>> ListarHistorialResenasAsync(int superModeradorId, int limite = 50, CancellationToken ct = default);
+
+        /// <summary>Total del historial de reseñas.</summary>
+        /// <exception cref="Datos.ReglaNegocioException">No es supermoderador.</exception>
+        Task<int> ContarHistorialResenasAsync(int superModeradorId, CancellationToken ct = default);
 
         /// <summary>
         /// NUEVO para el rediseño: "Ver motivo" del panel del organizador (última decisión sobre ese objetivo).

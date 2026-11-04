@@ -1,0 +1,9 @@
+@*
+  "Modal / Reporte enviado" de Figma: insignia verde, "Gracias por avisarnos" y "Listo".
+  La abre "Modal / Reportar" después de guardar el reporte.
+*@
+@inject Modales Modales
+
+<EncabezadoModal Titulo="Gracias por avisarnos" Icono="check-circulo-exito-24" Exito
+                 Texto="Revisaremos el reporte en las próximas 48 horas." />
+<Boton Texto="Listo" Variante="oscuro" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />

@@ -40,6 +40,9 @@ namespace Interfaz.Servicios
 
         public const string MotivoOtro = "Otro";
 
+        /// <summary>Filas que muestra "Moderación / Historial" ("Mostrando 50 de 214").</summary>
+        private const int FilasHistorial = 50;
+
         /// <summary>Filas de "Decididas recientemente" en Moderación / Organizadores.</summary>
         private const int DecididasRecientes = 5;
 
@@ -201,6 +204,65 @@ namespace Interfaz.Servicios
         public Task RechazarOrganizadorAsync(int usuarioId, string motivo, string comentario) =>
             bd.Moderacion.RechazarAsync(Moderador().Id, TipoObjetivoModeracion.Organizador, usuarioId, TextoRechazo(motivo, comentario));
 
+        // ---------------------------------------------------------------- Reportes
+
+        /// <summary>"Moderación / Reportes": los reportes en ese estado, cada uno con su evento o lugar.</summary>
+        public async Task<DatosReportes> ObtenerReportesAsync(EstadoReporte estado)
+        {
+            Moderador();
+            var lista = bd.Reportes.ListarDetalleAsync(estado);
+            var conteos = ContarAsync();
+            await Task.WhenAll(lista, conteos);
+            return new DatosReportes(lista.Result, conteos.Result);
+        }
+
+        /// <summary>"Descartar" o "Marcar resuelto".</summary>
+        public Task CerrarReporteAsync(int reporteId, EstadoReporte resultado) =>
+            bd.Reportes.ResolverAsync(reporteId, Moderador().Id, resultado);
+
+        /// <summary>"Ocultar reseña": la oculta y cierra sus reportes abiertos. Si ya estaba oculta, solo cierra este.</summary>
+        public async Task OcultarResenaAsync(ReporteDetalle reporte)
+        {
+            int moderadorId = Moderador().Id;
+            TipoResena tipo = reporte.Reporte.Tipo == TipoObjetivoReporte.ResenaEvento ? TipoResena.Evento : TipoResena.Lugar;
+            if (!await bd.Resenas.CambiarVisibilidadAsync(moderadorId, tipo, reporte.Reporte.ObjetivoId, true))
+                await bd.Reportes.ResolverAsync(reporte.Reporte.Id, moderadorId, EstadoReporte.Resuelto);
+        }
+
+        // ---------------------------------------------------------------- Historial
+
+        /// <summary>"Moderación / Historial": las decisiones más recientes y el total con ese filtro.</summary>
+        public async Task<DatosHistorial<RegistroModeracion>> ObtenerHistorialAsync(DecisionModeracion? decision)
+        {
+            Moderador();
+            var filas = bd.Moderacion.ListarHistorialAsync(FilasHistorial, decision);
+            var total = bd.Moderacion.ContarHistorialAsync(decision);
+            var conteos = ContarAsync();
+            await Task.WhenAll(filas, total, conteos);
+            return new DatosHistorial<RegistroModeracion>(filas.Result, total.Result, conteos.Result);
+        }
+
+        /// <summary>"Reseñas ocultas" del historial. Solo un supermoderador: BackendLogica revisa el permiso.</summary>
+        public async Task<DatosHistorial<RegistroResena>> ObtenerHistorialResenasAsync()
+        {
+            int moderadorId = Moderador().Id;
+            var filas = bd.Moderacion.ListarHistorialResenasAsync(moderadorId, FilasHistorial);
+            var total = bd.Moderacion.ContarHistorialResenasAsync(moderadorId);
+            var conteos = ContarAsync();
+            await Task.WhenAll(filas, total, conteos);
+            return new DatosHistorial<RegistroResena>(filas.Result, total.Result, conteos.Result);
+        }
+
+        /// <summary>Los conteos de las pestañas.</summary>
+        private async Task<ConteosModeracion> ContarAsync()
+        {
+            var envios = bd.Moderacion.ListarEnviosPendientesAsync();
+            var organizadores = bd.Organizadores.ListarPorEstadoAsync(EstadoOrganizador.Pendiente);
+            var reportes = bd.Reportes.ListarAsync(EstadoReporte.Abierto);
+            await Task.WhenAll(envios, organizadores, reportes);
+            return new ConteosModeracion(envios.Result.Count, organizadores.Result.Count, reportes.Result.Count);
+        }
+
         // ---------------------------------------------------------------- Equipo (solo supermoderadores)
 
         /// <summary>Moderadores activos para Paginas/EquipoModeracion.razor.</summary>
@@ -256,6 +318,16 @@ namespace Interfaz.Servicios
         int OrganizadoresPendientes,
         int ReportesAbiertos,
         int DecisionesHoy);
+
+    /// <summary>Lo que muestran las pestañas de moderación.</summary>
+    public sealed record ConteosModeracion(int Publicaciones, int Organizadores, int Reportes);
+
+    /// <param name="Lista">Los reportes del estado elegido, los más nuevos primero.</param>
+    public sealed record DatosReportes(IReadOnlyList<ReporteDetalle> Lista, ConteosModeracion Conteos);
+
+    /// <param name="Filas">Las más recientes primero.</param>
+    /// <param name="Total">Con el mismo filtro ("Mostrando 7 de 214").</param>
+    public sealed record DatosHistorial<T>(IReadOnlyList<T> Filas, int Total, ConteosModeracion Conteos);
 
     /// <param name="Decididas">"Decididas recientemente": las más recientes primero.</param>
     /// <param name="PublicacionesPendientes">Pestaña "Publicaciones".</param>

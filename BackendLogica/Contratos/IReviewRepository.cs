@@ -27,7 +27,12 @@ namespace BackendLogica.Contratos
         /// <summary>NUEVO para el rediseño: promedio, total y barras por estrellas de la pantalla "Reseñas".</summary>
         Task<ResumenResenas> ObtenerResumenAsync(TipoResena tipo, int objetivoId, CancellationToken ct = default);
 
-        /// <summary>Un moderador oculta (o vuelve a mostrar) una reseña tras un reporte.</summary>
-        Task<bool> CambiarVisibilidadAsync(TipoResena tipo, int resenaId, bool oculta, CancellationToken ct = default);
+        /// <summary>
+        /// Un moderador oculta (o vuelve a mostrar) una reseña tras un reporte. Queda en el historial de reseñas y,
+        /// al ocultarla, sus reportes abiertos se cierran como resueltos.
+        /// </summary>
+        /// <returns><c>false</c> si no existe o ya estaba así.</returns>
+        /// <exception cref="Datos.ReglaNegocioException">No es moderador.</exception>
+        Task<bool> CambiarVisibilidadAsync(int moderadorId, TipoResena tipo, int resenaId, bool oculta, CancellationToken ct = default);
     }
 }

@@ -78,6 +78,13 @@ namespace BackendLogica.Modelos
     /// <summary>Qué se está reportando (una sola columna objetivo por fila en <c>report</c>).</summary>
     public enum TipoObjetivoReporte { Evento, Lugar, ResenaEvento, ResenaLugar }
 
+    /// <summary>review_moderation.action</summary>
+    public enum AccionResena
+    {
+        [ValorBD("hidden")] Ocultada,
+        [ValorBD("shown")] Mostrada
+    }
+
     /// <summary>Reseñas de eventos (event_review) o de lugares (place_review).</summary>
     public enum TipoResena { Evento, Lugar }
 

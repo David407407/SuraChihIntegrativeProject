@@ -125,6 +125,13 @@ namespace Interfaz.Estado
         public async Task<bool> ConfirmarEliminarCuentaAsync() =>
             await Abrir<ModalEliminarCuenta>() as bool? ?? false;
 
+        /// <summary>"Modal / Reportar" de un evento, lugar o reseña.</summary>
+        public void Reportar(TipoObjetivoReporte tipo, int objetivoId) =>
+            _ = Abrir<ModalReportar>(new Dictionary<string, object?> { ["Tipo"] = tipo, ["ObjetivoId"] = objetivoId });
+
+        /// <summary>"Modal / Reporte enviado".</summary>
+        public void ReporteEnviado() => _ = Abrir<ModalReporteEnviado>();
+
         // ---------------------------------------------------------------- Moderación (WBS 4.3)
 
         /// <summary>Cuánto se ve "Decisión registrada" antes de cerrarse sola.</summary>

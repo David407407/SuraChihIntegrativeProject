@@ -57,9 +57,28 @@ namespace BackendLogica.Falso
         public Task<int> RechazarAsync(int moderadorId, TipoObjetivoModeracion tipo, int objetivoId, string motivo, CancellationToken ct = default) =>
             DecidirAsync(moderadorId, tipo, objetivoId, DecisionModeracion.Rechazado, motivo, ct);
 
-        public Task<List<RegistroModeracion>> ListarHistorialAsync(int limite = 50, CancellationToken ct = default) =>
-            Hacer(a => a.Moderaciones.OrderByDescending(m => m.DecididoEn).ThenByDescending(m => m.Id)
+        public Task<List<RegistroModeracion>> ListarHistorialAsync(int limite = 50, DecisionModeracion? decision = null, TipoObjetivoModeracion? tipo = null, CancellationToken ct = default) =>
+            Hacer(a => a.Moderaciones.Where(m => Coincide(m, decision, tipo))
+                .OrderByDescending(m => m.DecididoEn).ThenByDescending(m => m.Id)
                 .Take(limite).Select(m => ADatos(a, m)).ToList(), ct);
+
+        public Task<int> ContarHistorialAsync(DecisionModeracion? decision = null, TipoObjetivoModeracion? tipo = null, CancellationToken ct = default) =>
+            Hacer(a => a.Moderaciones.Count(m => Coincide(m, decision, tipo)), ct);
+
+        public Task<List<RegistroResena>> ListarHistorialResenasAsync(int superModeradorId, int limite = 50, CancellationToken ct = default) =>
+            Hacer(a =>
+            {
+                ExigirSuperModerador(a, superModeradorId);
+                return a.AccionesResenas.OrderByDescending(h => h.DecididoEn).ThenByDescending(h => h.Id)
+                    .Take(limite).Select(h => ADatos(a, h)).ToList();
+            }, ct);
+
+        public Task<int> ContarHistorialResenasAsync(int superModeradorId, CancellationToken ct = default) =>
+            Hacer(a =>
+            {
+                ExigirSuperModerador(a, superModeradorId);
+                return a.AccionesResenas.Count;
+            }, ct);
 
         public Task<RegistroModeracion?> ObtenerUltimaDecisionAsync(TipoObjetivoModeracion tipo, int objetivoId, CancellationToken ct = default) =>
             Hacer(a => a.Moderaciones.Where(m => m.Tipo == tipo && m.ObjetivoId == objetivoId)
@@ -83,7 +102,29 @@ namespace BackendLogica.Falso
                 return true;
             }, ct);
 
+        private static bool Coincide(FilaModeracion m, DecisionModeracion? decision, TipoObjetivoModeracion? tipo) =>
+            (decision == null || m.Decision == decision) && (tipo == null || m.Tipo == tipo);
+
+        private static void ExigirSuperModerador(AlmacenFalso a, int usuarioId)
+        {
+            if (a.Usuario(usuarioId) is not { EsSuperModerador: true, Activo: true })
+                throw new ReglaNegocioException(Repositorios.ModeracionDB.SoloSuperHistorial);
+        }
+
         private static RegistroModeracion ADatos(AlmacenFalso a, FilaModeracion m) =>
-            new(m.Id, m.ModeradorId, a.Usuario(m.ModeradorId)!.NombreUsuario, m.Tipo, m.ObjetivoId, m.Decision, m.Comentario, m.DecididoEn);
+            new(m.Id, m.ModeradorId, a.Usuario(m.ModeradorId)!.NombreUsuario, m.Tipo, m.ObjetivoId, m.Decision, m.Comentario, m.DecididoEn, m.Tipo switch
+            {
+                TipoObjetivoModeracion.Evento => a.Evento(m.ObjetivoId)!.Titulo,
+                TipoObjetivoModeracion.Lugar => a.Lugar(m.ObjetivoId)!.Nombre,
+                _ => a.Organizador(m.ObjetivoId)!.NombreNegocio
+            });
+
+        private static RegistroResena ADatos(AlmacenFalso a, FilaAccionResena h)
+        {
+            var resena = a.Resenas.First(r => r.Tipo == h.Tipo && r.Id == h.ResenaId);
+            string objetivo = h.Tipo == TipoResena.Evento ? a.Evento(resena.ObjetivoId)!.Titulo : a.Lugar(resena.ObjetivoId)!.Nombre;
+            return new RegistroResena(h.Id, h.ModeradorId, a.Usuario(h.ModeradorId)!.NombreUsuario, h.Tipo, h.ResenaId, resena.ObjetivoId, objetivo,
+                a.Usuario(resena.UsuarioId)!.NombreUsuario, resena.Calificacion, resena.Comentario, h.Accion, h.DecididoEn);
+        }
     }
 }

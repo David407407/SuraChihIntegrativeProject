@@ -1,0 +1,152 @@
+@*
+  "Moderación / Reportes" de Figma: lo que la comunidad marcó (tabla report), con píldoras Abiertos / Resueltos /
+  Descartados. "Descartar" y "Marcar resuelto" cierran el reporte; "Ocultar reseña" la oculta (is_hidden), cierra sus
+  reportes abiertos y queda en el historial de reseñas. Solo entran moderadores; BackendLogica lo vuelve a revisar.
+*@
+@page "/moderacion/reportes"
+@implements IDisposable
+@inject Sesion Sesion
+@inject ServicioModeracion Servicio
+@inject Modales Modales
+@inject Avisos Avisos
+@inject Acciones Acciones
+@inject ILogger<ModeracionReportes> Registro
+
+<PageTitle>SuraChih · Reportes</PageTitle>
+
+<div class="pagina-fondo">
+    <main class="reportes contenedor">
+        <EncabezadoModeracion Titulo="Reportes" Texto="Lo que la comunidad marcó como spam, estafa, inapropiado o falso." Usuario="Sesion.Usuario" />
+
+        <AccesoModeracion>
+            <PestanasModeracion Activa="PestanasModeracion.Seccion.Reportes" Publicaciones="_conteos?.Publicaciones"
+                                Organizadores="_conteos?.Organizadores" Reportes="_conteos?.Reportes" />
+
+            <div class="reportes__pildoras" role="group" aria-label="Qué reportes mostrar">
+                <Pildora Texto="@($"Abiertos ({_conteos?.Reportes ?? 0})")" Activa="_estado == EstadoReporte.Abierto" OnClick="() => ElegirAsync(EstadoReporte.Abierto)" />
+                <Pildora Texto="Resueltos" Activa="_estado == EstadoReporte.Resuelto" OnClick="() => ElegirAsync(EstadoReporte.Resuelto)" />
+                <Pildora Texto="Descartados" Activa="_estado == EstadoReporte.Descartado" OnClick="() => ElegirAsync(EstadoReporte.Descartado)" />
+            </div>
+
+            @if (_lista == null)
+            {
+                <div class="reportes__lista" aria-hidden="true">
+                    @for (int i = 0; i < 3; i++)
+                    {
+                        <div class="esqueleto reportes__esqueleto"></div>
+                    }
+                </div>
+            }
+            else if (_lista.Count == 0)
+            {
+                <VacioModeracion Icono="check-exito-24" Exito Titulo="@(_estado == EstadoReporte.Abierto ? "Todo al día" : "Nada por aquí")"
+                                 Texto="@(_estado switch
+                                 {
+                                     EstadoReporte.Abierto => "No hay reportes esperando revisión.",
+                                     EstadoReporte.Resuelto => "Aún no hay reportes resueltos.",
+                                     _ => "Aún no hay reportes descartados.",
+                                 })" />
+            }
+            else
+            {
+                <div class="reportes__lista">
+                    @foreach (var r in _lista)
+                    {
+                        <FilaReporte @key="r.Reporte.Id" R="r" Ocupado="_ocupado"
+                                     AlDescartar="() => DecidirAsync(() => Servicio.CerrarReporteAsync(r.Reporte.Id, EstadoReporte.Descartado))"
+                                     AlResolver="() => DecidirAsync(() => Servicio.CerrarReporteAsync(r.Reporte.Id, EstadoReporte.Resuelto))"
+                                     AlOcultar="() => DecidirAsync(() => Servicio.OcultarResenaAsync(r))" />
+                    }
+                </div>
+            }
+        </AccesoModeracion>
+    </main>
+</div>
+
+<VolverArriba />
+
+@code {
+    private EstadoReporte _estado = EstadoReporte.Abierto;
+    private IReadOnlyList<ReporteDetalle>? _lista;
+    private ConteosModeracion? _conteos;
+    private bool _ocupado;
+    private int? _usuarioId;
+
+    private bool EsModerador => Sesion.Usuario?.EsModerador == true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Sesion.Cambio += AlCambiarSesion;
+        _usuarioId = Sesion.Usuario?.Id;
+        if (!Sesion.Iniciada) Modales.RequiereSesion("Inicia sesión con tu cuenta de moderador para revisar reportes.");
+        else if (EsModerador) await CargarAsync();
+    }
+
+    private async Task ElegirAsync(EstadoReporte estado)
+    {
+        if (_estado == estado) return;
+        _estado = estado;
+        _lista = null;
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        EstadoReporte pedido = _estado;
+        try
+        {
+            var datos = await Servicio.ObtenerReportesAsync(pedido);
+            if (pedido != _estado) return;   // mientras cargaba eligió otra píldora
+            _lista = datos.Lista;
+            _conteos = datos.Conteos;
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            Registro.LogError(ex, "No se pudieron cargar los reportes");
+            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
+            _lista = [];
+        }
+    }
+
+    private async Task DecidirAsync(Func<Task> decision)
+    {
+        if (_ocupado) return;
+        _ocupado = true;
+        try
+        {
+            await decision();
+            await Modales.DecisionRegistradaAsync();
+            await CargarAsync();
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            Registro.LogError(ex, "No se pudo guardar la decisión sobre el reporte");
+            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
+        }
+        finally
+        {
+            _ocupado = false;
+        }
+    }
+
+    private void AlCambiarSesion() => InvokeAsync(async () =>
+    {
+        int? id = Sesion.Usuario?.Id;
+        if (id == _usuarioId) return;
+        if (_usuarioId != null && id == null) { Acciones.IrA(Acciones.Rutas.Home); return; }   // cerró sesión aquí
+        _usuarioId = id;
+        _lista = null;
+        if (EsModerador) await CargarAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
+}

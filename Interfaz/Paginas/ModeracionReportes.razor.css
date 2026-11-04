@@ -1,0 +1,11 @@
+/* "Moderación / Reportes": 40px arriba, 96px abajo y 24px entre bloques, como en Figma */
+.reportes {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-block: 40px var(--espacio-seccion);
+}
+
+.reportes__pildoras { display: flex; flex-wrap: wrap; gap: 8px; }
+.reportes__lista { display: flex; flex-direction: column; gap: 14px; }
+.reportes__esqueleto { height: 200px; border-radius: var(--radio-l); }

@@ -631,8 +631,63 @@ async Task PruebasFalso()
     await Prueba("Reportes: crear y resolver", async () =>
     {
         int id = await f.Reportes.CrearAsync(6, TipoObjetivoReporte.ResenaLugar, 3, MotivoReporte.Spam, null);
+        await EsperarError<ReglaNegocioException>(() => f.Reportes.ResolverAsync(id, 6, EstadoReporte.Descartado), ConexionDB.SoloModeradores);
+        Afirmar((await f.Reportes.ListarAsync()).Any(r => r.Id == id), "un usuario normal no lo cierra");
         Afirmar(await f.Reportes.ResolverAsync(id, 1, EstadoReporte.Descartado), "resolver");
-        Afirmar((await f.Reportes.ListarAsync()).Count == 0, "ya no está abierto");
+        Afirmar((await f.Reportes.ListarAsync()).All(r => r.Id != id), "ya no está abierto");
+        Afirmar((await f.Reportes.ListarAsync(EstadoReporte.Descartado)).Any(r => r.Id == id && r.ResueltoPor == 1), "queda quién lo cerró");
+        return "";
+    });
+    await Prueba("Reportes: cada uno queda ligado a su evento o lugar", async () =>
+    {
+        int deEvento = await f.Reportes.CrearAsync(6, TipoObjetivoReporte.ResenaEvento, 1, MotivoReporte.Inapropiado, null);
+        var lista = await f.Reportes.ListarDetalleAsync();
+        var resenaEvento = lista.Single(r => r.Reporte.Id == deEvento);
+        Afirmar(resenaEvento is { EventoId: 3, LugarId: null, ResenaAutor: "mariana_r", ResenaCalificacion: 5, ResenaComentario: "Muy bien organizada." }, "reseña de evento → su evento");
+        Afirmar(lista.Single(r => r.Reporte.Tipo == TipoObjetivoReporte.ResenaLugar && r.Reporte.ObjetivoId == 3) is { LugarId: 2, EventoId: null, ResenaAutor: "sofia_c" }, "reseña de lugar → su lugar");
+        Afirmar(lista.Single(r => r.Reporte.Tipo == TipoObjetivoReporte.Evento) is { EventoId: 1, ResenaAutor: null }, "evento");
+        Afirmar(lista.Single(r => r.Reporte.Tipo == TipoObjetivoReporte.Lugar) is { LugarId: 2, ResenaAutor: null, ReportanteNombre: "sofia_c" }, "lugar");
+        Afirmar(lista.Zip(lista.Skip(1)).All(p => p.First.Reporte.CreadoEn >= p.Second.Reporte.CreadoEn), "los más nuevos primero");
+        return "";
+    });
+    await Prueba("Ocultar reseña: solo moderadores, cierra sus reportes y queda en el historial", async () =>
+    {
+        int a = await f.Reportes.CrearAsync(5, TipoObjetivoReporte.ResenaLugar, 3, MotivoReporte.Spam, null);
+        int b = await f.Reportes.CrearAsync(6, TipoObjetivoReporte.ResenaLugar, 3, MotivoReporte.Estafa, null);
+        int otra = await f.Reportes.CrearAsync(6, TipoObjetivoReporte.ResenaEvento, 1, MotivoReporte.Spam, null);
+
+        await EsperarError<ReglaNegocioException>(() => f.Resenas.CambiarVisibilidadAsync(6, TipoResena.Lugar, 3, true), ConexionDB.SoloModeradores);
+        Afirmar((await f.Resenas.ListarAsync(TipoResena.Lugar, 2)).Any(r => r.Id == 3), "un usuario normal no la oculta");
+
+        Afirmar(await f.Resenas.CambiarVisibilidadAsync(2, TipoResena.Lugar, 3, true), "ocultar");
+        Afirmar((await f.Resenas.ListarAsync(TipoResena.Lugar, 2)).All(r => r.Id != 3), "ya no se ve");
+        Afirmar((await f.Resenas.ListarAsync(TipoResena.Lugar, 2, incluirOcultas: true)).Any(r => r.Id == 3), "sigue guardada");
+        var abiertos = await f.Reportes.ListarAsync();
+        Afirmar(abiertos.All(r => r.Id != a && r.Id != b), "sus reportes se cerraron");
+        Afirmar(abiertos.Any(r => r.Id == otra), "los de otra reseña (con el mismo id, en la otra tabla) siguen abiertos");
+        Afirmar(!await f.Resenas.CambiarVisibilidadAsync(2, TipoResena.Lugar, 3, true), "ocultarla otra vez no hace nada");
+
+        await EsperarError<ReglaNegocioException>(() => f.Moderacion.ListarHistorialResenasAsync(2), ModeracionDB.SoloSuperHistorial);
+        await EsperarError<ReglaNegocioException>(() => f.Moderacion.ContarHistorialResenasAsync(6), ModeracionDB.SoloSuperHistorial);
+        var historial = await f.Moderacion.ListarHistorialResenasAsync(1);
+        Afirmar(historial.Count == 1 && historial[0] is { ModeradorNombre: "mod_luis", Tipo: TipoResena.Lugar, ResenaId: 3, ObjetivoId: 2, AutorNombre: "sofia_c", Accion: AccionResena.Ocultada }, "historial");
+
+        Afirmar(await f.Resenas.CambiarVisibilidadAsync(1, TipoResena.Lugar, 3, false), "volver a mostrar");
+        Afirmar((await f.Moderacion.ListarHistorialResenasAsync(1))[0].Accion == AccionResena.Mostrada, "lo más nuevo primero");
+        Afirmar(await f.Moderacion.ContarHistorialResenasAsync(1) == 2, "conteo");
+        return "";
+    });
+    await Prueba("Historial de moderación: filtros, nombre del objetivo y total", async () =>
+    {
+        int total = await f.Moderacion.ContarHistorialAsync();
+        var rechazos = await f.Moderacion.ListarHistorialAsync(decision: DecisionModeracion.Rechazado);
+        Afirmar(rechazos.All(r => r.Decision == DecisionModeracion.Rechazado), "solo rechazos");
+        Afirmar(rechazos.Count == await f.Moderacion.ContarHistorialAsync(DecisionModeracion.Rechazado), "conteo de rechazos");
+        var organizadores = await f.Moderacion.ListarHistorialAsync(tipo: TipoObjetivoModeracion.Organizador);
+        Afirmar(organizadores.Count > 0 && organizadores.All(r => r.Tipo == TipoObjetivoModeracion.Organizador), "solo organizadores");
+        Afirmar(organizadores.Any(r => r.ObjetivoNombre == "Dandelion Coffee"), "con el nombre del negocio");
+        Afirmar((await f.Moderacion.ListarHistorialAsync(tipo: TipoObjetivoModeracion.Evento)).All(r => r.ObjetivoNombre.Length > 0), "con el título del evento");
+        Afirmar((await f.Moderacion.ListarHistorialAsync(limite: 1)).Count == 1 && total > 1, "el límite no cambia el total");
         return "";
     });
 
@@ -1013,6 +1068,51 @@ async Task PruebasEscrituraMySql(SuraChihBD bd)
         var ids = (await bd.Eventos.ListarPorEstadoAsync(EstadoEvento.Pendiente)).Select(e => e.Id).ToList();
         Afirmar(ids.IndexOf(primero) < ids.IndexOf(segundo), $"orden: {string.Join(", ", ids)}");
         return $"{ids.Count} pendientes";
+    });
+    await Prueba("Reportes: cada uno queda ligado a su evento o lugar (con los JOIN reales)", async () =>
+    {
+        int deLugar = await bd.Reportes.CrearAsync(6, TipoObjetivoReporte.ResenaLugar, 1, MotivoReporte.Spam, null);
+        int deEvento = await bd.Reportes.CrearAsync(6, TipoObjetivoReporte.Evento, 1, MotivoReporte.Otro, "Detalle");
+        var lista = await bd.Reportes.ListarDetalleAsync();
+        var resena = lista.Single(r => r.Reporte.Id == deLugar);
+        var eResena = (await bd.Resenas.ListarAsync(TipoResena.Lugar, resena.LugarId!.Value)).Single(r => r.Id == 1);
+        Afirmar(resena is { EventoId: null, ResenaOculta: false } && resena.ObjetivoNombre.Length > 0, "reseña → su lugar");
+        Afirmar(resena.ResenaAutor == eResena.NombreUsuario && resena.ResenaCalificacion == eResena.Calificacion, "datos de la reseña");
+        Afirmar(lista.Single(r => r.Reporte.Id == deEvento) is { EventoId: 1, LugarId: null, ResenaAutor: null, ReportanteNombre: "diego_m" }, "evento");
+        Afirmar(await bd.Reportes.ResolverAsync(deEvento, 1, EstadoReporte.Resuelto), "resolver");
+        await EsperarError<ReglaNegocioException>(() => bd.Reportes.ResolverAsync(deLugar, 6, EstadoReporte.Descartado), ConexionDB.SoloModeradores);
+        return "";
+    });
+    await Prueba("Ocultar reseña: todo junto y queda en el historial de reseñas", async () =>
+    {
+        int reporte = (await bd.Reportes.ListarDetalleAsync()).First(r => r.Reporte.Tipo == TipoObjetivoReporte.ResenaLugar && r.Reporte.ObjetivoId == 1).Reporte.Id;
+        await EsperarError<ReglaNegocioException>(() => bd.Resenas.CambiarVisibilidadAsync(6, TipoResena.Lugar, 1, true), ConexionDB.SoloModeradores);
+        Afirmar(await bd.Resenas.CambiarVisibilidadAsync(2, TipoResena.Lugar, 1, true), "ocultar");
+        Afirmar(!await bd.Resenas.CambiarVisibilidadAsync(2, TipoResena.Lugar, 1, true), "dos veces no");
+        Afirmar((await bd.Reportes.ListarAsync(EstadoReporte.Resuelto)).Any(r => r.Id == reporte && r.ResueltoPor == 2), "su reporte se cerró");
+
+        await EsperarError<ReglaNegocioException>(() => bd.Moderacion.ListarHistorialResenasAsync(2), ModeracionDB.SoloSuperHistorial);
+        int antes = await bd.Moderacion.ContarHistorialResenasAsync(1);
+        var historial = await bd.Moderacion.ListarHistorialResenasAsync(1);
+        Afirmar(historial[0] is { ModeradorNombre: "mod_luis", Tipo: TipoResena.Lugar, ResenaId: 1, Accion: AccionResena.Ocultada } && historial[0].ObjetivoNombre.Length > 0, "historial");
+
+        Afirmar(await bd.Resenas.CambiarVisibilidadAsync(2, TipoResena.Lugar, 1, false), "volver a mostrar");
+        Afirmar(await bd.Moderacion.ContarHistorialResenasAsync(1) == antes + 1, "también queda");
+        return "";
+    });
+    await Prueba("Historial de moderación: filtros y total con los JOIN reales", async () =>
+    {
+        var todo = await bd.Moderacion.ListarHistorialAsync(limite: 500);
+        Afirmar(todo.Count == await bd.Moderacion.ContarHistorialAsync() && todo.All(r => r.ObjetivoNombre.Length > 0), "todo con nombre");
+        foreach (var decision in new[] { DecisionModeracion.Aprobado, DecisionModeracion.Rechazado })
+        {
+            var filtrado = await bd.Moderacion.ListarHistorialAsync(limite: 500, decision: decision);
+            Afirmar(filtrado.All(r => r.Decision == decision) && filtrado.Count == todo.Count(r => r.Decision == decision), "por decisión");
+            Afirmar(await bd.Moderacion.ContarHistorialAsync(decision) == filtrado.Count, "conteo por decisión");
+        }
+        foreach (var tipo in Enum.GetValues<TipoObjetivoModeracion>())
+            Afirmar(await bd.Moderacion.ContarHistorialAsync(tipo: tipo) == todo.Count(r => r.Tipo == tipo), $"conteo de {tipo}");
+        return $"{todo.Count} decisiones";
     });
 }
 
