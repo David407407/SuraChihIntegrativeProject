@@ -1,9 +1,9 @@
 @*
   "Modal / Motivo de rechazo" de Figma: lo que ve el ORGANIZADOR cuando moderación rechaza su evento
   ("Tu evento fue rechazado", quién y cuándo, el comentario y "Editar y reenviar").
-  Lo abrirá el panel del organizador con Modales.MotivoRechazo(titulo, registro), donde registro sale de
-  bd.Moderacion.ObtenerUltimaDecisionAsync(TipoObjetivoModeracion.Evento, id). Mientras ese panel no
-  exista, "Editar y reenviar" muestra "llega en la siguiente versión" (y se puede ver en /componentes).
+  Lo abre el panel del organizador con Modales.MotivoRechazo(titulo, registro, id), donde registro sale de
+  bd.Moderacion.ObtenerUltimaDecisionAsync(TipoObjetivoModeracion.Evento, id). "Editar y reenviar" abre la
+  pantalla de Publicar evento con ese evento (en /componentes, sin id, solo cierra).
 *@
 @inject Modales Modales
 @inject Acciones Acciones
@@ -27,9 +27,12 @@
     [Parameter, EditorRequired] public string Titulo { get; set; } = "";
     [Parameter, EditorRequired] public RegistroModeracion Registro { get; set; } = default!;
 
+    /// <summary>Evento rechazado que se edita al reenviar.</summary>
+    [Parameter] public int? EventoId { get; set; }
+
     private void EditarYReenviar()
     {
         Modales.Cerrar();
-        Acciones.Proximamente("Editar eventos");
+        if (EventoId is { } id) Acciones.EditarEvento(id);
     }
 }

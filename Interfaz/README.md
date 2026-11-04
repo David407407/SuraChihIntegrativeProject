@@ -27,11 +27,14 @@ Paginas/                     una página por pantalla, con su @page
   Moderacion.razor  /moderacion              RevisarEvento.razor  /moderacion/evento/{id}
   ModeracionOrganizadores.razor  /moderacion/organizadores
   HazteOrganizador.razor  /organizador/solicitud
+  PanelOrganizador.razor  /organizador
+  EstadisticasDelEvento.razor  /organizador/evento/{id}/estadisticas
   PublicarEvento.razor  /organizador/evento/nuevo  y  /organizador/evento/{id}/editar
   Buscar.razor  /buscar?q=...  (resultados de búsqueda, filtros y calendario)
 Componentes/
   Base/                      Boton, Campo, Chip, ChipCategoria, Pildora, BotonFavorito, Imagen, Icono,
                              EncabezadoSeccion, VolverArriba, Interruptor, Opcion, AreaTexto
+  Organizador/               ChipsEstadoEvento
   Moderacion/                EncabezadoModeracion, PestanasModeracion, AccesoModeracion, VacioModeracion,
                              FilaPendiente (renglón de la bandeja), TarjetaSolicitud, ListaRevision, CajaDestacar
   Tarjetas/                  Tarjeta (Card evento / Card lugar), TarjetaRecomendada, ItemLugar,
@@ -329,6 +332,22 @@ evento" de la landing, que lleva aquí a quien todavía no está aprobado. Sin s
 Figma solo dibuja el formulario: los otros estados usan las mismas piezas. Al abrir la pantalla también se
 actualiza `Sesion.EsOrganizador`, por si un moderador decidió mientras la sesión estaba abierta. El WhatsApp se
 guarda solo con dígitos ("52 614 111 0002" → `526141110002`) y la red social siempre con `https://`.
+
+## Panel de organizador
+
+Se entra con el menú de cuenta → "Panel de organizador" (`Acciones.PanelOrganizador`). Solo organizadores aprobados; a
+los demás los manda a "Hazte organizador". Datos: `Servicios/ServicioPanelOrganizador.cs`.
+
+- **Panel** (`/organizador`): cuatro métricas de todos sus eventos y la tabla "Mis eventos". Publicado y Cancelado llevan a
+  Estadísticas, En revisión muestra "Enviado 8 oct", Rechazado "Ver motivo" (`ModalMotivoRechazo`, con "Editar y
+  reenviar") y la nota del moderador, Borrador "Continuar" y Finalizado su calificación.
+- **Estadísticas** (`/organizador/evento/{id}/estadisticas`): solo del dueño. Embudo de `v_event_stats`, inscritos
+  con buscador y "Ver más", "Ver como asistente" y "Editar evento" (la pantalla de Publicar evento).
+- **Gráfica "Últimos 7 días"**: vistas reales por día de `event_view` (`ListarVistasPorDiaAsync`), con los días sin vistas en
+  0. El día con más vistas va en amarillo. El "+18%" compara contra los 7 días anteriores y no sale si en esos días no hubo
+  vistas. La visita del propio organizador no cuenta.
+- **Cancelar evento**: solo eventos publicados y sin terminar. Pide motivo (`event.cancel_reason`), muestra "Evento cancelado"
+  y los inscritos lo ven en la pestaña Cancelados de Mis planes.
 
 ## Publicar / editar evento (WBS 4.6)
 

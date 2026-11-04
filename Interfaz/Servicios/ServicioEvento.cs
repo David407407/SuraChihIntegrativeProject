@@ -46,7 +46,8 @@ namespace Interfaz.Servicios
             Task<ResumenResenas>? resenas = evento.Terminado ? bd.Resenas.ObtenerResumenAsync(TipoResena.Evento, eventoId) : null;
             await Task.WhenAll(recomendados, favoritos, inscrito, resenas ?? Task.CompletedTask);
 
-            if (evento.Estado == EstadoEvento.Aprobado) await RegistrarVistaAsync(eventoId, usuario?.Id);
+            // La visita del propio organizador ("Ver como asistente") no cuenta en su embudo.
+            if (evento.Estado == EstadoEvento.Aprobado && usuario?.Id != evento.OrganizadorId) await RegistrarVistaAsync(eventoId, usuario?.Id);
 
             return new DatosDetalleEvento(
                 evento,
