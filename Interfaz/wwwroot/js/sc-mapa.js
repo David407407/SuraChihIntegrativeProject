@@ -25,6 +25,8 @@
  *   icono        Icono del pin único: archivo de assets/iconos sin extensión (por defecto 'ubicacion').
  *   zoom         Zoom con un solo pin (por defecto 16).
  *   arrastrable  El pin se puede mover; un clic en el mapa lo coloca ahí.
+ *   agrupar      Los pines cercanos se juntan en un círculo con el número ("12"); al acercar el mapa se
+ *                separan. Un clic en el círculo acerca hasta esa zona. El pin activo nunca se agrupa.
  *
  * Propiedades y métodos:
  *   puntos                       Arreglo de { id, tipo?, lat, lng, titulo?, icono? }. `tipo` distingue
@@ -73,6 +75,10 @@ const ATRIBUCION = CARTO_KEY
   : OSM;
 const ID_UNICO = 'unico';
 const SEPARACION_PINES = 40;   // px entre pines con las mismas coordenadas (el pin mide 40)
+/** Con `agrupar`: tamaño (px de pantalla) de cada celda en la que se juntan los pines. */
+const CELDA_GRUPO = 64;
+/** Desde este zoom ya no se agrupa (calles): cada pin se ve solo. */
+const ZOOM_SIN_GRUPOS = 17;
 
 const clave = (punto) => `${punto.tipo ?? 'punto'}:${punto.id}`;
 const limitar = (valor, minimo, maximo) => Math.min(Math.max(valor, minimo), maximo);
@@ -88,6 +94,8 @@ class Mapa extends HTMLElement {
   #mapa = null;
   #capa = null;
   #marcadores = new Map();
+  /** Puntos por clave, para encontrar el de un marcador o un grupo. */
+  #porClave = new Map();
   #puntos = [];
   #activo = null;
   #porPropiedad = false;   // true cuando los puntos se dieron con `puntos` y no con atributos
@@ -130,6 +138,9 @@ class Mapa extends HTMLElement {
       this.#marcarActivo(this.#activo, false);
       this.#activo = nueva;
       this.#marcarActivo(nueva, true);
+      // Si el nuevo activo estaba dentro de un grupo, sale de él para que se vea.
+      const nuevoMarcador = this.#marcadores.get(nueva);
+      if (this.#agrupa && nuevoMarcador && !this.#capa.hasLayer(nuevoMarcador)) this.#agrupar();
     }
     const marcador = this.#marcadores.get(nueva);
     if (!marcador) return;
@@ -205,7 +216,10 @@ class Mapa extends HTMLElement {
     this.#capa = L.layerGroup().addTo(this.#mapa);
 
     this.#mapa.on('moveend', () => this.#avisarZona());
-    this.#mapa.on('zoomend', () => this.#actualizarZoom());
+    this.#mapa.on('zoomend', () => {
+      this.#actualizarZoom();
+      if (this.#agrupa) this.#agrupar();
+    });
     // Clic en el mapa (fuera de los pines; arrastrar el mapa no cuenta como clic): con pin
     // arrastrable lo coloca ahí; si no, quita la selección.
     this.#mapa.on('click', (e) => {
@@ -254,9 +268,13 @@ class Mapa extends HTMLElement {
     }];
   }
 
+  /** Con el atributo `agrupar` (y sin pin arrastrable) los pines cercanos se juntan. */
+  get #agrupa() { return this.hasAttribute('agrupar') && !this.arrastrable; }
+
   #pintarPuntos(ajustar) {
     this.#capa.clearLayers();
     this.#marcadores.clear();
+    this.#porClave.clear();
     if (!this.#puntos.some((p) => clave(p) === this.#activo)) this.#activo = null;
 
     const enElMismoSitio = new Map();
@@ -278,10 +296,12 @@ class Mapa extends HTMLElement {
       marcador.on('dragend', () => this.#fijarUbicacion(marcador.getLatLng()));
       // Leaflet pinta el texto del tooltip como HTML: se escapa porque el título viene de la BD.
       if (punto.titulo) marcador.bindTooltip(escapar(punto.titulo), { direction: 'top', offset: [0, -22], className: 'mapa__etiqueta' });
-      this.#capa.addLayer(marcador);
-      marcador.getElement()?.setAttribute('aria-label', punto.titulo || 'Ubicación');
+      marcador.on('add', () => marcador.getElement()?.setAttribute('aria-label', punto.titulo || 'Ubicación'));
       this.#marcadores.set(clave(punto), marcador);
+      this.#porClave.set(clave(punto), punto);
     }
+    if (this.#agrupa) this.#agrupar();
+    else for (const marcador of this.#marcadores.values()) this.#capa.addLayer(marcador);
 
     const encuadrar = this.#puntos.length > 0 && this.#tieneTamano() && (ajustar || !this.#encuadrado);
     if (encuadrar) {
@@ -291,6 +311,71 @@ class Mapa extends HTMLElement {
     } else {
       this.#avisarZona();
     }
+  }
+
+  /**
+   * Junta los pines que caen en la misma celda de CELDA_GRUPO px (con el zoom actual) en un círculo con
+   * el número. Se recalcula al cambiar el zoom, los puntos o el pin activo; al mover el mapa no hace falta.
+   */
+  #agrupar() {
+    if (!this.#mapa) return;
+    this.#capa.clearLayers();
+    const zoom = this.#mapa.getZoom();
+    const celdas = new Map();
+    for (const [llave, marcador] of this.#marcadores) {
+      if (zoom >= ZOOM_SIN_GRUPOS || llave === this.#activo) {
+        this.#capa.addLayer(marcador);
+        continue;
+      }
+      const p = this.#mapa.project(marcador.getLatLng(), zoom);
+      const celda = `${Math.floor(p.x / CELDA_GRUPO)}:${Math.floor(p.y / CELDA_GRUPO)}`;
+      if (!celdas.has(celda)) celdas.set(celda, []);
+      celdas.get(celda).push(llave);
+    }
+    for (const llaves of celdas.values()) {
+      if (llaves.length === 1) this.#capa.addLayer(this.#marcadores.get(llaves[0]));
+      else this.#capa.addLayer(this.#grupo(llaves.map((k) => this.#porClave.get(k))));
+    }
+  }
+
+  /** Círculo con el número de pines; un clic acerca el mapa hasta ver los de ese grupo. */
+  #grupo(puntos) {
+    const caja = L.latLngBounds(puntos.map((p) => [p.lat, p.lng]));
+    const eventos = puntos.filter((p) => p.tipo === 'evento').length;
+    const lugares = puntos.length - eventos;
+    const clase = eventos === 0 ? ' grupo--lugares' : lugares === 0 ? ' grupo--eventos' : '';
+    const tamano = puntos.length < 10 ? 44 : puntos.length < 50 ? 52 : 60;
+    const partes = [];
+    if (lugares > 0) partes.push(`${lugares} ${lugares === 1 ? 'lugar' : 'lugares'}`);
+    if (eventos > 0) partes.push(`${eventos} ${eventos === 1 ? 'evento' : 'eventos'}`);
+    const texto = `${partes.join(' y ')}: acerca para verlos`;
+
+    const marcador = L.marker(caja.getCenter(), {
+      icon: L.divIcon({
+        className: 'mapa__grupo',
+        iconSize: [tamano, tamano],
+        iconAnchor: [tamano / 2, tamano / 2],
+        html: `<span class="grupo${clase}">${puntos.length}</span>`,
+      }),
+      riseOnHover: true,
+      keyboard: true,
+    });
+    marcador.on('add', () => {
+      const el = marcador.getElement();
+      el?.setAttribute('aria-label', texto);
+      el?.setAttribute('role', 'button');
+    });
+    marcador.bindTooltip(escapar(texto), { direction: 'top', offset: [0, -tamano / 2], className: 'mapa__etiqueta' });
+    marcador.on('click', () => {
+      const animate = !sinMovimiento();
+      // Todos en el mismo sitio (o casi): directo al zoom en que se separan.
+      const actual = this.#mapa.getZoom();
+      const mismoSitio = caja.getNorthEast().distanceTo(caja.getSouthWest()) < 30;
+      let destino = mismoSitio ? ZOOM_SIN_GRUPOS : Math.min(this.#mapa.getBoundsZoom(caja.pad(0.3)), ZOOM_SIN_GRUPOS);
+      if (destino <= actual) destino = Math.min(actual + 2, ZOOM_SIN_GRUPOS);   // siempre acerca algo
+      this.#mapa.setView(caja.getCenter(), destino, { animate });
+    });
+    return marcador;
   }
 
   /** @param {number} repetidos Cuántos puntos ya hay en estas mismas coordenadas (un evento en un lugar del mapa). */

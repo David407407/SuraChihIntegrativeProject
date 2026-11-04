@@ -20,6 +20,17 @@
 
 .panel-mapa__segmentos { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* Filtros chicos: Hoy · Este fin de semana · Gratis · Abierto ahora · Quitar filtros */
+.panel-mapa__filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: -6px; }
+.panel-mapa__quitar {
+  padding: 4px 6px;
+  border: 0;
+  background: none;
+  color: var(--color-cielo-texto);
+  cursor: pointer;
+}
+.panel-mapa__quitar:hover { text-decoration: underline; }
+
 .panel-mapa__lista {
   display: flex;
   flex-direction: column;

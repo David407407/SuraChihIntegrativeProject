@@ -2,18 +2,33 @@
   Fila del Home con "Ver todo" ("Te podrían interesar", "Música en vivo"...): Card evento o Card lugar
   que se salen por la derecha y se deslizan. Si no hay datos en la BD la sección se oculta (Visible);
   si los filtros la dejan vacía, lo dice. Null = cargando.
+  Se mueve con las flechas ‹ › del encabezado, deslizando dos dedos en el touchpad, Shift + rueda,
+  o arrastrando con el mouse (js/interop.js: conectarPista / moverPista). Las flechas se apagan en las orillas.
 
   <FilaTarjetas Id="fila-musica" Titulo="Música en vivo" Eventos="eventos" Favoritos="ids" AlVerTodo="..." />
 *@
+@inject InteropJs Js
+
 @if (Visible)
 {
-    <section class="home-seccion fila" id="@Id" aria-labelledby="@($"{Id}-titulo")">
+    <section class="home-seccion fila" id="@Id" aria-labelledby="@($"{Id}-titulo")" data-inicio>
         <div class="contenedor">
             <header class="fila__encabezado">
                 <h2 class="t-h2" id="@($"{Id}-titulo")">@Titulo</h2>
-                <button type="button" class="fila__ver-todo t-small-fuerte" @onclick="AlVerTodo">
-                    Ver todo <Icono Nombre="chevron-tinta-10" Caja="10" />
-                </button>
+                <div class="fila__acciones">
+                    <button type="button" class="fila__ver-todo t-small-fuerte" @onclick="AlVerTodo">
+                        Ver todo <Icono Nombre="chevron-tinta-10" Caja="10" />
+                    </button>
+                    @if (HayTarjetas)
+                    {
+                        <button type="button" class="fila__flecha fila__flecha--anterior" aria-label="@($"Anteriores de {Titulo}")" @onclick="() => MoverAsync(-1)">
+                            <Icono Nombre="chevron-izquierda-14" Caja="14" />
+                        </button>
+                        <button type="button" class="fila__flecha fila__flecha--siguiente" aria-label="@($"Siguientes de {Titulo}")" @onclick="() => MoverAsync(1)">
+                            <Icono Nombre="chevron-derecha-14" Caja="14" />
+                        </button>
+                    }
+                </div>
             </header>
             @if (Eventos == null && Lugares == null)
             {
@@ -30,7 +45,7 @@
             }
             else
             {
-                <div class="fila__pista">
+                <div class="fila__pista" @ref="_pista">
                     @if (Eventos != null)
                     {
                         @foreach (var (evento, i) in Eventos.Select((e, i) => (e, i)))
@@ -63,4 +78,15 @@
     [Parameter] public IReadOnlySet<int>? Favoritos { get; set; }
     [Parameter] public bool Visible { get; set; } = true;
     [Parameter] public EventCallback AlVerTodo { get; set; }
+
+    private ElementReference _pista;
+    private bool HayTarjetas => (Eventos?.Count ?? Lugares?.Count ?? 0) > 0;
+
+    /// <summary>Cada vez que aparecen tarjetas: escucha el scroll (flechas) y el arrastre con el mouse. JS ignora si ya estaba.</summary>
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (Visible && HayTarjetas) await Js.LlamarAsync("conectarPista", _pista);
+    }
+
+    private ValueTask MoverAsync(int direccion) => Js.LlamarAsync("moverPista", _pista, direccion);
 }

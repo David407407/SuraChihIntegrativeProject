@@ -1,7 +1,8 @@
 @*
   "Carrusel destacado" del Home (Figma, 5 slides): eventos destacados por los moderadores + un lugar.
   - Avanza solo cada 6 s; se pausa con el mouse o el foco encima y con "reducir movimiento" del sistema.
-  - Puntos (el activo es una píldora de 28px) y flechas Anterior / Siguiente; también ← y → del teclado.
+  - Puntos (el activo es una píldora de 28px) y flechas Anterior / Siguiente; también ← y → del teclado
+    y deslizar dos dedos de lado en el touchpad.
   Null = cargando (esqueleto); lista vacía = no se muestra.
 *@
 @implements IDisposable
@@ -15,7 +16,7 @@
     }
     else if (Elementos.Count > 0)
     {
-        <section class="carrusel" aria-roledescription="carrusel" aria-label="Lo más destacado" @onkeydown="AlTeclado"
+        <section class="carrusel" aria-roledescription="carrusel" aria-label="Lo más destacado" @onkeydown="AlTeclado" @onwheel="AlDeslizar"
                  @onmouseenter="() => _sobre = true" @onmouseleave="() => _sobre = false"
                  @onfocusin="() => _foco = true" @onfocusout="() => _foco = false">
             <div class="carrusel__pista" aria-live="off" style="transform: translateX(@(-100 * _actual)%)">
@@ -102,6 +103,26 @@
         if (total == 0) return;
         _actual = (indice % total + total) % total;
         _ticksDesdeCambio = 0;
+    }
+
+    /// <summary>Lo que se ha deslizado de lado en el touchpad (px) desde el último cambio.</summary>
+    private double _deslizado;
+    private DateTime _ultimoDeslizar;
+    private const double UmbralDeslizar = 80;
+
+    /// <summary>
+    /// Touchpad: dos dedos de lado cambian de slide (uno por gesto). La rueda normal (vertical) sigue bajando la página.
+    /// </summary>
+    private void AlDeslizar(WheelEventArgs e)
+    {
+        if (Math.Abs(e.DeltaX) <= Math.Abs(e.DeltaY)) return;
+        DateTime ahora = DateTime.UtcNow;
+        if ((ahora - _ultimoDeslizar).TotalMilliseconds < 700) { _deslizado = 0; return; }   // el mismo gesto sigue llegando
+        _deslizado += e.DeltaX;
+        if (Math.Abs(_deslizado) < UmbralDeslizar) return;
+        Ir(_actual + (_deslizado > 0 ? 1 : -1));
+        _deslizado = 0;
+        _ultimoDeslizar = ahora;
     }
 
     private void AlTeclado(KeyboardEventArgs e)

@@ -33,6 +33,8 @@ namespace SuraChihIntegrativeProject
             var opciones = e.WebView.CoreWebView2.Settings;
             opciones.IsZoomControlEnabled = false;
             opciones.IsStatusBarEnabled = false;
+            // Deslizar dos dedos en el touchpad mueve las filas de tarjetas, no hace "Atrás" / "Adelante".
+            opciones.IsSwipeNavigationEnabled = false;
 #if !DEBUG
             opciones.AreDevToolsEnabled = false;
             opciones.AreDefaultContextMenusEnabled = false;

@@ -3,7 +3,9 @@
   el mapa a la derecha, sincronizados.
 
   1. Pide los lugares aprobados y los eventos vigentes con ubicación (pines azules).
-  2. El buscador y las píldoras de tipo deciden qué va al mapa.
+  2. El buscador, las píldoras de tipo y los filtros chicos (Hoy, Este fin de semana, Gratis, Abierto ahora)
+     deciden qué va al mapa. Los pines cercanos se agrupan en un círculo con el número (Mapa Agrupar) para
+     que el mapa no se llene; al acercarlo se separan.
   3. La lista muestra solo lo que se ve en el mapa ("2 lugares y 1 evento en esta zona"): al moverlo o
      acercarlo, el mapa avisa (AlCambiarZona) y la lista se vuelve a pintar.
   4. Elegir una fila resalta su pin y elegir un pin resalta su fila; los dos abren su detalle.
@@ -39,6 +41,23 @@
                 }
             }
         </div>
+        @if (_lugares != null && _lugares.Count + _eventos.Count > 0)
+        {
+            <div class="panel-mapa__filtros" role="group" aria-label="Filtros">
+                @if (_eventos.Count > 0 && (_tipo == null || _tipo == Lugares.TipoEvento))
+                {
+                    @* Solo filtran eventos; se excluyen entre sí y tocar el activo lo quita (igual que en el Home). *@
+                    <Pildora Texto="Hoy" Clase="pildora--chica" Activa="_cuando == CuandoFiltro.Hoy" OnClick="() => AlternarCuandoAsync(CuandoFiltro.Hoy)" />
+                    <Pildora Texto="Este fin de semana" Clase="pildora--chica" Activa="_cuando == CuandoFiltro.FinDeSemana" OnClick="() => AlternarCuandoAsync(CuandoFiltro.FinDeSemana)" />
+                }
+                <Pildora Texto="Gratis" Clase="pildora--chica" Activa="_gratis" OnClick="AlternarGratisAsync" />
+                <Pildora Texto="Abierto ahora" Clase="pildora--chica" Activa="_abierto" OnClick="AlternarAbiertoAsync" />
+                @if (HayFiltros)
+                {
+                    <button type="button" class="panel-mapa__quitar t-small-fuerte" @onclick="QuitarFiltrosAsync">Quitar filtros</button>
+                }
+            </div>
+        }
         <p class="panel-mapa__conteo t-small-fuerte texto-2" aria-live="polite">@Conteo</p>
         <ul class="panel-mapa__lista">
             @if (_lugares == null)
@@ -62,7 +81,7 @@
             }
         </ul>
     </aside>
-    <Mapa @ref="_mapa" Clase="explorar-mapa__mapa" AriaLabel="Mapa de lugares y eventos"
+    <Mapa @ref="_mapa" Clase="explorar-mapa__mapa" Agrupar AriaLabel="Mapa de lugares y eventos"
           AlElegirPin="AlElegirPinAsync" AlDeseleccionar="() => _seleccionado = null" AlCambiarZona="AlCambiarZona" />
 </main>
 
@@ -77,6 +96,14 @@
     private string _texto = "";
     /// <summary>Píldora elegida: tipo de lugar, <see cref="Lugares.TipoEvento"/> o null (todo).</summary>
     private string? _tipo;
+    /// <summary>"Hoy" / "Este fin de semana" (solo eventos).</summary>
+    private CuandoFiltro? _cuando;
+    private bool _gratis;
+    /// <summary>"Abierto ahora": lugares abiertos en este momento y eventos que están ocurriendo.</summary>
+    private bool _abierto;
+
+    private bool HayFiltros => _cuando != null || _gratis || _abierto;
+
     /// <summary><see cref="PuntoMapa.Clave"/> de lo elegido.</summary>
     private string? _seleccionado;
     /// <summary>La selección vino de un pin: la lista se desplaza hasta su fila.</summary>
@@ -112,7 +139,7 @@
 
     private string MensajeVacio =>
         _lugares!.Count + _eventos.Count == 0 ? "Todavía no hay lugares ni eventos publicados."
-        : Filtrados.Count == 0 ? "Nada coincide con tu búsqueda."
+        : Filtrados.Count == 0 ? (HayFiltros ? "Nada coincide con estos filtros. Prueba quitando alguno." : "Nada coincide con tu búsqueda.")
         : "No hay nada en esta parte del mapa. Aléjalo o muévelo para ver más.";
 
     /// <summary>Minúsculas y sin acentos, para que "cafe" encuentre "Café".</summary>
@@ -125,11 +152,47 @@
     {
         string? tipo = elemento.Lugar is { } lugar ? Lugares.TipoLugar(lugar) : Lugares.TipoEvento;
         if (_tipo != null && tipo != _tipo) return false;
+        if (!PasaFiltros(elemento)) return false;
         string buscado = Normalizar(_texto.Trim());
         if (buscado.Length == 0) return true;
         string?[] textos = elemento.Evento is { } e ? [e.Titulo, e.LugarNombre, e.Direccion] : [elemento.Lugar!.Nombre, elemento.Lugar.Direccion];
         var etiquetas = elemento.Evento?.Etiquetas ?? elemento.Lugar!.Etiquetas;
         return textos.Concat(etiquetas.Select(t => t.Nombre)).Any(t => Normalizar(t).Contains(buscado));
+    }
+
+    /// <summary>Los filtros chicos, con las mismas reglas que los del Home (FiltroHome).</summary>
+    private bool PasaFiltros(ElementoCollage elemento)
+    {
+        DateTime ahora = DateTime.Now;
+        var filtro = new FiltroHome(TipoFiltro.Todo, _cuando, _gratis);
+        if (elemento.Evento is { } e)
+            return filtro.Pasa(e, ahora) && (!_abierto || (!e.FechaPorConfirmar && e.Inicio <= ahora && ahora < e.Fin));
+        LugarTarjeta lugar = elemento.Lugar!;
+        return filtro.Pasa(lugar) && (!_abierto || lugar.HorarioAhora.Abierto);
+    }
+
+    private async Task AlternarCuandoAsync(CuandoFiltro cuando)
+    {
+        _cuando = _cuando == cuando ? null : cuando;
+        await AplicarFiltroAsync();
+    }
+
+    private Task AlternarGratisAsync()
+    {
+        _gratis = !_gratis;
+        return AplicarFiltroAsync();
+    }
+
+    private Task AlternarAbiertoAsync()
+    {
+        _abierto = !_abierto;
+        return AplicarFiltroAsync();
+    }
+
+    private async Task QuitarFiltrosAsync()
+    {
+        (_cuando, _gratis, _abierto) = (null, false, false);
+        await AplicarFiltroAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool primeraVez)
