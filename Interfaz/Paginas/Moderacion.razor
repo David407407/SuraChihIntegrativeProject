@@ -1,7 +1,7 @@
 @*
   "Moderación / Publicaciones" de Figma (WBS 4.3): la bandeja de lo que espera revisión.
-  - Encabezado con el moderador, pestañas (Publicaciones; Organizadores, Reportes e Historial muestran su
-    conteo pero todavía no tienen pantalla) y las cuatro métricas.
+  - Encabezado con el moderador, pestañas (Organizadores tiene su propia pantalla; Reportes e Historial muestran
+    su conteo pero todavía no tienen pantalla) y las cuatro métricas.
   - Píldoras Todo / Eventos / Lugares y el orden ("Más antiguos primero" por defecto) filtran aquí.
   - "Revisar" abre "Moderación / Revisar evento". Lo propio sale con candado (la BD no deja moderarlo).
   Solo entran moderadores (Usuario.EsModerador); el menú de cuenta solo les muestra "Moderación" a ellos.
@@ -17,63 +17,13 @@
 
 <PageTitle>SuraChih · Moderación</PageTitle>
 
-<main class="moderacion contenedor">
-    <header class="moderacion__encabezado">
-        <span class="moderacion__insignia"><Icono Nombre="escudo-blanco-26" Caja="26" /></span>
-        <div class="moderacion__titulo">
-            <p class="t-small-fuerte moderacion__seccion">Moderación</p>
-            <h1 class="t-h1">Por revisar</h1>
-            <p class="t-body texto-2">Nada se publica sin tu aprobación. Revisa lo más antiguo primero.</p>
-        </div>
-        @if (Sesion.Usuario is { EsModerador: true } usuario)
-        {
-            <p class="moderacion__moderador t-small-fuerte">
-                <span class="moderacion__avatar" aria-hidden="true">@usuario.NombreUsuario[..1].ToUpperInvariant()</span>
-                <span>@usuario.NombreUsuario · Moderador</span>
-            </p>
-        }
-    </header>
+<div class="pagina-fondo">
+    <main class="moderacion contenedor">
+        <EncabezadoModeracion Titulo="Por revisar" Texto="Nada se publica sin tu aprobación. Revisa lo más antiguo primero." Usuario="Sesion.Usuario" />
 
-    @if (!Sesion.Iniciada)
-    {
-        <div class="moderacion__vacio">
-            <span class="moderacion__vacio-icono"><Icono Nombre="candado-cielo" Caja="32" /></span>
-            <h2 class="t-h2">Inicia sesión para moderar</h2>
-            <p class="t-body texto-2">Entra con tu cuenta de moderador para revisar lo que espera publicarse.</p>
-            <div><Boton Texto="Iniciar sesión" Variante="oscuro" OnClick="Acciones.IniciarSesion" /></div>
-        </div>
-    }
-    else if (!EsModerador)
-    {
-        <div class="moderacion__vacio">
-            <span class="moderacion__vacio-icono"><Icono Nombre="candado-cielo" Caja="32" /></span>
-            <h2 class="t-h2">Solo para moderadores</h2>
-            <p class="t-body texto-2">Esta sección es del equipo que revisa los eventos y lugares antes de publicarse.</p>
-            <div><Boton Texto="Ir al inicio" Variante="oscuro" OnClick="Acciones.Inicio" /></div>
-        </div>
-    }
-    else
-    {
-        <nav class="pestanas" aria-label="Secciones de moderación">
-            <button type="button" class="pestana pestana--activa" aria-current="page">
-                <span class="pestana__etiqueta">Publicaciones<span class="pestana__conteo pestana__conteo--activo">@(_datos?.Pendientes.Count ?? 0)</span></span>
-            </button>
-            <button type="button" class="pestana" @onclick='() => Acciones.Proximamente("Revisar organizadores")'>
-                <span class="pestana__etiqueta">Organizadores<span class="pestana__conteo">@(_datos?.OrganizadoresPendientes ?? 0)</span></span>
-            </button>
-            <button type="button" class="pestana" @onclick='() => Acciones.Proximamente("Los reportes")'>
-                <span class="pestana__etiqueta">Reportes<span class="pestana__conteo">@(_datos?.ReportesAbiertos ?? 0)</span></span>
-            </button>
-            <button type="button" class="pestana" @onclick='() => Acciones.Proximamente("El historial de moderación")'>
-                <span class="pestana__etiqueta">Historial</span>
-            </button>
-            @if (Sesion.Usuario?.EsSuperModerador == true)
-            {
-                <button type="button" class="pestana" @onclick="() => Acciones.IrA(Acciones.Rutas.EquipoModeracion)">
-                    <span class="pestana__etiqueta">Equipo</span>
-                </button>
-            }
-        </nav>
+        <AccesoModeracion>
+        <PestanasModeracion Activa="PestanasModeracion.Seccion.Publicaciones" Publicaciones="_datos?.Pendientes.Count"
+                            Organizadores="_datos?.OrganizadoresPendientes" Reportes="_datos?.ReportesAbiertos" />
 
         <section class="metricas" aria-label="Resumen">
             @Metrica("bandeja", "sol-suave", _datos?.Pendientes.Count.ToString(), "Publicaciones pendientes")
@@ -106,11 +56,8 @@
             }
             else if (Visibles.Count == 0)
             {
-                <div class="moderacion__vacio">
-                    <span class="moderacion__vacio-icono moderacion__vacio-icono--exito"><Icono Nombre="check-exito-24" Caja="32" /></span>
-                    <h2 class="t-h2">Todo al día</h2>
-                    <p class="t-body texto-2">No hay @(_filtro switch { Filtro.Eventos => "eventos", Filtro.Lugares => "lugares", _ => "publicaciones" }) esperando revisión.</p>
-                </div>
+                <VacioModeracion Icono="check-exito-24" Exito Titulo="Todo al día"
+                                 Texto="@($"No hay {(_filtro switch { Filtro.Eventos => "eventos", Filtro.Lugares => "lugares", _ => "publicaciones" })} esperando revisión.")" />
             }
             else
             {
@@ -120,8 +67,9 @@
                 }
             }
         </section>
-    }
-</main>
+        </AccesoModeracion>
+    </main>
+</div>
 
 <VolverArriba />
 

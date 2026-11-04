@@ -34,6 +34,10 @@ namespace Interfaz.Estado
             public static string RevisarEvento(int id) => $"moderacion/evento/{id}";
             /// <summary>"Publicar evento" (WBS 4.6).</summary>
             public const string PublicarEvento = "organizador/evento/nuevo";
+            /// <summary>"Organizador / Hazte organizador": la solicitud y su estado.</summary>
+            public const string HazteOrganizador = "organizador/solicitud";
+            /// <summary>"Moderación / Organizadores": solicitudes pendientes.</summary>
+            public const string ModeracionOrganizadores = "moderacion/organizadores";
             /// <summary>La misma pantalla de "Publicar evento", con los datos de un evento propio.</summary>
             public static string EditarEvento(int id) => $"organizador/evento/{id}/editar";
         }
@@ -100,14 +104,17 @@ namespace Interfaz.Estado
 
         /// <summary>
         /// "Publicar evento" / "Publicar mi evento": sin sesión pide iniciarla; solo los organizadores aprobados
-        /// entran a la pantalla (la solicitud para ser organizador aún no tiene pantalla).
+        /// entran a la pantalla. A los demás los lleva a "Hazte organizador", que también muestra su solicitud.
         /// </summary>
         public void PublicarEvento()
         {
             if (!sesion.Iniciada) modales.RequiereSesion("Inicia sesión con tu cuenta de organizador para publicar eventos.");
-            else if (!sesion.EsOrganizador) avisos.Mostrar("Solo los organizadores aprobados pueden publicar eventos.", TipoAviso.Info);
+            else if (!sesion.EsOrganizador) IrA(Rutas.HazteOrganizador);
             else IrA(Rutas.PublicarEvento);
         }
+
+        /// <summary>Menú de cuenta (quien no es organizador): la solicitud o, si ya la envió, su estado.</summary>
+        public void HazteOrganizador() => SoloConSesion(() => IrA(Rutas.HazteOrganizador));
 
         /// <summary>Editar un evento propio (la misma pantalla de "Publicar evento").</summary>
         public void EditarEvento(int id) => SoloConSesion(() => IrA(Rutas.EditarEvento(id)));

@@ -1,0 +1,44 @@
+.solicitud {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--color-linea);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+}
+
+.solicitud__cabeza { display: flex; align-items: center; gap: 12px; }
+.solicitud__insignia {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--color-sol-suave);
+}
+.solicitud__texto { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.solicitud__texto > * { overflow-wrap: anywhere; }
+.solicitud__descripcion { overflow-wrap: anywhere; }
+
+/* "Datos": caja gris con icono, etiqueta de 110px y valor */
+.solicitud__datos {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--color-fondo);
+}
+.solicitud__dato { display: flex; align-items: center; gap: 10px; }
+.solicitud__dato dt { display: flex; flex: none; align-items: center; gap: 10px; width: 134px; }
+.solicitud__dato dd { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.solicitud__enlace { color: var(--color-cielo-texto); }
+.solicitud__enlace:hover { text-decoration: underline; }
+
+.solicitud__botones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.solicitud__botones ::deep .boton { width: 100%; }
+.solicitud__propia { display: flex; align-items: center; gap: 8px; }

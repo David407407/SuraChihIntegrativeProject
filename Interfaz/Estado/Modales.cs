@@ -143,7 +143,23 @@ namespace Interfaz.Estado
         /// <summary>"Modal / Rechazar": motivo y comentario obligatorio.</summary>
         /// <returns>true si se rechazó.</returns>
         public async Task<bool> RechazarEventoAsync(EventoTarjeta evento, string? comentario) =>
-            await Abrir<ModalRechazar>(new Dictionary<string, object?> { ["Evento"] = evento, ["Comentario"] = comentario }) as bool? ?? false;
+            await Abrir<ModalRechazar>(new Dictionary<string, object?> { ["Tipo"] = TipoObjetivoModeracion.Evento, ["ObjetivoId"] = evento.Id, ["Comentario"] = comentario }) as bool? ?? false;
+
+        /// <summary>"¿Aprobar a este organizador?": confirma y aprueba la solicitud.</summary>
+        /// <returns>true si se aprobó.</returns>
+        public async Task<bool> AprobarOrganizadorAsync(SolicitudPendiente solicitud) =>
+            await Abrir<ModalAprobarOrganizador>(new Dictionary<string, object?> { ["Solicitud"] = solicitud }) as bool? ?? false;
+
+        /// <summary>"Modal / Rechazar" de una solicitud de organizador: motivo y comentario obligatorio.</summary>
+        /// <returns>true si se rechazó.</returns>
+        public async Task<bool> RechazarOrganizadorAsync(int usuarioId) =>
+            await Abrir<ModalRechazar>(new Dictionary<string, object?> { ["Tipo"] = TipoObjetivoModeracion.Organizador, ["ObjetivoId"] = usuarioId }) as bool? ?? false;
+
+        // ---------------------------------------------------------------- Hazte organizador
+
+        /// <summary>"Modal / Solicitud enviada".</summary>
+        public Task SolicitudEnviadaAsync(string negocio) =>
+            Abrir<ModalSolicitudEnviada>(new Dictionary<string, object?> { ["Negocio"] = negocio });
 
         /// <summary>"Modal / Decisión registrada": se muestra un momento y se cierra sola (o antes, con Esc o el botón).</summary>
         public async Task DecisionRegistradaAsync()

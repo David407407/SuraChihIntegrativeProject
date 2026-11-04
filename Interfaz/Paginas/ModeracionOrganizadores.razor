@@ -1,0 +1,139 @@
+@*
+  "Moderación / Organizadores" de Figma: las solicitudes de organizador pendientes, con "Rechazar" y "Aprobar", y
+  "Decididas recientemente". Aprobar o rechazar inserta en moderation (organizer_id) y el trigger
+  trg_moderation_ai cambia organizer_profile.status. Nadie decide su propia solicitud (trg_moderation_bi): la suya
+  sale con candado. Solo entran moderadores.
+*@
+@page "/moderacion/organizadores"
+@implements IDisposable
+@inject Sesion Sesion
+@inject ServicioModeracion Servicio
+@inject Modales Modales
+@inject Avisos Avisos
+@inject Acciones Acciones
+@inject ILogger<ModeracionOrganizadores> Registro
+
+<PageTitle>SuraChih · Solicitudes de organizador</PageTitle>
+
+<div class="pagina-fondo">
+    <main class="organizadores contenedor">
+        <EncabezadoModeracion Titulo="Solicitudes de organizador" Texto="Aprueba solo perfiles que puedas verificar con su red social pública." Usuario="Sesion.Usuario" />
+
+        <AccesoModeracion>
+            <PestanasModeracion Activa="PestanasModeracion.Seccion.Organizadores" Publicaciones="_datos?.PublicacionesPendientes"
+                                Organizadores="_datos?.Pendientes.Count" Reportes="_datos?.ReportesAbiertos" />
+
+            <p class="organizadores__aviso t-small">
+                <Icono Nombre="info-cielo-16" />
+                <span>Confirma que la red social existe, tiene actividad reciente y coincide con el nombre. No puedes aprobar tu propia solicitud.</span>
+            </p>
+
+            @if (_datos == null)
+            {
+                <section class="organizadores__solicitudes" aria-hidden="true">
+                    @for (int i = 0; i < 2; i++)
+                    {
+                        <div class="esqueleto organizadores__esqueleto"></div>
+                    }
+                </section>
+            }
+            else if (_datos.Pendientes.Count == 0)
+            {
+                <VacioModeracion Icono="check-exito-24" Exito Titulo="Todo al día" Texto="No hay solicitudes de organizador esperando revisión." />
+            }
+            else
+            {
+                <section class="organizadores__solicitudes" aria-label="Solicitudes pendientes">
+                    @foreach (var s in _datos.Pendientes)
+                    {
+                        <TarjetaSolicitud @key="s.Perfil.UsuarioId" S="s" AlAprobar="() => AprobarAsync(s)" AlRechazar="() => RechazarAsync(s)" />
+                    }
+                </section>
+            }
+
+            @if (_datos is { Decididas.Count: > 0 })
+            {
+                <section class="decididas" aria-labelledby="titulo-decididas">
+                    <h2 class="t-h3 decididas__titulo" id="titulo-decididas">Decididas recientemente</h2>
+                    @foreach (var d in _datos.Decididas)
+                    {
+                        <div class="decidida">
+                            <p class="t-body-fuerte decidida__negocio">@d.Negocio</p>
+                            <p class="t-small texto-2">@Formato.RangoFechas(d.DecididoEn) · @d.ModeradorNombre</p>
+                            @if (d.Decision == DecisionModeracion.Aprobado)
+                            {
+                                <Chip Texto="Aprobado" Variante="exito-suave" Icono="check-circulo-exito-12" Clase="chip--estado" />
+                            }
+                            else
+                            {
+                                <Chip Texto="Rechazado" Variante="error-suave" Icono="x-error-12" Clase="chip--estado" />
+                            }
+                        </div>
+                    }
+                </section>
+            }
+        </AccesoModeracion>
+    </main>
+</div>
+
+@code {
+    private DatosOrganizadores? _datos;
+    private int? _usuarioId;
+
+    private bool EsModerador => Sesion.Usuario?.EsModerador == true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Sesion.Cambio += AlCambiarSesion;
+        _usuarioId = Sesion.Usuario?.Id;
+        if (!Sesion.Iniciada) Modales.RequiereSesion("Inicia sesión con tu cuenta de moderador para revisar solicitudes.");
+        else if (EsModerador) await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        try
+        {
+            _datos = await Servicio.ObtenerOrganizadoresAsync();
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            Registro.LogError(ex, "No se pudieron cargar las solicitudes de organizador");
+            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
+            _datos = new DatosOrganizadores([], [], 0, 0);
+        }
+    }
+
+    private async Task AprobarAsync(SolicitudPendiente s)
+    {
+        if (await Modales.AprobarOrganizadorAsync(s)) await TerminarAsync();
+    }
+
+    private async Task RechazarAsync(SolicitudPendiente s)
+    {
+        if (await Modales.RechazarOrganizadorAsync(s.Perfil.UsuarioId)) await TerminarAsync();
+    }
+
+    private async Task TerminarAsync()
+    {
+        await Modales.DecisionRegistradaAsync();
+        await CargarAsync();
+    }
+
+    private void AlCambiarSesion() => InvokeAsync(async () =>
+    {
+        int? id = Sesion.Usuario?.Id;
+        if (id == _usuarioId) return;
+        if (_usuarioId != null && id == null) { Acciones.IrA(Acciones.Rutas.Home); return; }   // cerró sesión aquí
+        _usuarioId = id;
+        _datos = null;
+        if (EsModerador) await CargarAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
+}

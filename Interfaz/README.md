@@ -25,12 +25,15 @@ Paginas/                     una página por pantalla, con su @page
   MisPlanes.razor  /mis-planes
   Resenas.razor  /resenas/evento/{id}  y  /resenas/lugar/{id}
   Moderacion.razor  /moderacion              RevisarEvento.razor  /moderacion/evento/{id}
+  ModeracionOrganizadores.razor  /moderacion/organizadores
+  HazteOrganizador.razor  /organizador/solicitud
   PublicarEvento.razor  /organizador/evento/nuevo  y  /organizador/evento/{id}/editar
   Buscar.razor  /buscar?q=...  (resultados de búsqueda, filtros y calendario)
 Componentes/
   Base/                      Boton, Campo, Chip, ChipCategoria, Pildora, BotonFavorito, Imagen, Icono,
                              EncabezadoSeccion, VolverArriba, Interruptor, Opcion, AreaTexto
-  Moderacion/                FilaPendiente (renglón de la bandeja), ListaRevision, CajaDestacar
+  Moderacion/                EncabezadoModeracion, PestanasModeracion, AccesoModeracion, VacioModeracion,
+                             FilaPendiente (renglón de la bandeja), TarjetaSolicitud, ListaRevision, CajaDestacar
   Tarjetas/                  Tarjeta (Card evento / Card lugar), TarjetaRecomendada, ItemLugar,
                              TarjetaEventoPrincipal, TarjetaEventoFila
   Navegacion/                Navbar, MenuCuenta, Pie
@@ -178,7 +181,7 @@ Botones que todavía no tienen pantalla muestran "llega en la siguiente versión
 | "¿Vas a ir?" / "¿Cancelar tu inscripción?" | `await Modales.ConfirmarInscripcionAsync(evento)` / `ConfirmarCancelacionAsync(evento)` → estado final |
 | "¿Eliminar tu cuenta?" | `await Modales.ConfirmarEliminarCuentaAsync()` → true si se desactivó |
 | Búsqueda (WBS 4.5 y 4.7) | `await Modales.FiltrosAsync(filtro)` → `FiltroBusqueda` o null · `await Modales.ElegirFechaAsync()` → día o null |
-| Moderación (WBS 4.3) | `await Modales.AprobarEventoAsync(e, comentario, destacar)` / `RechazarEventoAsync(e, comentario)` → true si se decidió · `DecisionRegistradaAsync()` (se cierra sola) · `MotivoRechazo(titulo, registro)` (lo ve el organizador) |
+| Moderación (WBS 4.3) | `await Modales.AprobarEventoAsync(e, comentario, destacar)` / `RechazarEventoAsync(e, comentario)` / `AprobarOrganizadorAsync(s)` / `RechazarOrganizadorAsync(id)` → true si se decidió · `DecisionRegistradaAsync()` (se cierra sola) · `MotivoRechazo(titulo, registro)` (lo ve el organizador) |
 | Detalle de evento / de lugar | `Hojas.AbrirEvento(id)` · `Hojas.AbrirEvento(id, inscribir: true)` · `Hojas.AbrirLugar(id)` |
 
 - Solo hay una modal a la vez: abrir otra cambia el contenido sin cerrar la ventana.
@@ -229,8 +232,12 @@ el menú de cuenta → "Moderación". Los datos los da `Servicios/ServicioModera
 - **Publicaciones** (`/moderacion`): eventos y lugares pendientes, los más antiguos primero (se puede
   invertir). "Hace 2 días" sale en rojo. Etiquetas: "Primer evento" (su organizador no tiene eventos
   publicados), "Lugar nuevo" y "Editado: vuelve a revisión" (ya estaba aprobado). Lo propio sale con
-  candado: la BD no deja que alguien modere lo suyo. Las pestañas Organizadores, Reportes e Historial
+  candado: la BD no deja que alguien modere lo suyo. Las pestañas Reportes e Historial
   muestran su conteo, pero sus pantallas todavía no existen (igual que revisar lugares).
+- **Organizadores** (`/moderacion/organizadores`): las solicitudes pendientes de "Hazte organizador", con su red
+  social, WhatsApp y antigüedad de la cuenta, y "Decididas recientemente". "Rechazar" pide motivo y comentario;
+  "Aprobar" confirma antes. La solicitud propia sale con candado (`trg_moderation_bi`). El estado lo cambia
+  `trg_moderation_ai` en `organizer_profile.status`.
 - **Revisar evento** (`/moderacion/evento/{id}`): vista previa como la verán los usuarios, datos del
   organizador, "Lista de revisión" (solo visual, no se guarda) y la decisión. Aprobar puede destacar el
   evento en el carrusel (`is_featured`, al final del orden). Rechazar pide motivo y comentario; el
@@ -304,6 +311,24 @@ una animación ligada al scroll), el conteo del hero (contador CSS) y la escala 
 | Chip categoría (Normal → Activo) | borde tinta dibujado por dentro para que el chip no cambie de tamaño |
 
 Todas respetan "reducir movimiento" del sistema operativo (los carruseles dejan de avanzar solos).
+
+## Hazte organizador
+
+Se entra con el menú de cuenta → "Hazte organizador" (solo sale a quien no es organizador) o con "Publicar mi
+evento" de la landing, que lleva aquí a quien todavía no está aprobado. Sin sesión pide iniciarla. Pantalla
+`Paginas/HazteOrganizador.razor`, datos en `Servicios/ServicioOrganizador.cs` (`organizer_profile`).
+
+| `organizer_profile.status` | Lo que se ve en la tarjeta de la derecha |
+|---|---|
+| Sin solicitud | El formulario; al enviarlo, "Modal / Solicitud enviada" |
+| `pending` | "Solicitud en revisión" con los datos enviados |
+| `rejected` | El motivo del moderador y el formulario con sus datos, para reenviarla |
+| `approved` | "Ya eres organizador" y "Publicar evento" |
+| `suspended` | Un aviso |
+
+Figma solo dibuja el formulario: los otros estados usan las mismas piezas. Al abrir la pantalla también se
+actualiza `Sesion.EsOrganizador`, por si un moderador decidió mientras la sesión estaba abierta. El WhatsApp se
+guarda solo con dígitos ("52 614 111 0002" → `526141110002`) y la red social siempre con `https://`.
 
 ## Publicar / editar evento (WBS 4.6)
 

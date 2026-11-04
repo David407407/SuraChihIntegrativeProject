@@ -1,0 +1,60 @@
+@*
+  "Solicitud:..." de "Moderación / Organizadores": negocio, @usuario y fecha, "Pendiente", descripción, datos para
+  verificarlo (red social, WhatsApp, antigüedad de la cuenta) y "Rechazar" / "Aprobar". La solicitud propia sale
+  con candado y sin botones: el trigger trg_moderation_bi no dejaría decidirla.
+*@
+<article class="solicitud">
+    <div class="solicitud__cabeza">
+        <span class="solicitud__insignia"><Icono Nombre="tienda-tinta-20" Caja="20" /></span>
+        <div class="solicitud__texto">
+            <h2 class="t-card-titulo">@P.NombreNegocio</h2>
+            <p class="t-small texto-2">@@@S.NombreUsuario · Solicitado el @Formato.RangoFechas(P.SolicitadoEn)</p>
+        </div>
+        <Chip Texto="Pendiente" Icono="reloj-arena-12" Clase="chip--estado" />
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(P.Descripcion))
+    {
+        <p class="t-body texto-2 solicitud__descripcion">@P.Descripcion</p>
+    }
+
+    <dl class="solicitud__datos">
+        <div class="solicitud__dato">
+            <dt class="t-small texto-2"><Icono Nombre="enlace-gris-14" Caja="14" /><span>Red social</span></dt>
+            <dd class="t-small-fuerte">
+                <a class="solicitud__enlace" href="@Formato.UrlPublica(P.RedSocialUrl)" target="_blank" rel="noopener noreferrer">@Formato.SinProtocolo(P.RedSocialUrl)</a>
+            </dd>
+        </div>
+        <div class="solicitud__dato">
+            <dt class="t-small texto-2"><Icono Nombre="telefono-gris-14" Caja="14" /><span>WhatsApp</span></dt>
+            <dd class="t-small-fuerte">@Formato.Telefono(P.WhatsApp)</dd>
+        </div>
+        @if (S.CuentaCreada is { } creada)
+        {
+            <div class="solicitud__dato">
+                <dt class="t-small texto-2"><Icono Nombre="calendario-gris-14" Caja="14" /><span>Cuenta creada</span></dt>
+                <dd class="t-small-fuerte">@Formato.Antiguedad(creada)</dd>
+            </div>
+        }
+    </dl>
+
+    @if (S.EsPropia)
+    {
+        <p class="solicitud__propia t-small texto-2"><Icono Nombre="candado-gris-12" Caja="12" /><span>Es tu solicitud: la revisa otro moderador.</span></p>
+    }
+    else
+    {
+        <div class="solicitud__botones">
+            <Boton Texto="Rechazar" Variante="secundario" Tamano="s" Icono="x-circulo-error-16" aria-label="@($"Rechazar a {P.NombreNegocio}")" OnClick="AlRechazar" />
+            <Boton Texto="Aprobar" Tamano="s" Icono="check-tinta-16" aria-label="@($"Aprobar a {P.NombreNegocio}")" OnClick="AlAprobar" />
+        </div>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public SolicitudPendiente S { get; set; } = default!;
+    [Parameter] public EventCallback AlAprobar { get; set; }
+    [Parameter] public EventCallback AlRechazar { get; set; }
+
+    private PerfilOrganizador P => S.Perfil;
+}

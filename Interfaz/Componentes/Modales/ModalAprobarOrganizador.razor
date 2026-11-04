@@ -1,0 +1,46 @@
+@*
+  Confirmación de "Aprobar" en Moderación / Organizadores. Es la misma "Modal / Aprobar publicación" de Figma,
+  con los datos de la solicitud en vez del evento (el botón de la tarjeta no decide solo: la decisión queda en
+  el historial con el nombre del moderador). Lo abre la pantalla con Modales.AprobarOrganizadorAsync(...).
+*@
+@inject ServicioModeracion Moderacion
+@inject Modales Modales
+
+<EncabezadoModal Titulo="¿Aprobar a este organizador?" Icono="check-circulo-exito-24" Exito
+                 Texto="Podrá publicar eventos; cada uno se revisa antes de salir. Queda en el historial con tu nombre." />
+
+<div class="modal__resumen">
+    <p class="t-body-fuerte">@Solicitud.Perfil.NombreNegocio</p>
+    <p class="t-small texto-2">@@@Solicitud.NombreUsuario · @Formato.SinProtocolo(Solicitud.Perfil.RedSocialUrl)</p>
+</div>
+<AvisoModal Errores="_errores" />
+<div class="modal__botones">
+    <Boton Texto="Aprobar" Icono="check-18" Clase="modal__ancho" Ocupado="_enviando" OnClick="AprobarAsync" />
+    <Boton Texto="Volver" Variante="secundario" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SolicitudPendiente Solicitud { get; set; } = default!;
+
+    private readonly ErroresFormulario _errores = new();
+    private bool _enviando;
+
+    private async Task AprobarAsync()
+    {
+        _errores.Limpiar();
+        _enviando = true;
+        try
+        {
+            await Moderacion.AprobarOrganizadorAsync(Solicitud.Perfil.UsuarioId);
+            Modales.Cerrar(true);
+        }
+        catch (Exception ex)
+        {
+            _errores.PonerAviso(MensajesError.Para(ex));   // texto del trigger tal cual
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+}

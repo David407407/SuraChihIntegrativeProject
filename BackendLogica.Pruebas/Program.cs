@@ -532,6 +532,66 @@ async Task PruebasFalso()
         Afirmar(!await f.Favoritos.AlternarLugarAsync(7, 2), "alternar otra vez lo quita");
         return "";
     });
+    await Prueba("Hazte organizador: solicitar, pendiente y duplicado", async () =>
+    {
+        var nueva = new SolicitudOrganizador(5, "  Café Mariana ", "Café de barrio", "https://instagram.com/cafe_mariana", "526141230000");
+        await EsperarError<DatosInvalidosException>(() => f.Organizadores.SolicitarAsync(nueva with { WhatsApp = "52 614 123" }));
+        Afirmar(await f.Organizadores.ObtenerAsync(5) == null, "con datos inválidos no se guarda");
+        await f.Organizadores.SolicitarAsync(nueva);
+        var perfil = await f.Organizadores.ObtenerAsync(5);
+        Afirmar(perfil is { NombreNegocio: "Café Mariana", Estado: EstadoOrganizador.Pendiente }, "queda pendiente, sin espacios");
+        Afirmar(!await f.Organizadores.EsAprobadoAsync(5), "pendiente todavía no publica");
+        Afirmar((await f.Organizadores.ListarPorEstadoAsync(EstadoOrganizador.Pendiente)).Any(p => p.UsuarioId == 5), "el moderador la ve");
+        return await EsperarError<DuplicadoException>(() => f.Organizadores.SolicitarAsync(nueva), "Ya enviaste una solicitud de organizador.");
+    });
+    await Prueba("Moderación rechaza con motivo y el usuario reenvía la solicitud", async () =>
+    {
+        await EsperarError<DatosInvalidosException>(() => f.Moderacion.RechazarAsync(1, TipoObjetivoModeracion.Organizador, 5, "  "));
+        await f.Moderacion.RechazarAsync(1, TipoObjetivoModeracion.Organizador, 5, "No se pudo verificar: la cuenta no tiene publicaciones.");
+        Afirmar((await f.Organizadores.ObtenerAsync(5))!.Estado == EstadoOrganizador.Rechazado, "quedó rechazada");
+        var motivo = await f.Moderacion.ObtenerUltimaDecisionAsync(TipoObjetivoModeracion.Organizador, 5);
+        Afirmar(motivo is { Decision: DecisionModeracion.Rechazado, ModeradorNombre: "mod_ana" } && motivo.Comentario!.StartsWith("No se pudo"), "el usuario ve el motivo");
+        await EsperarError<ReglaNegocioException>(() => f.Moderacion.AprobarAsync(1, TipoObjetivoModeracion.Organizador, 5), MensajesTrigger.SolicitudNoPendiente);
+        await f.Organizadores.SolicitarAsync(new SolicitudOrganizador(5, "Café Mariana", null, "https://facebook.com/cafe_mariana", "526141230000"));
+        var reenviada = (await f.Organizadores.ObtenerAsync(5))!;
+        Afirmar(reenviada is { Estado: EstadoOrganizador.Pendiente, RedSocialUrl: "https://facebook.com/cafe_mariana" }, "reenviar la deja pendiente con los datos nuevos");
+        return "";
+    });
+    await Prueba("Moderación aprueba: ya puede publicar y no puede volver a solicitar", async () =>
+    {
+        await EsperarError<ReglaNegocioException>(() => f.Moderacion.AprobarAsync(6, TipoObjetivoModeracion.Organizador, 5), MensajesTrigger.SoloModeradores);
+        await f.Moderacion.AprobarAsync(2, TipoObjetivoModeracion.Organizador, 5);
+        Afirmar(await f.Organizadores.EsAprobadoAsync(5), "quedó aprobada");
+        Afirmar((await f.Organizadores.ListarPorEstadoAsync(EstadoOrganizador.Pendiente)).All(p => p.UsuarioId != 5), "ya no está pendiente");
+        var historial = await f.Moderacion.ListarHistorialAsync();
+        Afirmar(historial.Count(h => h.Tipo == TipoObjetivoModeracion.Organizador && h.ObjetivoId == 5) == 2, "las dos decisiones quedan en el historial");
+        int evento = await f.Eventos.CrearAsync(5, new DatosEvento
+        {
+            Titulo = "Primer evento de Mariana", Descripcion = "Ya es organizadora", LugarId = 1,
+            Inicio = DateTime.Now.AddDays(3), Fin = DateTime.Now.AddDays(3).AddHours(2)
+        }, enviarARevision: false);
+        Afirmar(evento > 0, "el trigger ya la deja publicar");
+        return await EsperarError<DuplicadoException>(() => f.Organizadores.SolicitarAsync(new SolicitudOrganizador(5, "Otro", null, "https://x.com/otro", "526141230000")));
+    });
+    await Prueba("Nadie aprueba su propia solicitud (trigger trg_moderation_bi)", async () =>
+    {
+        await f.Organizadores.SolicitarAsync(new SolicitudOrganizador(2, "Colectivo de Luis", null, "https://instagram.com/luis", "526141230001"));
+        await EsperarError<ReglaNegocioException>(() => f.Moderacion.AprobarAsync(2, TipoObjetivoModeracion.Organizador, 2), MensajesTrigger.PropiaSolicitud);
+        await EsperarError<ReglaNegocioException>(() => f.Moderacion.RechazarAsync(2, TipoObjetivoModeracion.Organizador, 2, "No"), MensajesTrigger.PropiaSolicitud);
+        Afirmar((await f.Organizadores.ObtenerAsync(2))!.Estado == EstadoOrganizador.Pendiente, "sigue pendiente");
+        await f.Moderacion.AprobarAsync(1, TipoObjetivoModeracion.Organizador, 2);
+        Afirmar(await f.Organizadores.EsAprobadoAsync(2), "otro moderador sí puede");
+        return "";
+    });
+    await Prueba("Una cuenta eliminada no aparece entre las solicitudes pendientes", async () =>
+    {
+        var nuevo = await f.Usuarios.RegistrarAsync("se_va", "se.va@example.com", "Clave1234");
+        await f.Organizadores.SolicitarAsync(new SolicitudOrganizador(nuevo.Id, "Se Va", null, "https://x.com/se_va", "526141230002"));
+        Afirmar((await f.Organizadores.ListarPorEstadoAsync(EstadoOrganizador.Pendiente)).Any(p => p.UsuarioId == nuevo.Id), "antes sí");
+        await f.Usuarios.DesactivarAsync(nuevo.Id);
+        Afirmar((await f.Organizadores.ListarPorEstadoAsync(EstadoOrganizador.Pendiente)).All(p => p.UsuarioId != nuevo.Id), "después ya no");
+        return "";
+    });
     await Prueba("Reportes: crear y resolver", async () =>
     {
         int id = await f.Reportes.CrearAsync(6, TipoObjetivoReporte.ResenaLugar, 3, MotivoReporte.Spam, null);

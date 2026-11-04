@@ -1,0 +1,124 @@
+/* "Organizador / Hazte organizador": 56px arriba, 96px abajo y 48px entre bloques, como en Figma */
+.hazte {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  padding-block: 56px var(--espacio-seccion);
+}
+.hazte__principal { display: flex; align-items: flex-start; gap: 64px; }
+.hazte__esqueleto { height: 620px; border-radius: var(--radio-m); }
+
+/* ---- Mensaje y beneficios ---- */
+.mensaje { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: 24px; min-width: 0; padding-top: 24px; }
+.beneficios { display: flex; flex-direction: column; gap: 16px; width: 100%; margin: 0; padding: 0; list-style: none; }
+.beneficio { display: flex; align-items: flex-start; gap: 16px; }
+.beneficio__insignia {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+}
+.beneficio__insignia--cielo-suave { background: var(--color-cielo-suave); }
+.beneficio__insignia--exito-suave { background: var(--color-exito-suave); }
+.beneficio__insignia--sol-suave { background: var(--color-sol-suave); }
+.beneficio__insignia--error-suave { background: var(--color-error-suave); }
+.beneficio__texto { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+
+/* ---- Tarjeta de la solicitud: 500px ---- */
+.tarjeta-solicitud {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 18px;
+  width: 500px;
+  max-width: 100%;
+  padding: 32px;
+  border: 1px solid var(--color-linea);
+  border-radius: var(--radio-xl);
+  background: var(--color-superficie);
+  box-shadow: 0 12px 32px rgba(10, 26, 59, 0.08);
+}
+.tarjeta-solicitud__cabeza { display: flex; flex-direction: column; gap: 4px; }
+.tarjeta-solicitud ::deep .tarjeta-solicitud__ancho { width: 100%; }
+.tarjeta-solicitud ::deep .formulario { display: flex; flex-direction: column; gap: 18px; }
+
+/* ---- "Acepto las reglas": casilla de 20px ---- */
+.reglas { display: flex; flex-direction: column; gap: 6px; }
+.reglas__fila { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.reglas__casilla {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--color-linea);
+  border-radius: 6px;
+  background: var(--color-superficie);
+}
+.reglas__entrada:checked + .reglas__casilla { border-color: var(--color-tinta); background: var(--color-tinta); }
+.reglas__entrada:focus-visible + .reglas__casilla { outline: 2px solid var(--color-cielo); outline-offset: 2px; }
+.reglas__error { color: var(--color-error); }
+.formulario__aviso {
+  padding: 12px 14px;
+  border-radius: var(--radio-s);
+  background: var(--color-error-suave);
+  color: var(--color-error);
+}
+
+/* ---- Rechazada: el motivo del moderador ---- */
+.rechazo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: var(--radio-m);
+  background: var(--color-error-suave);
+  color: var(--color-tinta);
+  overflow-wrap: anywhere;
+}
+.rechazo__autor { display: flex; align-items: center; gap: 8px; color: var(--color-error); }
+
+/* ---- En revisión, aprobada o suspendida: como la insignia de "Solicitud enviada" ---- */
+.estado { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; overflow-wrap: anywhere; }
+.estado__insignia { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; }
+.resumen { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 14px 16px; border-radius: 14px; background: var(--color-fondo); }
+.resumen > div { display: flex; gap: 10px; }
+.resumen dt { flex: none; width: 90px; }
+.resumen dd { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; }
+
+/* ---- "Cómo funciona": tres pasos ---- */
+.pasos {
+  display: flex;
+  gap: 24px;
+  margin: 0;
+  padding: 28px;
+  border: 1px solid var(--color-linea);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  list-style: none;
+}
+.paso { display: flex; flex: 1; align-items: center; gap: 14px; min-width: 0; }
+.paso__numero {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-fondo);
+}
+.paso__numero--actual { background: var(--color-sol); }
+.paso__texto { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+
+@media (max-width: 1100px) {
+  .hazte__principal { flex-direction: column; align-items: stretch; }
+  .tarjeta-solicitud { width: auto; }
+}
+@media (max-width: 860px) {
+  .pasos { flex-direction: column; }
+}
+@media (max-width: 640px) {
+  .mensaje .t-display { font-size: 38px; line-height: 44px; }
+}
