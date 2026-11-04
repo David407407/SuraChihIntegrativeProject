@@ -20,6 +20,9 @@ namespace Interfaz.Utilidades
         /// <summary>8+ caracteres con letras y números.</summary>
         public static string? ErrorContrasena(string valor) => Revisar(() => Contrasenas.Validar(valor));
 
+        /// <summary>Solo dígitos con lada, 10 a 15 (ck_orgprof_whatsapp).</summary>
+        public static string? ErrorWhatsApp(string valor) => Revisar(() => Validar.WhatsApp(valor));
+
         public static bool EsCorreo(string? valor) => valor != null && ErrorCorreo(valor) == null;
 
         private static string? Revisar(Action validar)

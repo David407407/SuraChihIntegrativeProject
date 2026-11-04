@@ -17,7 +17,7 @@ namespace BackendLogica.Contratos
         /// <summary>Puede publicar eventos y registrar lugares.</summary>
         Task<bool> EsAprobadoAsync(int usuarioId, CancellationToken ct = default);
 
-        /// <summary>Solicitudes en un estado (Pendiente para "Moderación / Organizadores").</summary>
+        /// <summary>Solicitudes en un estado (Pendiente para "Moderación / Organizadores"), sin las de cuentas eliminadas.</summary>
         Task<List<PerfilOrganizador>> ListarPorEstadoAsync(EstadoOrganizador estado, CancellationToken ct = default);
 
         /// <summary>Edita los datos públicos del organizador (no cambia su estado).</summary>

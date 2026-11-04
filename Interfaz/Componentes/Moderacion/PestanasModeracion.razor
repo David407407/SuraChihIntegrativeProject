@@ -1,0 +1,39 @@
+@*
+  Pestañas de las pantallas de moderación: Publicaciones, Organizadores, Reportes e Historial con su conteo
+  (subrayado sol en la activa). Reportes e Historial todavía no tienen pantalla. "Equipo" solo le sale a un
+  supermoderador. Sin conteo (null: aún cargando) se muestra 0.
+*@
+@inject Sesion Sesion
+@inject Acciones Acciones
+
+<nav class="pestanas" aria-label="Secciones de moderación">
+    @Pestana("Publicaciones", Publicaciones, Seccion.Publicaciones, () => Acciones.IrA(Acciones.Rutas.Moderacion))
+    @Pestana("Organizadores", Organizadores, Seccion.Organizadores, () => Acciones.IrA(Acciones.Rutas.ModeracionOrganizadores))
+    @Pestana("Reportes", Reportes, null, () => Acciones.Proximamente("Los reportes"))
+    <button type="button" class="pestana" @onclick='() => Acciones.Proximamente("El historial de moderación")'>
+        <span class="pestana__etiqueta">Historial</span>
+    </button>
+    @if (Sesion.Usuario?.EsSuperModerador == true)
+    {
+        <button type="button" class="pestana" @onclick="() => Acciones.IrA(Acciones.Rutas.EquipoModeracion)">
+            <span class="pestana__etiqueta">Equipo</span>
+        </button>
+    }
+</nav>
+
+@code {
+    public enum Seccion { Publicaciones, Organizadores }
+
+    [Parameter, EditorRequired] public Seccion Activa { get; set; }
+    [Parameter] public int? Publicaciones { get; set; }
+    [Parameter] public int? Organizadores { get; set; }
+    [Parameter] public int? Reportes { get; set; }
+
+    private RenderFragment Pestana(string texto, int? conteo, Seccion? seccion, Action alElegir)
+    {
+        bool activa = seccion == Activa;
+        return @<button type="button" class="pestana @(activa ? "pestana--activa" : "")" aria-current="@(activa ? "page" : null)" @onclick="alElegir">
+            <span class="pestana__etiqueta">@texto<span class="pestana__conteo @(activa ? "pestana__conteo--activo" : "")">@(conteo ?? 0)</span></span>
+        </button>;
+    }
+}

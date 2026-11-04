@@ -34,6 +34,14 @@ namespace Interfaz.Estado
             public static string RevisarEvento(int id) => $"moderacion/evento/{id}";
             /// <summary>"Publicar evento" (WBS 4.6).</summary>
             public const string PublicarEvento = "organizador/evento/nuevo";
+            /// <summary>"Organizador / Hazte organizador": la solicitud y su estado.</summary>
+            public const string HazteOrganizador = "organizador/solicitud";
+            /// <summary>"Organizador / Panel".</summary>
+            public const string Panel = "organizador";
+            /// <summary>"Organizador / Estadísticas del evento" de un evento propio.</summary>
+            public static string EstadisticasEvento(int id) => $"organizador/evento/{id}/estadisticas";
+            /// <summary>"Moderación / Organizadores": solicitudes pendientes.</summary>
+            public const string ModeracionOrganizadores = "moderacion/organizadores";
             /// <summary>La misma pantalla de "Publicar evento", con los datos de un evento propio.</summary>
             public static string EditarEvento(int id) => $"organizador/evento/{id}/editar";
         }
@@ -93,21 +101,31 @@ namespace Interfaz.Estado
         public void MisPlanes() => SoloConSesion(() => IrA(Rutas.MisPlanes));
         public void Favoritos() => SoloConSesion(() => IrA(Rutas.Favoritos));
         public void MiPerfil() => SoloConSesion(() => IrA(Rutas.Perfil));
-        public void PanelOrganizador() => Proximamente("El panel de organizador");
+        /// <summary>Sin sesión pide iniciarla; quien aún no es organizador va a "Hazte organizador".</summary>
+        public void PanelOrganizador()
+        {
+            if (!sesion.Iniciada) modales.RequiereSesion("Inicia sesión con tu cuenta de organizador para ver tu panel.");
+            else IrA(sesion.EsOrganizador ? Rutas.Panel : Rutas.HazteOrganizador);
+        }
+
+        public void EstadisticasEvento(int id) => SoloConSesion(() => IrA(Rutas.EstadisticasEvento(id)));
         /// <summary>Menú de cuenta (solo moderadores): "Moderación / Publicaciones".</summary>
         public void Moderacion() => SoloConSesion(() => IrA(Rutas.Moderacion));
         public void RevisarEvento(int id) => IrA(Rutas.RevisarEvento(id));
 
         /// <summary>
         /// "Publicar evento" / "Publicar mi evento": sin sesión pide iniciarla; solo los organizadores aprobados
-        /// entran a la pantalla (la solicitud para ser organizador aún no tiene pantalla).
+        /// entran a la pantalla. A los demás los lleva a "Hazte organizador", que también muestra su solicitud.
         /// </summary>
         public void PublicarEvento()
         {
             if (!sesion.Iniciada) modales.RequiereSesion("Inicia sesión con tu cuenta de organizador para publicar eventos.");
-            else if (!sesion.EsOrganizador) avisos.Mostrar("Solo los organizadores aprobados pueden publicar eventos.", TipoAviso.Info);
+            else if (!sesion.EsOrganizador) IrA(Rutas.HazteOrganizador);
             else IrA(Rutas.PublicarEvento);
         }
+
+        /// <summary>Menú de cuenta (quien no es organizador): la solicitud o, si ya la envió, su estado.</summary>
+        public void HazteOrganizador() => SoloConSesion(() => IrA(Rutas.HazteOrganizador));
 
         /// <summary>Editar un evento propio (la misma pantalla de "Publicar evento").</summary>
         public void EditarEvento(int id) => SoloConSesion(() => IrA(Rutas.EditarEvento(id)));

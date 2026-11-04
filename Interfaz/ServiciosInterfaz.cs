@@ -35,6 +35,8 @@ namespace Interfaz
             servicios.AddScoped<ServicioPlanes>();
             servicios.AddScoped<ServicioResenas>();
             servicios.AddScoped<ServicioModeracion>();
+            servicios.AddScoped<ServicioOrganizador>();
+            servicios.AddScoped<ServicioPanelOrganizador>();
             servicios.AddScoped<ServicioBusqueda>();
             servicios.AddScoped<ServicioPublicacion>();
             servicios.AddScoped<ServicioImagenes>();

@@ -1,0 +1,38 @@
+@*
+  Chips de estado de un evento en el panel y en sus estadísticas: Publicado (y Destacado), En revisión, Rechazado,
+  Borrador, Finalizado o Cancelado. Cancelado no sale en Figma: usa el mismo chip rojo que Rechazado.
+*@
+@if (Evento.Estado == EstadoEvento.Aprobado && !Evento.Terminado)
+{
+    <Chip Texto="Publicado" Variante="exito-suave" Icono="check-circulo-exito-12" Clase="chip--estado" />
+    @if (Evento.Destacado)
+    {
+        <Chip Texto="@TextoDestacado" Variante="sol" Icono="estrella-tinta-12" />
+    }
+}
+else if (Evento.Estado == EstadoEvento.Aprobado)
+{
+    <Chip Texto="Finalizado" Variante="cielo-suave" Icono="bandera-cielo-12" Clase="chip--estado" />
+}
+else if (Evento.Estado == EstadoEvento.Pendiente)
+{
+    <Chip Texto="En revisión" Icono="reloj-arena-12" Clase="chip--estado" />
+}
+else if (Evento.Estado == EstadoEvento.Rechazado)
+{
+    <Chip Texto="Rechazado" Variante="error-suave" Icono="x-error-12" Clase="chip--estado" />
+}
+else if (Evento.Estado == EstadoEvento.Cancelado)
+{
+    <Chip Texto="Cancelado" Variante="error-suave" Icono="calendario-x-error-12" Clase="chip--estado" />
+}
+else
+{
+    <Chip Texto="Borrador" Variante="fondo" Icono="editar-gris-12" Clase="chip--estado chip--gris" />
+}
+
+@code {
+    [Parameter, EditorRequired] public EventoTarjeta Evento { get; set; } = default!;
+    /// <summary>"Destacado" en la tabla, "Destacado en el inicio" en las estadísticas.</summary>
+    [Parameter] public string TextoDestacado { get; set; } = "Destacado";
+}

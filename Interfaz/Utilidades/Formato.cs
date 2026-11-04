@@ -117,6 +117,51 @@ namespace Interfaz.Utilidades
         /// <summary>"Hace 6 h", "Hace 2 días" (bandeja de moderación).</summary>
         public static string Hace(DateTime fecha) => $"Hace {Duracion(DateTime.Now - fecha)}";
 
+        /// <summary>"hoy", "hace 5 días", "hace 3 meses", "hace 2 años" ("Cuenta creada" de Moderación / Organizadores).</summary>
+        public static string Antiguedad(DateTime fecha)
+        {
+            int dias = (DateTime.Now - fecha).Days;
+            static string Texto(int n, string una, string varias) => $"hace {n} {(n == 1 ? una : varias)}";
+            return dias switch
+            {
+                < 1 => "hoy",
+                < 30 => Texto(dias, "día", "días"),
+                < 365 => Texto(dias / 30, "mes", "meses"),
+                _ => Texto(dias / 365, "año", "años"),
+            };
+        }
+
+        /// <summary>"526141110003" → "52 614 111 0003"; los últimos 10 dígitos se escriben como en México.</summary>
+        public static string Telefono(string digitos)
+        {
+            if (digitos.Length < 10) return digitos;
+            string lada = digitos[..^10];
+            string numero = $"{digitos[^10..^7]} {digitos[^7..^4]} {digitos[^4..]}";
+            return lada.Length > 0 ? $"{lada} {numero}" : numero;
+        }
+
+        /// <summary>"instagram.com/x" → "https://instagram.com/x". Lo que no empieza con http(s) nunca llega al href tal cual.</summary>
+        public static string UrlPublica(string url)
+        {
+            url = url.Trim();
+            return url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ? url : $"https://{url}";
+        }
+
+        /// <summary>"https://www.instagram.com/x/" → "instagram.com/x".</summary>
+        public static string SinProtocolo(string url) =>
+            url.Replace("https://", "").Replace("http://", "").Replace("www.", "").TrimEnd('/');
+
+        private static readonly string[] Dias = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+
+        /// <summary>"sábado".</summary>
+        public static string NombreDia(DateOnly dia) => Dias[(int)dia.DayOfWeek];
+
+        /// <summary>"El sábado" (gráfica "Últimos 7 días").</summary>
+        public static string ConArticulo(DateOnly dia) => $"El {NombreDia(dia)}";
+
+        /// <summary>L, M, M, J, V, S, D, como en la gráfica de Figma.</summary>
+        public static string InicialDia(DateOnly dia) => NombreDia(dia)[..1].ToUpperInvariant();
+
         /// <summary>"7 oct a las 18:42" ("Enviado el ..." de Revisar evento).</summary>
         public static string FechaYHora(DateTime fecha) => $"{RangoFechas(fecha)} a las {fecha:HH:mm}";
 

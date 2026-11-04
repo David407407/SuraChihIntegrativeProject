@@ -1,0 +1,29 @@
+@*
+  Lo que ve quien entra a una pantalla de moderación sin ser moderador: pide iniciar sesión o avisa que no tiene
+  permiso. A los moderadores les muestra el contenido.
+*@
+@inject Sesion Sesion
+@inject Acciones Acciones
+
+@if (!Sesion.Iniciada)
+{
+    <VacioModeracion Icono="candado-cielo" Titulo="Inicia sesión para moderar"
+                     Texto="Entra con tu cuenta de moderador para revisar lo que espera publicarse.">
+        <Boton Texto="Iniciar sesión" Variante="oscuro" OnClick="Acciones.IniciarSesion" />
+    </VacioModeracion>
+}
+else if (Sesion.Usuario?.EsModerador != true)
+{
+    <VacioModeracion Icono="candado-cielo" Titulo="Solo para moderadores"
+                     Texto="Esta sección es del equipo que revisa los eventos y lugares antes de publicarse.">
+        <Boton Texto="Ir al inicio" Variante="oscuro" OnClick="Acciones.Inicio" />
+    </VacioModeracion>
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter, EditorRequired] public RenderFragment ChildContent { get; set; } = default!;
+}

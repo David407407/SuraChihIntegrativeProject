@@ -1,0 +1,219 @@
+@*
+  "Organizador / Panel" de Figma: encabezado con el negocio, cuatro métricas, la tabla "Mis eventos" y el aviso de
+  moderación. Cada estado tiene su acción: Publicado y Cancelado → Estadísticas, En revisión → "Enviado 8 oct",
+  Rechazado → Ver motivo (con la nota del moderador abajo), Borrador → Continuar, Finalizado → su calificación.
+  El título del evento abre su detalle. Solo organizadores aprobados; a los demás los manda a "Hazte organizador".
+*@
+@page "/organizador"
+@implements IDisposable
+@inject Sesion Sesion
+@inject ServicioPanelOrganizador Servicio
+@inject Modales Modales
+@inject Avisos Avisos
+@inject Acciones Acciones
+@inject ILogger<PanelOrganizador> Registro
+
+<PageTitle>SuraChih · Panel de organizador</PageTitle>
+
+<div class="pagina-fondo">
+    <main class="panel contenedor">
+        @if (_datos == null)
+        {
+            <div class="esqueleto panel__esqueleto-titulo" aria-hidden="true"></div>
+            <div class="panel__metricas" aria-hidden="true">
+                @for (int i = 0; i < 4; i++)
+                {
+                    <div class="esqueleto panel__esqueleto-metrica"></div>
+                }
+            </div>
+            <div class="esqueleto panel__esqueleto-tabla" aria-hidden="true"></div>
+        }
+        else
+        {
+            <header class="panel__encabezado">
+                <span class="panel__insignia"><Icono Nombre="tienda-tinta-26" Caja="26" /></span>
+                <div class="panel__titulo">
+                    <p class="t-small-fuerte panel__seccion">Panel de organizador</p>
+                    <h1 class="t-h1">@_datos.Perfil.NombreNegocio</h1>
+                    <div class="panel__meta">
+                        <Chip Texto="Organizador aprobado" Variante="exito-suave" Icono="check-circulo-exito-12" Clase="chip--estado" />
+                        <p class="t-small texto-2">@@@_datos.NombreUsuario · Perfil revisado por moderación</p>
+                    </div>
+                </div>
+                <Boton Texto="Publicar evento" Icono="mas-18" OnClick="Acciones.PublicarEvento" />
+            </header>
+
+            <section class="panel__metricas" aria-label="Resumen">
+                @Metrica("ojo-cielo-16", "cielo-suave", "Vistas", Formato.Numero(_datos.Vistas), "Últimos 30 días, todos tus eventos")
+                @Metrica("corazon-favorito-16", "favorito-suave", "Interesados", Formato.Numero(_datos.Interesados), "Personas que lo guardaron en favoritos")
+                @Metrica("calendario-check-exito-16", "exito-suave", "Inscritos", Formato.Numero(_datos.Inscritos), "Dijeron “Voy a ir” (no garantiza cupo)")
+                @Metrica("estrella-tinta-16", "sol-suave", "Calificación", _datos.Calificacion is { } c ? Formato.Calificacion(c) : "—", TextoResenas)
+            </section>
+
+            <div class="panel__seccion-eventos">
+                <h2 class="t-h2">Mis eventos</h2>
+                <p class="t-small texto-2">@_datos.Filas.Count @(_datos.Filas.Count == 1 ? "evento" : "eventos")</p>
+            </div>
+
+            @if (_datos.Filas.Count == 0)
+            {
+                <div class="panel__vacio">
+                    <p class="t-card-titulo">Todavía no tienes eventos</p>
+                    <p class="t-small texto-2">Publica el primero: un moderador lo revisa antes de que salga.</p>
+                </div>
+            }
+            else
+            {
+                <div class="tabla" role="table" aria-label="Mis eventos">
+                    <div class="tabla__encabezado t-caption texto-2" role="row">
+                        <span class="col col--evento" role="columnheader">EVENTO</span>
+                        <span class="col col--estado" role="columnheader">ESTADO</span>
+                        <span class="col col--fecha" role="columnheader">FECHA</span>
+                        <span class="col col--vistas" role="columnheader">VISTAS</span>
+                        <span class="col col--interesados" role="columnheader">INTERESADOS</span>
+                        <span class="col col--inscritos" role="columnheader">INSCRITOS</span>
+                        <span class="col col--accion" role="columnheader"><span class="solo-lectores">Acción</span></span>
+                    </div>
+                    @foreach (var fila in _datos.Filas)
+                    {
+                        var e = fila.Evento;
+                        bool conCifras = e.Estado is EstadoEvento.Aprobado or EstadoEvento.Cancelado;
+                        <div @key="e.Id" class="tabla__evento" role="rowgroup">
+                            <div class="tabla__fila" role="row">
+                                <div class="col col--evento evento" role="cell">
+                                    @if (e.ImagenUrl != null)
+                                    {
+                                        <Imagen Clase="evento__miniatura" Src="@e.ImagenUrl" Alt="" Ancho="56" Alto="56" />
+                                    }
+                                    else
+                                    {
+                                        <span class="evento__sin-foto"><Icono Nombre="imagen-gris-20" Caja="20" /></span>
+                                    }
+                                    <div class="evento__texto">
+                                        @if (conCifras)
+                                        {
+                                            <button type="button" class="evento__titulo t-body-fuerte" aria-label="@($"Ver {e.Titulo}")" @onclick="() => Acciones.VerEvento(e.Id)">@e.Titulo</button>
+                                        }
+                                        else
+                                        {
+                                            <p class="t-body-fuerte">@e.Titulo</p>
+                                        }
+                                        <p class="t-small texto-2">@(Formato.UbicacionEvento(e) ?? "Sin ubicación")</p>
+                                    </div>
+                                </div>
+                                <div class="col col--estado estados" role="cell"><ChipsEstadoEvento Evento="e" /></div>
+                                <p class="col col--fecha t-small" role="cell">@(e.FechaPorConfirmar ? "Sin fecha" : Formato.FechaEvento(e))</p>
+                                <p class="col col--vistas t-small" role="cell">@Cifra(conCifras, fila.Estadisticas?.Vistas)</p>
+                                <p class="col col--interesados t-small" role="cell">@Cifra(conCifras, fila.Estadisticas?.Interesados)</p>
+                                <p class="col col--inscritos t-small" role="cell">@Cifra(conCifras, fila.Estadisticas?.Inscritos)</p>
+                                <div class="col col--accion" role="cell">@Accion(fila)</div>
+                            </div>
+                            @if (fila.Rechazo is { } rechazo)
+                            {
+                                <div class="nota">
+                                    <Icono Nombre="comentario-error-14" Caja="14" />
+                                    <div class="nota__texto">
+                                        <p class="t-caption nota__autor">Moderación · @rechazo.ModeradorNombre</p>
+                                        <p class="t-small">@(rechazo.Comentario ?? "Sin comentario.")</p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+            <aside class="revision">
+                <span class="revision__insignia"><Icono Nombre="escudo-blanco-22" Caja="22" /></span>
+                <div class="revision__texto">
+                    <p class="t-card-titulo">Todo pasa por moderación antes de publicarse</p>
+                    <p class="t-small texto-2">Un moderador aprueba o rechaza con un motivo. Si editas el título, la descripción, la imagen, la ubicación o el enlace de boletos de un evento publicado, vuelve a revisión y sale del carrusel destacado.</p>
+                </div>
+            </aside>
+        }
+    </main>
+</div>
+
+<VolverArriba />
+
+@code {
+    private DatosPanel? _datos;
+    private int? _usuarioId;
+
+    private string TextoResenas => _datos!.NumResenas switch
+    {
+        0 => "Sin reseñas todavía",
+        1 => "1 reseña de eventos finalizados",
+        var n => $"{n} reseñas de eventos finalizados",
+    };
+
+    private static string Cifra(bool visible, int? valor) => visible && valor is { } v ? Formato.Numero(v) : "—";
+
+    private static RenderFragment Metrica(string icono, string color, string titulo, string valor, string texto) =>
+        @<div class="metrica">
+            <div class="metrica__cabeza">
+                <span class="metrica__insignia metrica__insignia--@color"><Icono Nombre="@icono" /></span>
+                <p class="t-small-fuerte texto-2">@titulo</p>
+            </div>
+            <p class="t-h2">@valor</p>
+            <p class="t-caption texto-2">@texto</p>
+        </div>;
+
+    private RenderFragment Accion(FilaPanel fila)
+    {
+        var e = fila.Evento;
+        if (e.Estado == EstadoEvento.Pendiente)
+            return @<p class="t-caption texto-2">@(fila.EnviadoEn is { } enviado ? $"Enviado {Formato.RangoFechas(enviado)}" : "En revisión")</p>;
+        if (e.Estado == EstadoEvento.Rechazado)
+            return @<button type="button" class="enlace enlace--error t-small-fuerte" aria-label="@($"Ver motivo de {e.Titulo}")" @onclick="() => VerMotivo(fila)"><Icono Nombre="alerta-circulo-error-12" Caja="12" /><span>Ver motivo</span></button>;
+        if (e.Estado == EstadoEvento.Borrador)
+            return @<button type="button" class="enlace t-small-fuerte" aria-label="@($"Continuar {e.Titulo}")" @onclick="() => Acciones.EditarEvento(e.Id)"><Icono Nombre="editar-cielo-12" Caja="12" /><span>Continuar</span></button>;
+        if (e.Terminado && fila.Estadisticas is { NumResenas: > 0 } s)
+            return @<button type="button" class="enlace enlace--gris t-small-fuerte" aria-label="@($"Estadísticas de {e.Titulo}")" @onclick="() => Acciones.EstadisticasEvento(e.Id)"><Icono Nombre="estrella-12" Caja="12" /><span>@Formato.Calificacion(s.Calificacion) · @s.NumResenas @(s.NumResenas == 1 ? "reseña" : "reseñas")</span></button>;
+        return @<button type="button" class="enlace t-small-fuerte" aria-label="@($"Estadísticas de {e.Titulo}")" @onclick="() => Acciones.EstadisticasEvento(e.Id)"><Icono Nombre="barras-cielo-12" Caja="12" /><span>Estadísticas</span></button>;
+    }
+
+    private void VerMotivo(FilaPanel fila)
+    {
+        if (fila.Rechazo != null) Modales.MotivoRechazo(fila.Evento.Titulo, fila.Rechazo, fila.Evento.Id);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Sesion.Cambio += AlCambiarSesion;
+        _usuarioId = Sesion.Usuario?.Id;
+        if (Sesion.Iniciada) await CargarAsync();
+        else Modales.RequiereSesion("Inicia sesión con tu cuenta de organizador para ver tu panel.");
+    }
+
+    private async Task CargarAsync()
+    {
+        try
+        {
+            _datos = await Servicio.ObtenerPanelAsync();
+            if (_datos == null) Acciones.IrA(Acciones.Rutas.HazteOrganizador);
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            Registro.LogError(ex, "No se pudo cargar el panel de organizador");
+            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
+        }
+    }
+
+    private void AlCambiarSesion() => InvokeAsync(async () =>
+    {
+        int? id = Sesion.Usuario?.Id;
+        if (id == _usuarioId) return;
+        if (_usuarioId != null && id == null) { Acciones.Inicio(); return; }   // cerró sesión aquí
+        _usuarioId = id;
+        _datos = null;
+        if (id != null) await CargarAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
+}

@@ -1,0 +1,63 @@
+@*
+  "Modal / Cancelar evento" de Figma: insignia roja, "¿Cancelar ...?", cuántos inscritos lo verán como cancelado,
+  motivo obligatorio y "Cancelar evento" (rojo) / "Mantener evento". Lo abre Estadísticas del evento con
+  Modales.CancelarEventoAsync(evento, inscritos). El motivo se guarda en event.cancel_reason y lo ven el
+  detalle del evento y Mis planes.
+*@
+@inject ServicioPanelOrganizador Panel
+@inject Modales Modales
+
+<EncabezadoModal Titulo="@($"¿Cancelar {Evento.Titulo}?")" Icono="calendario-x-error-24" Peligro Texto="@TextoInscritos" />
+<EditForm Model="this" OnSubmit="CancelarAsync" class="modal__formulario" novalidate>
+    <AreaTexto Nombre="motivo" Etiqueta="Motivo de la cancelación" Filas="3" Maximo="MaximoMotivo"
+               Placeholder="Escribe el motivo (obligatorio)" @bind-Valor="_motivo" Errores="_errores" />
+    <AvisoModal Errores="_errores" />
+    <div class="modal__botones">
+        <Boton Texto="Cancelar evento" Variante="peligro" Icono="calendario-x-blanco-18" Tipo="submit" Clase="modal__ancho" Ocupado="_enviando" />
+        <Boton Texto="Mantener evento" Variante="secundario" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+    </div>
+</EditForm>
+
+@code {
+    /// <summary>Tamaño de la columna event.cancel_reason.</summary>
+    private const int MaximoMotivo = 300;
+
+    [Parameter, EditorRequired] public EventoTarjeta Evento { get; set; } = default!;
+    [Parameter] public int Inscritos { get; set; }
+
+    private readonly ErroresFormulario _errores = new();
+    private string? _motivo;
+    private bool _enviando;
+
+    private string TextoInscritos => Inscritos switch
+    {
+        0 => "Todavía no hay personas inscritas. El motivo se mostrará en el detalle del evento.",
+        1 => "La persona inscrita lo verá como cancelado en Mis planes, junto con tu motivo.",
+        var n => $"Las {Formato.Numero(n)} personas inscritas lo verán como cancelado en Mis planes, junto con tu motivo.",
+    };
+
+    private async Task CancelarAsync()
+    {
+        _errores.Limpiar();
+        if (string.IsNullOrWhiteSpace(_motivo))
+        {
+            _errores.Poner("motivo", "Escribe el motivo de la cancelación.");
+            return;
+        }
+
+        _enviando = true;
+        try
+        {
+            await Panel.CancelarAsync(Evento.Id, _motivo);
+            Modales.Cerrar(true);
+        }
+        catch (Exception ex)
+        {
+            _errores.PonerAviso(MensajesError.Para(ex));
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+}
