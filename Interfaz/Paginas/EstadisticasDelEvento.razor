@@ -1,0 +1,288 @@
+@*
+  "Organizador / Estadísticas del evento" de Figma: encabezado con "Ver como asistente", "Editar evento" (la pantalla
+  de Publicar evento) y "Cancelar evento"; embudo, gráfica "Últimos 7 días" e inscritos con buscador.
+  La gráfica usa las vistas reales por día de event_view (una por usuario y día; las de visitantes siempre cuentan).
+  Solo entra el organizador dueño del evento.
+*@
+@page "/organizador/evento/{Id:int}/estadisticas"
+@implements IDisposable
+@inject Sesion Sesion
+@inject ServicioPanelOrganizador Servicio
+@inject Modales Modales
+@inject Acciones Acciones
+@inject ILogger<EstadisticasDelEvento> Registro
+
+<PageTitle>SuraChih · Estadísticas del evento</PageTitle>
+
+<div class="pagina-fondo">
+    <main class="estadisticas contenedor">
+        <button type="button" class="volver t-small-fuerte texto-2" @onclick="Acciones.PanelOrganizador">
+            <Icono Nombre="flecha-volver-gris-12" Caja="12" /><span>Volver al panel</span>
+        </button>
+
+        @if (_error != null)
+        {
+            <div class="tarjeta error">
+                <h1 class="t-h2">No pudimos abrir estas estadísticas</h1>
+                <p class="t-body texto-2">@_error</p>
+            </div>
+        }
+        else if (_datos == null)
+        {
+            <div class="esqueleto esqueleto--encabezado" aria-hidden="true"></div>
+            <div class="esqueleto esqueleto--cuerpo" aria-hidden="true"></div>
+        }
+        else
+        {
+            var e = _datos.Evento;
+            var s = _datos.Estadisticas;
+            <header class="encabezado">
+                <Imagen Clase="encabezado__miniatura" Src="@e.ImagenUrl" Alt="" Ancho="128" Alto="128" />
+                <div class="encabezado__titulo">
+                    <div class="encabezado__estados"><ChipsEstadoEvento Evento="e" TextoDestacado="Destacado en el inicio" /></div>
+                    <h1 class="t-h1">@e.Titulo</h1>
+                    <div class="encabezado__meta t-small texto-2">
+                        <span><Icono Nombre="calendario-gris-14" Caja="14" />@Formato.FechaEvento(e)</span>
+                        @if (Formato.UbicacionEvento(e) is { } ubicacion)
+                        {
+                            <span><Icono Nombre="ubicacion-gris-14" Caja="14" />@ubicacion</span>
+                        }
+                        <span><Icono Nombre="etiqueta-gris-14" Caja="14" />@Formato.PrecioEvento(e, Formato.EstiloPrecio.Desde)</span>
+                    </div>
+                </div>
+                <div class="encabezado__acciones">
+                    <Boton Texto="Ver como asistente" Variante="secundario" Icono="ojo-tinta-18" Clase="encabezado__boton" OnClick="() => Acciones.VerEvento(e.Id)" />
+                    @if (SePuedeEditar)
+                    {
+                        <Boton Texto="Editar evento" Variante="oscuro" Icono="editar-18" Clase="encabezado__boton" OnClick="() => Acciones.EditarEvento(e.Id)" />
+                    }
+                    @if (SePuedeCancelar)
+                    {
+                        <button type="button" class="encabezado__cancelar t-small-fuerte" @onclick="CancelarAsync">
+                            <Icono Nombre="calendario-x-error-12" Caja="12" /><span>Cancelar evento</span>
+                        </button>
+                    }
+                </div>
+            </header>
+
+            @if (e.Estado == EstadoEvento.Cancelado)
+            {
+                <div class="cancelado" role="status">
+                    <Icono Nombre="calendario-x-error-24" Caja="24" />
+                    <div class="cancelado__texto">
+                        <p class="t-body-fuerte">Este evento está cancelado</p>
+                        <p class="t-small">@(e.MotivoCancelacion ?? "Sin motivo.")</p>
+                        <p class="t-caption texto-2">Las personas inscritas lo ven como cancelado en Mis planes.</p>
+                    </div>
+                </div>
+            }
+
+            <div class="analitica">
+                <section class="tarjeta embudo" aria-labelledby="titulo-embudo">
+                    <div class="tarjeta__cabeza">
+                        <h2 class="t-h3" id="titulo-embudo">Embudo de interés</h2>
+                        <p class="t-small texto-2">Desde la publicación</p>
+                    </div>
+                    @Paso("ojo-cielo-14", "Vistas", s.Vistas, "paso__barra--cielo", s.Vistas == 0 ? 0 : 100, "Personas que abrieron el evento")
+                    @Paso("corazon-favorito-14", "Interesados", s.Interesados, "paso__barra--favorito", Ancho(s.Interesados, s.Vistas), TextoInteresados(s))
+                    @Paso("calendario-check-exito-14", "Inscritos", s.Inscritos, "paso__barra--exito", Ancho(s.Inscritos, s.Vistas), TextoInscritos(s))
+                </section>
+
+                <section class="tarjeta dias" aria-labelledby="titulo-dias">
+                    <div class="tarjeta__cabeza">
+                        <h2 class="t-h3" id="titulo-dias">Últimos 7 días</h2>
+                        @if (_datos.Cambio is { } cambio)
+                        {
+                            @if (cambio >= 0)
+                            {
+                                <Chip Texto="@($"+{cambio}%")" Variante="exito-suave" Icono="tendencia-exito-12" Clase="chip--estado" />
+                            }
+                            else
+                            {
+                                <Chip Texto="@($"−{-cambio}%")" Variante="fondo" />
+                            }
+                        }
+                    </div>
+                    <div class="grafica" role="img" aria-label="@DescripcionGrafica">
+                        @foreach (var d in _datos.Dias)
+                        {
+                            <div @key="d.Dia" class="grafica__dia" title="@($"{Formato.NombreDia(d.Dia)}: {d.Vistas} vistas")">
+                                <span class="grafica__barra @(EsMayor(d) ? "grafica__barra--mayor" : "")" style="height:@(AltoBarra(d))px"></span>
+                                <span class="t-caption texto-2">@Formato.InicialDia(d.Dia)</span>
+                            </div>
+                        }
+                    </div>
+                    <p class="t-small texto-2">@TextoMayor</p>
+                </section>
+            </div>
+
+            <section class="tarjeta inscritos" aria-labelledby="titulo-inscritos">
+                <div class="inscritos__cabeza">
+                    <div class="inscritos__texto">
+                        <h2 class="t-h3" id="titulo-inscritos">Inscritos (@s.Inscritos)</h2>
+                        <p class="t-small texto-2">“Voy a ir” no garantiza lugar: los boletos se compran en tu página oficial.</p>
+                    </div>
+                    @if (_datos.Inscritos.Count > 0)
+                    {
+                        <div class="inscritos__buscar">
+                            <Campo Nombre="buscar-inscrito" Etiqueta="Buscar por usuario" Tipo="search" Icono="buscar-gris" Autocompletar="off"
+                                   Valor="@_busqueda" ValorChanged="AlBuscar" />
+                        </div>
+                    }
+                </div>
+                @if (_datos.Inscritos.Count == 0)
+                {
+                    <p class="inscritos__vacio t-small texto-2">Todavía no se inscribe nadie.</p>
+                }
+                else if (Filtrados.Count == 0)
+                {
+                    <p class="inscritos__vacio t-small texto-2">Ningún inscrito coincide con “@_busqueda”.</p>
+                }
+                else
+                {
+                    @foreach (var i in Filtrados.Take(_mostrados))
+                    {
+                        bool activo = i.Estado == EstadoInscripcion.Activa;
+                        <div @key="i.UsuarioId" class="inscrito @(activo ? "" : "inscrito--cancelado")">
+                            <span class="inscrito__avatar t-small-fuerte" aria-hidden="true">@i.NombreUsuario[..1].ToUpperInvariant()</span>
+                            <p class="inscrito__nombre t-body-fuerte">@@@i.NombreUsuario</p>
+                            <p class="inscrito__fecha t-small texto-2">Se inscribió el @Formato.RangoFechas(i.InscritoEn)</p>
+                            @if (activo)
+                            {
+                                <Chip Texto="Activo" Variante="exito-suave" Icono="check-exito-12" Clase="chip--estado" />
+                            }
+                            else
+                            {
+                                <Chip Texto="@(i.CanceladoEn is { } c ? $"Canceló {Formato.RangoFechas(c)}" : "Canceló")" Variante="fondo" Icono="x-gris-12" Clase="chip--estado chip--gris" />
+                            }
+                        </div>
+                    }
+                    <div class="inscritos__pie">
+                        <p class="t-small texto-2">Mostrando @Math.Min(_mostrados, Filtrados.Count) de @Filtrados.Count</p>
+                        @if (_mostrados < Filtrados.Count)
+                        {
+                            <Boton Texto="Ver más" Variante="secundario" Tamano="s" OnClick="() => _mostrados += PorPagina" />
+                        }
+                    </div>
+                }
+            </section>
+        }
+    </main>
+</div>
+
+<VolverArriba />
+
+@code {
+    /// <summary>Filas de inscritos que se muestran de entrada y con cada "Ver más" (Figma muestra 5).</summary>
+    private const int PorPagina = 5;
+    /// <summary>Alto de la barra más alta; así caben la inicial del día y el espacio en los 170px de Figma.</summary>
+    private const int AltoMaximo = 134;
+    private const int AltoMinimo = 4;
+
+    [Parameter] public int Id { get; set; }
+
+    private DatosEstadisticas? _datos;
+    private string? _error;
+    private int? _cargado;
+    private int? _usuarioId;
+    private string _busqueda = "";
+    private int _mostrados = PorPagina;
+
+    private bool SePuedeEditar => _datos!.Evento is { Estado: not EstadoEvento.Cancelado, Terminado: false };
+    private bool SePuedeCancelar => _datos!.Evento is { Estado: EstadoEvento.Aprobado, Terminado: false };
+
+    private List<Inscrito> Filtrados => [.. _datos!.Inscritos.Where(i => i.NombreUsuario.Contains(_busqueda.Trim().TrimStart('@'), StringComparison.OrdinalIgnoreCase))];
+
+    private int MaximoVistas => _datos!.Dias.Max(d => d.Vistas);
+    /// <summary>El primer día con más vistas (en amarillo); si todos están en 0 no se resalta ninguno.</summary>
+    private bool EsMayor(VistasDia d) => MaximoVistas > 0 && d == _datos!.Dias.First(x => x.Vistas == MaximoVistas);
+    private int AltoBarra(VistasDia d) => MaximoVistas == 0 ? AltoMinimo : Math.Max(AltoMinimo, d.Vistas * AltoMaximo / MaximoVistas);
+
+    private string TextoMayor
+    {
+        get
+        {
+            if (MaximoVistas == 0) return "Sin vistas en estos 7 días.";
+            var mayor = _datos!.Dias.First(EsMayor);
+            return $"{Formato.ConArticulo(mayor.Dia)} tuvo más vistas: {Formato.Numero(mayor.Vistas)}.";
+        }
+    }
+
+    private string DescripcionGrafica => "Vistas por día: " + string.Join(", ", _datos!.Dias.Select(d => $"{Formato.NombreDia(d.Dia)} {d.Vistas}"));
+
+    private static double Ancho(int valor, int total) => total == 0 ? 0 : Math.Min(100, valor * 100d / total);
+
+    private static string TextoInteresados(EstadisticasEvento s) =>
+        s.Vistas == 0 || s.Interesados > s.Vistas ? "Personas que lo guardaron" : $"{s.Interesados * 100d / s.Vistas:0.#}% de las vistas lo guardó";
+
+    private static string TextoInscritos(EstadisticasEvento s) =>
+        s.Interesados == 0 || s.Inscritos > s.Interesados ? "Personas que dijeron “Voy a ir”" : $"{s.Inscritos * 100d / s.Interesados:0.#}% de los interesados dijo “Voy a ir”";
+
+    private static RenderFragment Paso(string icono, string titulo, int valor, string barra, double ancho, string texto) =>
+        @<div class="paso">
+            <div class="paso__etiquetas">
+                <Icono Nombre="@icono" Caja="14" />
+                <p class="t-small-fuerte paso__titulo">@titulo</p>
+                <p class="t-card-titulo">@Formato.Numero(valor)</p>
+            </div>
+            <div class="paso__pista"><span class="paso__barra @barra" style="width:@(ancho.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></span></div>
+            <p class="t-caption texto-2">@texto</p>
+        </div>;
+
+    protected override void OnInitialized() => Sesion.Cambio += AlCambiarSesion;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_cargado == Id) return;
+        _usuarioId = Sesion.Usuario?.Id;
+        if (!Sesion.Iniciada)
+        {
+            Modales.RequiereSesion("Inicia sesión con tu cuenta de organizador para ver tus estadísticas.");
+            return;
+        }
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _cargado = Id;
+        _error = null;
+        try
+        {
+            _datos = await Servicio.ObtenerEstadisticasAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            Registro.LogWarning(ex, "No se pudieron cargar las estadísticas del evento {Id}", Id);
+            _datos = null;
+            _error = MensajesError.Para(ex);
+        }
+    }
+
+    private void AlBuscar(string texto)
+    {
+        _busqueda = texto ?? "";
+        _mostrados = PorPagina;
+    }
+
+    private async Task CancelarAsync()
+    {
+        var e = _datos!.Evento;
+        if (!await Modales.CancelarEventoAsync(e, _datos.Estadisticas.Inscritos)) return;
+        await Modales.EventoCanceladoAsync();
+        await CargarAsync();
+    }
+
+    private void AlCambiarSesion() => InvokeAsync(async () =>
+    {
+        int? id = Sesion.Usuario?.Id;
+        if (id == _usuarioId) return;
+        if (_usuarioId != null && id == null) { Acciones.Inicio(); return; }   // cerró sesión aquí
+        _usuarioId = id;
+        _datos = null;
+        if (id != null) await CargarAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
+}

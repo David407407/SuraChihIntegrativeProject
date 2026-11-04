@@ -532,6 +532,42 @@ async Task PruebasFalso()
         Afirmar(!await f.Favoritos.AlternarLugarAsync(7, 2), "alternar otra vez lo quita");
         return "";
     });
+    await Prueba("Panel: estadísticas y vistas por día son solo del organizador", async () =>
+    {
+        var deDandelion = await f.Eventos.ListarEstadisticasAsync(3);
+        Afirmar(deDandelion.Any(s => s.EventoId == 2) && deDandelion.All(s => s.EventoId != 1), "cada quien ve sus eventos");
+        Afirmar((await f.Inscripciones.ListarInscritosAsync(2, organizadorId: 4)).Count == 0, "los inscritos ajenos no se ven");
+        var dias = await f.Eventos.ListarVistasPorDiaAsync(1, 14);
+        Afirmar(dias.Count == 14 && dias.Sum(d => d.Vistas) == 4, "14 días para comparar con la semana anterior, con los días en 0");
+        return "";
+    });
+    await Prueba("Cancelar evento: solo el dueño, con motivo, y los inscritos lo ven en Mis planes", async () =>
+    {
+        // Un evento propio de la prueba: otras pruebas usan los de los datos de ejemplo.
+        DatosEvento Datos(string titulo) => new()
+        {
+            Titulo = titulo, Descripcion = "Para cancelar", LugarId = 1,
+            Inicio = DateTime.Now.AddDays(5), Fin = DateTime.Now.AddDays(5).AddHours(2)
+        };
+        int id = await f.Eventos.CrearAsync(3, Datos("Evento que se cancela"));
+        await f.Moderacion.AprobarAsync(1, TipoObjetivoModeracion.Evento, id);
+        await f.Inscripciones.InscribirAsync(7, id);
+
+        await EsperarError<DatosInvalidosException>(() => f.Eventos.CancelarAsync(id, 3, "  "));
+        Afirmar(!await f.Eventos.CancelarAsync(id, 4, "No es mío"), "un organizador no cancela eventos ajenos");
+        Afirmar((await f.Eventos.ObtenerAsync(id))!.Evento.Estado == EstadoEvento.Aprobado, "sigue publicado");
+
+        Afirmar(await f.Eventos.CancelarAsync(id, 3, "  Se inundó el local. "), "el dueño sí");
+        var cancelado = (await f.Eventos.ObtenerAsync(id))!.Evento;
+        Afirmar(cancelado is { Estado: EstadoEvento.Cancelado, MotivoCancelacion: "Se inundó el local." }, "estado y motivo (v_event_card)");
+        Afirmar(!await f.Eventos.CancelarAsync(id, 3, "Otra vez"), "no se cancela dos veces");
+
+        var planes = await f.Inscripciones.ListarPlanesAsync(7, PestanaPlanes.Cancelados);
+        Afirmar(planes.Any(p => p.Evento.Id == id && p.Evento.MotivoCancelacion != null), "el inscrito lo ve cancelado con el motivo");
+        Afirmar((await f.Inscripciones.ListarPlanesAsync(7, PestanaPlanes.Proximos)).All(p => p.Evento.Id != id), "ya no está en Próximos");
+        Afirmar(await f.Eventos.ActualizarAsync(id, 3, Datos("Otro título")) == null, "un cancelado ya no se edita");
+        return await EsperarError<ReglaNegocioException>(() => f.Inscripciones.InscribirAsync(5, id), MensajesTrigger.NoPuedesInscribirte);
+    });
     await Prueba("Hazte organizador: solicitar, pendiente y duplicado", async () =>
     {
         var nueva = new SolicitudOrganizador(5, "  Café Mariana ", "Café de barrio", "https://instagram.com/cafe_mariana", "526141230000");

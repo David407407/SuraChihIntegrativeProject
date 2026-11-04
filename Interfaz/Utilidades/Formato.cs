@@ -151,6 +151,17 @@ namespace Interfaz.Utilidades
         public static string SinProtocolo(string url) =>
             url.Replace("https://", "").Replace("http://", "").Replace("www.", "").TrimEnd('/');
 
+        private static readonly string[] Dias = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+
+        /// <summary>"sábado".</summary>
+        public static string NombreDia(DateOnly dia) => Dias[(int)dia.DayOfWeek];
+
+        /// <summary>"El sábado" (gráfica "Últimos 7 días").</summary>
+        public static string ConArticulo(DateOnly dia) => $"El {NombreDia(dia)}";
+
+        /// <summary>L, M, M, J, V, S, D, como en la gráfica de Figma.</summary>
+        public static string InicialDia(DateOnly dia) => NombreDia(dia)[..1].ToUpperInvariant();
+
         /// <summary>"7 oct a las 18:42" ("Enviado el ..." de Revisar evento).</summary>
         public static string FechaYHora(DateTime fecha) => $"{RangoFechas(fecha)} a las {fecha:HH:mm}";
 

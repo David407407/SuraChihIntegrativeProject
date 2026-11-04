@@ -162,9 +162,11 @@ namespace Interfaz.Estado
             Abrir<ModalSolicitudEnviada>(new Dictionary<string, object?> { ["Negocio"] = negocio });
 
         /// <summary>"Modal / Decisión registrada": se muestra un momento y se cierra sola (o antes, con Esc o el botón).</summary>
-        public async Task DecisionRegistradaAsync()
+        public Task DecisionRegistradaAsync() => ConfirmacionBreveAsync(null);
+
+        private async Task ConfirmacionBreveAsync(IDictionary<string, object?>? parametros)
         {
-            var tarea = Abrir<ModalDecisionRegistrada>();
+            var tarea = Abrir<ModalDecisionRegistrada>(parametros);
             if (await Task.WhenAny(tarea, Task.Delay(DuracionRegistrada)) != tarea && Componente == typeof(ModalDecisionRegistrada)) Cerrar();
             await tarea;
         }
@@ -197,7 +199,24 @@ namespace Interfaz.Estado
             await Abrir<ModalCalendario>(new Dictionary<string, object?> { ["Fecha"] = actual }) as DateTime?;
 
         /// <summary>"Modal / Motivo de rechazo" (lo ve el organizador): la última decisión de moderación sobre su evento.</summary>
-        public void MotivoRechazo(string titulo, RegistroModeracion registro) =>
-            _ = Abrir<ModalMotivoRechazo>(new Dictionary<string, object?> { ["Titulo"] = titulo, ["Registro"] = registro });
+        /// <param name="eventoId">Para "Editar y reenviar"; sin él (catálogo) el botón solo cierra.</param>
+        public void MotivoRechazo(string titulo, RegistroModeracion registro, int? eventoId = null) =>
+            _ = Abrir<ModalMotivoRechazo>(new Dictionary<string, object?> { ["Titulo"] = titulo, ["Registro"] = registro, ["EventoId"] = eventoId });
+
+        // ---------------------------------------------------------------- Panel de organizador
+
+        /// <summary>"Modal / Cancelar evento": motivo obligatorio.</summary>
+        /// <param name="inscritos">"Las N personas inscritas lo verán como cancelado".</param>
+        /// <returns>true si quedó cancelado.</returns>
+        public async Task<bool> CancelarEventoAsync(EventoTarjeta evento, int inscritos) =>
+            await Abrir<ModalCancelarEvento>(new Dictionary<string, object?> { ["Evento"] = evento, ["Inscritos"] = inscritos }) as bool? ?? false;
+
+        /// <summary>"Modal / Evento cancelado": se muestra un momento y se cierra sola, como "Decisión registrada".</summary>
+        public Task EventoCanceladoAsync() =>
+            ConfirmacionBreveAsync(new Dictionary<string, object?>
+            {
+                ["Titulo"] = "Evento cancelado",
+                ["Texto"] = "Las personas inscritas lo verán como cancelado en Mis planes.",
+            });
     }
 }

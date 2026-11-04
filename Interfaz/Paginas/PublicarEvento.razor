@@ -464,7 +464,7 @@
         if (_estado == EstadoEvento.Aprobado && _datos.Evento is { } detalle)
         {
             StateHasChanged();
-            if (!await Modales.EditarEventoPublicadoAsync(detalle.Evento.Titulo, _datos.Inscritos)) Acciones.Inicio();
+            if (!await Modales.EditarEventoPublicadoAsync(detalle.Evento.Titulo, _datos.Inscritos)) Acciones.EstadisticasEvento(detalle.Evento.Id);
         }
     }
 
@@ -676,8 +676,6 @@
         }
         else if (eleccion == ModalEnviadoRevision.IrAlPanel)
         {
-            // El panel de organizador aún no tiene pantalla: se va al inicio con el aviso de "próximamente".
-            Acciones.Inicio();
             Acciones.PanelOrganizador();
         }
         else if (Id != id)

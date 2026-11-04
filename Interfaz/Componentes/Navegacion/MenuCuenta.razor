@@ -45,7 +45,7 @@
     [Parameter] public bool EsOrganizador { get; set; }
     [Inject] private Acciones Acciones { get; set; } = default!;
 
-    private readonly ElementReference[] _botones = new ElementReference[7];
+    private readonly ElementReference[] _botones = new ElementReference[6];
     private int _foco;
     private bool _abierto;
 
@@ -64,8 +64,6 @@
             if (EsOrganizador)
             {
                 lista.Add(new("Panel de organizador", "tienda-16", Acciones.PanelOrganizador));
-                // Mientras no exista el panel, este es el camino a "Publicar evento" (WBS 4.6).
-                lista.Add(new("Publicar evento", "calendario", Acciones.PublicarEvento));
             }
             else
             {
