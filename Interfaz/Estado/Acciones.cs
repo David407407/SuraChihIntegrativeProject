@@ -1,3 +1,4 @@
+using BackendLogica.Datos;
 using BackendLogica.Modelos;
 using Interfaz.Servicios;
 using Microsoft.AspNetCore.Components;
@@ -11,7 +12,7 @@ namespace Interfaz.Estado
     /// <remarks>
     /// Al construir una pantalla nueva, agrega su ruta en <see cref="Rutas"/> (y su @page en Paginas/).
     /// </remarks>
-    public sealed class Acciones(NavigationManager nav, Sesion sesion, Avisos avisos, Modales modales, Hojas hojas, InteropJs js)
+    public sealed class Acciones(NavigationManager nav, Sesion sesion, Avisos avisos, Modales modales, Hojas hojas, InteropJs js, ServicioReportes reportes)
     {
         /// <summary>Rutas de las pantallas (las mismas de los @page).</summary>
         public static class Rutas
@@ -77,11 +78,24 @@ namespace Interfaz.Estado
             else modales.RequiereSesion();
         }
 
-        /// <summary>"Reportar" de un evento, lugar o reseña. Sin sesión: modal "Inicia sesión para continuar".</summary>
-        public void Reportar(TipoObjetivoReporte tipo, int objetivoId)
+        /// <summary>
+        /// "Reportar" de un evento, lugar o reseña. Sin sesión: modal "Inicia sesión para continuar". Si ya lo reportó
+        /// avisa sin pedirle el formulario. Si esa consulta falla se abre el formulario: al enviar lo revisa BackendLogica.
+        /// </summary>
+        public async Task ReportarAsync(TipoObjetivoReporte tipo, int objetivoId)
         {
-            if (sesion.Iniciada) modales.Reportar(tipo, objetivoId);
-            else modales.RequiereSesion("Inicia sesión para reportar.");
+            if (!sesion.Iniciada)
+            {
+                modales.RequiereSesion("Inicia sesión para reportar.");
+                return;
+            }
+
+            bool yaReporte = false;
+            try { yaReporte = await reportes.YaReporteAsync(tipo, objetivoId); }
+            catch (SuraChihException) { }
+
+            if (yaReporte) modales.ReporteEnviado(repetido: true);
+            else modales.Reportar(tipo, objetivoId);
         }
 
         // ---------------------------------------------------------------- Navegación

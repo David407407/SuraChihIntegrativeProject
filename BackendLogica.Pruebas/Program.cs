@@ -630,12 +630,41 @@ async Task PruebasFalso()
     });
     await Prueba("Reportes: crear y resolver", async () =>
     {
-        int id = await f.Reportes.CrearAsync(6, TipoObjetivoReporte.ResenaLugar, 3, MotivoReporte.Spam, null);
+        int id = await f.Reportes.CrearAsync(5, TipoObjetivoReporte.ResenaLugar, 3, MotivoReporte.Spam, null);
         await EsperarError<ReglaNegocioException>(() => f.Reportes.ResolverAsync(id, 6, EstadoReporte.Descartado), ConexionDB.SoloModeradores);
         Afirmar((await f.Reportes.ListarAsync()).Any(r => r.Id == id), "un usuario normal no lo cierra");
         Afirmar(await f.Reportes.ResolverAsync(id, 1, EstadoReporte.Descartado), "resolver");
         Afirmar((await f.Reportes.ListarAsync()).All(r => r.Id != id), "ya no está abierto");
         Afirmar((await f.Reportes.ListarAsync(EstadoReporte.Descartado)).Any(r => r.Id == id && r.ResueltoPor == 1), "queda quién lo cerró");
+        return "";
+    });
+    await Prueba("Reportes: una persona, un reporte por objetivo, aunque ya se haya cerrado", async () =>
+    {
+        var falso = new SuraChihFalso();
+        Afirmar(!await falso.Reportes.YaReportoAsync(6, TipoObjetivoReporte.Evento, 2), "todavía no lo reporta");
+        int id = await falso.Reportes.CrearAsync(6, TipoObjetivoReporte.Evento, 2, MotivoReporte.Spam, null);
+        Afirmar(await falso.Reportes.YaReportoAsync(6, TipoObjetivoReporte.Evento, 2), "ya lo reportó");
+
+        await EsperarError<DuplicadoException>(() => falso.Reportes.CrearAsync(6, TipoObjetivoReporte.Evento, 2, MotivoReporte.Estafa, null), "Ya reportaste esto.");
+        await falso.Reportes.ResolverAsync(id, 1, EstadoReporte.Descartado);
+        await EsperarError<DuplicadoException>(() => falso.Reportes.CrearAsync(6, TipoObjetivoReporte.Evento, 2, MotivoReporte.Spam, null), "Ya reportaste esto.");
+
+        Afirmar(!await falso.Reportes.YaReportoAsync(5, TipoObjetivoReporte.Evento, 2), "otra persona todavía no");
+        await falso.Reportes.CrearAsync(5, TipoObjetivoReporte.Evento, 2, MotivoReporte.Spam, null);
+        // Mismo id en otra tabla: la reseña 1 de evento no es la reseña 1 de lugar.
+        await falso.Reportes.CrearAsync(6, TipoObjetivoReporte.ResenaEvento, 1, MotivoReporte.Spam, null);
+        await falso.Reportes.CrearAsync(6, TipoObjetivoReporte.ResenaLugar, 1, MotivoReporte.Spam, null);
+        return "";
+    });
+    await Prueba("Reportes: nadie reporta lo suyo", async () =>
+    {
+        var falso = new SuraChihFalso();
+        await EsperarError<ReglaNegocioException>(() => falso.Reportes.CrearAsync(4, TipoObjetivoReporte.Evento, 1, MotivoReporte.Spam, null), MensajesTrigger.ReportePropioEvento);
+        await EsperarError<ReglaNegocioException>(() => falso.Reportes.CrearAsync(3, TipoObjetivoReporte.Lugar, 1, MotivoReporte.Spam, null), MensajesTrigger.ReportePropioLugar);
+        await EsperarError<ReglaNegocioException>(() => falso.Reportes.CrearAsync(5, TipoObjetivoReporte.ResenaEvento, 1, MotivoReporte.Spam, null), MensajesTrigger.ReportePropiaResena);
+        await EsperarError<ReglaNegocioException>(() => falso.Reportes.CrearAsync(6, TipoObjetivoReporte.ResenaLugar, 2, MotivoReporte.Spam, null), MensajesTrigger.ReportePropiaResena);
+        // El dueño del lugar sí puede reportar una reseña de otra persona sobre su lugar.
+        await falso.Reportes.CrearAsync(3, TipoObjetivoReporte.ResenaLugar, 2, MotivoReporte.Spam, null);
         return "";
     });
     await Prueba("Reportes: cada uno queda ligado a su evento o lugar", async () =>
@@ -662,9 +691,9 @@ async Task PruebasFalso()
     });
     await Prueba("Ocultar reseña: solo moderadores, cierra sus reportes y queda en el historial", async () =>
     {
-        int a = await f.Reportes.CrearAsync(5, TipoObjetivoReporte.ResenaLugar, 3, MotivoReporte.Spam, null);
-        int b = await f.Reportes.CrearAsync(6, TipoObjetivoReporte.ResenaLugar, 3, MotivoReporte.Estafa, null);
-        int otra = await f.Reportes.CrearAsync(6, TipoObjetivoReporte.ResenaEvento, 1, MotivoReporte.Spam, null);
+        int a = await f.Reportes.CrearAsync(4, TipoObjetivoReporte.ResenaLugar, 3, MotivoReporte.Spam, null);
+        int b = await f.Reportes.CrearAsync(3, TipoObjetivoReporte.ResenaLugar, 3, MotivoReporte.Estafa, null);
+        int otra = await f.Reportes.CrearAsync(7, TipoObjetivoReporte.ResenaEvento, 1, MotivoReporte.Spam, null);
 
         await EsperarError<ReglaNegocioException>(() => f.Resenas.CambiarVisibilidadAsync(6, TipoResena.Lugar, 3, true), ConexionDB.SoloModeradores);
         Afirmar((await f.Resenas.ListarAsync(TipoResena.Lugar, 2)).Any(r => r.Id == 3), "un usuario normal no la oculta");
@@ -1093,6 +1122,19 @@ async Task PruebasEscrituraMySql(SuraChihBD bd)
         Afirmar(lista.Single(r => r.Reporte.Id == deEvento) is { EventoId: 1, LugarId: null, ResenaAutor: null, ReportanteNombre: "diego_m" }, "evento");
         Afirmar(await bd.Reportes.ResolverAsync(deEvento, 1, EstadoReporte.Resuelto), "resolver");
         await EsperarError<ReglaNegocioException>(() => bd.Reportes.ResolverAsync(deLugar, 6, EstadoReporte.Descartado), ConexionDB.SoloModeradores);
+        return "";
+    });
+    await Prueba("Reportes: una persona, un reporte, y nadie reporta lo suyo (llave y trigger reales)", async () =>
+    {
+        Afirmar(!await bd.Reportes.YaReportoAsync(7, TipoObjetivoReporte.Evento, 1), "todavía no lo reporta");
+        await bd.Reportes.CrearAsync(7, TipoObjetivoReporte.Evento, 1, MotivoReporte.Spam, null);
+        Afirmar(await bd.Reportes.YaReportoAsync(7, TipoObjetivoReporte.Evento, 1), "ya lo reportó");
+        Afirmar(!await bd.Reportes.YaReportoAsync(7, TipoObjetivoReporte.Lugar, 1), "el lugar con el mismo id es otro objetivo");
+        await EsperarError<DuplicadoException>(() => bd.Reportes.CrearAsync(7, TipoObjetivoReporte.Evento, 1, MotivoReporte.Estafa, null), "Ya reportaste esto.");
+        await EsperarError<ReglaNegocioException>(() => bd.Reportes.CrearAsync(4, TipoObjetivoReporte.Evento, 1, MotivoReporte.Spam, null), MensajesTrigger.ReportePropioEvento);
+        await EsperarError<ReglaNegocioException>(() => bd.Reportes.CrearAsync(3, TipoObjetivoReporte.Lugar, 1, MotivoReporte.Spam, null), MensajesTrigger.ReportePropioLugar);
+        await EsperarError<ReglaNegocioException>(() => bd.Reportes.CrearAsync(5, TipoObjetivoReporte.ResenaEvento, 1, MotivoReporte.Spam, null), MensajesTrigger.ReportePropiaResena);
+        await EsperarError<ReglaNegocioException>(() => bd.Reportes.CrearAsync(5, TipoObjetivoReporte.ResenaLugar, 1, MotivoReporte.Spam, null), MensajesTrigger.ReportePropiaResena);
         return "";
     });
     await Prueba("Reportes: orden y reabrir con la BD real", async () =>

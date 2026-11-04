@@ -328,6 +328,9 @@ CREATE TABLE report (
     CONSTRAINT ck_rep_one_target CHECK ((event_id IS NOT NULL) + (place_id IS NOT NULL)
                                         + (event_review_id IS NOT NULL) + (place_review_id IS NOT NULL) = 1),
     CONSTRAINT ck_rep_other_details CHECK (reason <> 'other' OR details IS NOT NULL),
+    -- Una persona, un reporte por objetivo, aunque ya se haya cerrado. COALESCE porque en una llave UNIQUE los NULL no chocan.
+    UNIQUE KEY uq_rep_once (reporter_id, (COALESCE(event_id, 0)), (COALESCE(place_id, 0)),
+                            (COALESCE(event_review_id, 0)), (COALESCE(place_review_id, 0))),
     INDEX ix_rep_status (status, created_at)
 );
 
@@ -536,6 +539,22 @@ BEGIN
     END IF;
     IF EXISTS (SELECT 1 FROM place WHERE id = NEW.place_id AND owner_id = NEW.user_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No puedes resenar tu propio lugar.';
+    END IF;
+END$$
+
+-- Reporte: nadie reporta su propio evento, lugar o resena.
+CREATE TRIGGER trg_report_bi BEFORE INSERT ON report
+FOR EACH ROW
+BEGIN
+    IF EXISTS (SELECT 1 FROM event WHERE id = NEW.event_id AND organizer_id = NEW.reporter_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No puedes reportar tu propio evento.';
+    END IF;
+    IF EXISTS (SELECT 1 FROM place WHERE id = NEW.place_id AND owner_id = NEW.reporter_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No puedes reportar tu propio lugar.';
+    END IF;
+    IF EXISTS (SELECT 1 FROM event_review WHERE id = NEW.event_review_id AND user_id = NEW.reporter_id)
+       OR EXISTS (SELECT 1 FROM place_review WHERE id = NEW.place_review_id AND user_id = NEW.reporter_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No puedes reportar algo que escribiste.';
     END IF;
 END$$
 

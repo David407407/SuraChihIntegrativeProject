@@ -1,6 +1,6 @@
 @*
-  Fila de "Moderación / Reportes" de Figma: bandera, tipo y motivo, el evento o lugar (el título lo abre), la reseña
-  y lo que escribieron quienes reportaron. Los reportes repetidos del mismo objetivo van juntos en una fila y las
+  Fila de "Moderación / Reportes" de Figma: tipo y motivo, el evento o lugar (el título lo abre), la reseña y lo que
+  escribieron quienes reportaron. El rojo queda para lo urgente: estafas y reportes que pasaron de las 48 horas. Los reportes repetidos del mismo objetivo van juntos en una fila y las
   acciones los cierran todos. Abierto: "Descartar" y, según el tipo, "Ocultar reseña" o "Ver evento" / "Ver lugar" y
   "Marcar resuelto" (ya se revisó). Si reabrieron el reporte de una reseña que sigue oculta: "Mantener oculta" o
   "Volver a mostrar" (descartarlo dejaría la reseña oculta sin motivo). Cerrado: "Reabrir" y, si sigue oculta,
@@ -9,21 +9,27 @@
 @inject Acciones Acciones
 
 <article class="fila-reporte" aria-labelledby="@_idTitulo">
-    <span class="fila-reporte__insignia"><Icono Nombre="bandera-error-18" Caja="18" /></span>
     <div class="fila-reporte__info">
         <div class="fila-reporte__etiquetas">
             <Chip Texto="@TipoTexto" Variante="fondo" Icono="@TipoIcono" Clase="chip--estado" />
             @foreach (var motivo in G.Reportes.Select(r => r.Reporte.Motivo).Distinct())
             {
-                <Chip Texto="@MotivoTexto(motivo)" Variante="error-suave" Icono="alerta-error-12" Clase="chip--estado" />
+                @if (motivo == MotivoReporte.Estafa)
+                {
+                    <Chip Texto="@MotivoTexto(motivo)" Variante="error-suave" Icono="alerta-error-12" Clase="chip--estado" />
+                }
+                else
+                {
+                    <Chip Texto="@MotivoTexto(motivo)" Variante="fondo" Clase="chip--estado" />
+                }
             }
-            @if (G.Reportes.Count > 1)
+            @if (G.Reportantes.Count > 1)
             {
-                <Chip Texto="@($"{G.Reportes.Count} reportes")" Variante="sol-suave" Clase="chip--estado" />
+                <Chip Texto="@($"{G.Reportantes.Count} personas")" Variante="sol-suave" Clase="chip--estado" />
             }
             @if (EsResena && P.ResenaOculta)
             {
-                <Chip Texto="Reseña oculta" Variante="error-suave" Icono="x-circulo-error-12" Clase="chip--estado" />
+                <Chip Texto="Reseña oculta" Variante="sol-suave" Clase="chip--estado" />
             }
             @if (Abierto && Espera.TotalHours >= HorasLimite)
             {
@@ -46,7 +52,7 @@
                 </p>
                 @if (P.ResenaComentario is { } comentario)
                 {
-                    <p class="t-small">“@comentario”</p>
+                    <TextoLargo Texto="@comentario" Comillas />
                 }
                 else
                 {
@@ -54,16 +60,18 @@
                 }
             </div>
         }
-        else
+        @foreach (var r in _todosLosComentarios ? Comentarios : Comentarios.Take(1))
         {
-            <p class="t-small texto-2">@(P.EventoId != null ? "Evento publicado" : "Lugar publicado")</p>
-        }
-        @foreach (var r in G.Reportes.Where(r => r.Reporte.Detalles != null))
-        {
-            <div class="fila-reporte__bloque">
+            <div @key="r.Reporte.Id" class="fila-reporte__bloque">
                 <p class="t-caption texto-2">Comentario de @@@r.ReportanteNombre</p>
-                <p class="t-small">@r.Reporte.Detalles</p>
+                <TextoLargo Texto="@(r.Reporte.Detalles!)" />
             </div>
+        }
+        @if (Comentarios.Count > 1)
+        {
+            <button type="button" class="fila-reporte__mas t-small-fuerte" aria-expanded="@(_todosLosComentarios ? "true" : "false")" @onclick="() => _todosLosComentarios = !_todosLosComentarios">
+                @(_todosLosComentarios ? "Ver menos comentarios" : Comentarios.Count == 2 ? "Ver 1 comentario más" : $"Ver {Comentarios.Count - 1} comentarios más")
+            </button>
         }
         <p class="fila-reporte__meta t-caption texto-2">
             <Icono Nombre="persona-gris-12" Caja="12" />
@@ -81,7 +89,7 @@
             <Boton Texto="Descartar" Variante="fantasma" Tamano="s" Deshabilitado="Ocupado" OnClick="AlDescartar" aria-label="@($"Descartar: {Titulo}")" />
             @if (EsResena)
             {
-                <Boton Texto="Ocultar reseña" Variante="peligro" Tamano="s" Icono="ojo-tachado-blanco-16" Deshabilitado="Ocupado" OnClick="AlOcultar" aria-label="@($"Ocultar reseña: {Titulo}")" />
+                <Boton Texto="Ocultar reseña" Variante="secundario" Tamano="s" Icono="ojo-tachado-tinta-16" Deshabilitado="Ocupado" OnClick="AlOcultar" aria-label="@($"Ocultar reseña: {Titulo}")" />
             }
             else
             {
@@ -117,7 +125,10 @@
     [Parameter] public EventCallback AlReabrir { get; set; }
     [Parameter] public EventCallback AlMostrar { get; set; }
 
+    private bool _todosLosComentarios;
+
     private ReporteDetalle P => G.Principal;
+    private List<ReporteDetalle> Comentarios => [.. G.Reportes.Where(r => r.Reporte.Detalles != null)];
     private bool Abierto => P.Reporte.Estado == EstadoReporte.Abierto;
     private bool EsResena => P.Reporte.Tipo is TipoObjetivoReporte.ResenaEvento or TipoObjetivoReporte.ResenaLugar;
     private string VerTexto => P.EventoId != null ? "Ver evento" : "Ver lugar";
@@ -130,11 +141,12 @@
     {
         get
         {
-            string quienes = G.Reportes.Count switch
+            var personas = G.Reportantes;
+            string quienes = personas.Count switch
             {
-                1 => $"@{P.ReportanteNombre}",
-                2 => $"@{G.Reportes[0].ReportanteNombre} y @{G.Reportes[1].ReportanteNombre}",
-                _ => $"@{P.ReportanteNombre} y {G.Reportes.Count - 1} más",
+                1 => $"@{personas[0]}",
+                2 => $"@{personas[0]} y @{personas[1]}",
+                _ => $"@{personas[0]} y {personas.Count - 1} más",
             };
             string cuando = Formato.Hace(G.Reportes.Min(r => r.Reporte.CreadoEn)).ToLowerInvariant();
             string texto = $"Reportado por {quienes} · {cuando}";

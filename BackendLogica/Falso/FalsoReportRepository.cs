@@ -25,6 +25,22 @@ namespace BackendLogica.Falso
                 };
                 if (!existe || a.Usuario(reportanteId) == null) throw AlmacenFalso.NoExiste();
 
+                // trg_report_bi
+                switch (tipo)
+                {
+                    case TipoObjetivoReporte.Evento when a.Evento(objetivoId)!.OrganizadorId == reportanteId:
+                        throw Trigger(MensajesTrigger.ReportePropioEvento);
+                    case TipoObjetivoReporte.Lugar when a.Lugar(objetivoId)!.DuenoId == reportanteId:
+                        throw Trigger(MensajesTrigger.ReportePropioLugar);
+                    case TipoObjetivoReporte.ResenaEvento when a.Resenas.Any(r => r.Tipo == TipoResena.Evento && r.Id == objetivoId && r.UsuarioId == reportanteId):
+                    case TipoObjetivoReporte.ResenaLugar when a.Resenas.Any(r => r.Tipo == TipoResena.Lugar && r.Id == objetivoId && r.UsuarioId == reportanteId):
+                        throw Trigger(MensajesTrigger.ReportePropiaResena);
+                }
+
+                // uq_rep_once
+                if (a.Reportes.Any(r => r.ReportanteId == reportanteId && r.Tipo == tipo && r.ObjetivoId == objetivoId))
+                    throw new DuplicadoException("Ya reportaste esto.");
+
                 var fila = new FilaReporte
                 {
                     Id = AlmacenFalso.Siguiente(a.Reportes, r => r.Id), ReportanteId = reportanteId, Tipo = tipo,
@@ -33,6 +49,9 @@ namespace BackendLogica.Falso
                 a.Reportes.Add(fila);
                 return fila.Id;
             }, ct);
+
+        public Task<bool> YaReportoAsync(int reportanteId, TipoObjetivoReporte tipo, int objetivoId, CancellationToken ct = default) =>
+            Hacer(a => a.Reportes.Any(r => r.ReportanteId == reportanteId && r.Tipo == tipo && r.ObjetivoId == objetivoId), ct);
 
         public Task<List<Reporte>> ListarAsync(EstadoReporte estado = EstadoReporte.Abierto, CancellationToken ct = default) =>
             Hacer(a => a.Reportes.Where(r => r.Estado == estado).OrderBy(r => r.CreadoEn).Select(r => r.ADatos()).ToList(), ct);

@@ -13,6 +13,7 @@ namespace BackendLogica.Repositorios
 
         /// <summary>Envía un reporte. Con motivo <see cref="MotivoReporte.Otro"/> los detalles son obligatorios.</summary>
         /// <returns>Id del reporte.</returns>
+        /// <remarks>La llave <c>uq_rep_once</c> rechaza un segundo reporte de la misma persona y <c>trg_report_bi</c> los de lo suyo.</remarks>
         public Task<int> CrearAsync(int reportanteId, TipoObjetivoReporte tipo, int objetivoId, MotivoReporte motivo, string? detalles, CancellationToken ct = default)
         {
             detalles = string.IsNullOrWhiteSpace(detalles) ? null : detalles.Trim();
@@ -32,6 +33,11 @@ namespace BackendLogica.Repositorios
                 resenaLugar = tipo == TipoObjetivoReporte.ResenaLugar ? objetivoId : (int?)null
             }, ct);
         }
+
+        /// <summary>Si esa persona ya reportó este objetivo, en cualquier estado.</summary>
+        public async Task<bool> YaReportoAsync(int reportanteId, TipoObjetivoReporte tipo, int objetivoId, CancellationToken ct = default) =>
+            await EscalarAsync<int>($"SELECT COUNT(*) FROM report WHERE reporter_id = @reportanteId AND {ColumnaObjetivo(tipo)} = @objetivoId",
+                new { reportanteId, objetivoId }, ct) > 0;
 
         /// <summary>Bandeja de reportes (por defecto los abiertos, del más antiguo al más nuevo).</summary>
         public Task<List<Reporte>> ListarAsync(EstadoReporte estado = EstadoReporte.Abierto, CancellationToken ct = default) =>
@@ -86,6 +92,14 @@ namespace BackendLogica.Repositorios
                 WHERE id = @reporteId AND status <> 'open'
                 """, new { reporteId }, ct) > 0;
         }
+
+        private static string ColumnaObjetivo(TipoObjetivoReporte tipo) => tipo switch
+        {
+            TipoObjetivoReporte.Evento => "event_id",
+            TipoObjetivoReporte.Lugar => "place_id",
+            TipoObjetivoReporte.ResenaEvento => "event_review_id",
+            _ => "place_review_id"
+        };
 
         private static Reporte Mapear(DbDataReader r)
         {

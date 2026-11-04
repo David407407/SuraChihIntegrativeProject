@@ -16,12 +16,11 @@
   background: var(--color-superficie);
 }
 
-/* En pantallas angostas la tabla se desplaza sola; la página no */
+/* Por si una palabra muy larga no cabe: se desplaza la tabla, no la página */
 .historial__desplazar { overflow-x: auto; }
-.historial__desplazar:focus-visible { outline: 3px solid var(--color-cielo); outline-offset: -3px; }
 
 /* break-word (no anywhere): las palabras no se parten para hacer angosta la columna OBJETIVO */
-table { width: 100%; min-width: 1060px; border-collapse: collapse; text-align: left; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
 thead { background: var(--color-fondo); }
 th { padding: 14px 10px; font: inherit; letter-spacing: inherit; }
 td { padding: 16px 10px; border-top: 1px solid var(--color-linea); overflow-wrap: break-word; }
@@ -45,4 +44,36 @@ th:last-child, td:last-child { padding-right: 24px; }
   padding: 16px 24px;
   border-top: 1px solid var(--color-linea);
   text-align: center;
+}
+
+/* Ventana mediana: las columnas fijas ceden para que OBJETIVO siga siendo legible */
+@media (max-width: 1280px) {
+  .historial__fecha { width: 120px; }
+  .historial__tipo { width: 110px; }
+  .historial__decision { width: 120px; }
+  .historial__comentario { width: 220px; }
+  .historial__moderador { width: 100px; }
+}
+
+/* Angosta: cada decisión es un bloque, con la decisión y la fecha primero. Ya no hay nada que desplazar de lado. */
+@media (max-width: 1023px) {
+  table, tbody { display: block; }
+  thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  tbody tr {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 16px;
+    border-top: 1px solid var(--color-linea);
+  }
+  tbody tr:first-child { border-top: 0; }
+  td, td:first-child, td:last-child { display: block; width: auto; padding: 0; border: 0; }
+  td.historial__decision { grid-area: 1 / 1; }
+  td.historial__fecha { grid-area: 1 / 2; text-align: right; }
+  td.historial__objetivo { grid-area: 2 / 1 / 2 / 3; }
+  td.historial__tipo { grid-area: 3 / 1; }
+  td.historial__moderador { grid-area: 3 / 2; text-align: right; }
+  td.historial__comentario { grid-area: 4 / 1 / 4 / 3; }
+  td.historial__comentario--vacio { display: none; }
 }

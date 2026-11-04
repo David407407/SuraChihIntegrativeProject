@@ -51,29 +51,29 @@
             else
             {
                 <div class="historial__tabla">
-                    @* tabindex: con teclado también se puede desplazar la tabla en pantallas angostas *@
-                    <div class="historial__desplazar" role="region" aria-label="Tabla del historial" tabindex="0">
-                        <table>
+                    @* Los role mantienen la tabla para los lectores de pantalla cuando en pantallas angostas se apila. *@
+                    <div class="historial__desplazar">
+                        <table role="table">
                             <caption class="solo-lectores">Historial de decisiones de moderación</caption>
-                            <thead class="t-caption texto-2">
-                                <tr>
-                                    <th scope="col" class="historial__fecha">FECHA</th>
-                                    <th scope="col">OBJETIVO</th>
-                                    <th scope="col" class="historial__tipo">TIPO</th>
-                                    <th scope="col" class="historial__decision">DECISIÓN</th>
-                                    <th scope="col" class="historial__comentario">@(_filtro == Filtro.Resenas ? "RESEÑA" : "COMENTARIO")</th>
-                                    <th scope="col" class="historial__moderador">MODERADOR</th>
+                            <thead class="t-caption texto-2" role="rowgroup">
+                                <tr role="row">
+                                    <th scope="col" role="columnheader" class="historial__fecha">FECHA</th>
+                                    <th scope="col" role="columnheader">OBJETIVO</th>
+                                    <th scope="col" role="columnheader" class="historial__tipo">TIPO</th>
+                                    <th scope="col" role="columnheader" class="historial__decision">DECISIÓN</th>
+                                    <th scope="col" role="columnheader" class="historial__comentario">@(_filtro == Filtro.Resenas ? "RESEÑA" : "COMENTARIO")</th>
+                                    <th scope="col" role="columnheader" class="historial__moderador">MODERADOR</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody role="rowgroup">
                                 @foreach (var f in _filas)
                                 {
-                                    <tr>
-                                        <td class="t-small texto-2 historial__fecha">@Fecha(f.Fecha)</td>
-                                        <td class="t-body-fuerte">@f.Objetivo</td>
-                                        <td class="t-small historial__tipo">@f.Tipo</td>
-                                        <td class="historial__decision"><Chip Texto="@f.Decision" Variante="@(f.Positiva ? "exito-suave" : "error-suave")" Icono="@(f.Positiva ? "check-circulo-exito-12" : "x-circulo-error-12")" Clase="chip--estado" /></td>
-                                        <td class="t-small historial__comentario">
+                                    <tr role="row">
+                                        <td role="cell" class="t-small texto-2 historial__fecha">@Fecha(f.Fecha)</td>
+                                        <td role="cell" class="t-body-fuerte historial__objetivo">@f.Objetivo</td>
+                                        <td role="cell" class="t-small historial__tipo">@f.Tipo</td>
+                                        <td role="cell" class="historial__decision"><Chip Texto="@f.Decision" Variante="@(f.Positiva ? "exito-suave" : "error-suave")" Icono="@(f.Positiva ? "check-circulo-exito-12" : "x-circulo-error-12")" Clase="chip--estado" /></td>
+                                        <td role="cell" class="t-small historial__comentario @(f.Comentario == null ? "historial__comentario--vacio" : "")">
                                             <span>@(f.Comentario ?? "—")</span>
                                             @if (f.Resena is { } oculta && SigueOculta(oculta))
                                             {
@@ -81,7 +81,7 @@
                                                        OnClick="() => MostrarAsync(oculta)" aria-label="@($"Volver a mostrar: {f.Objetivo}")" />
                                             }
                                         </td>
-                                        <td class="t-small texto-2 historial__moderador">@f.Moderador</td>
+                                        <td role="cell" class="t-small texto-2 historial__moderador">@f.Moderador</td>
                                     </tr>
                                 }
                             </tbody>

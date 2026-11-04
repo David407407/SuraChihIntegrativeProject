@@ -82,6 +82,7 @@ namespace BackendLogica.Datos
             if (mensajeMySql.Contains("uq_user_email")) return "Ese correo ya está registrado.";
             if (mensajeMySql.Contains("uq_user_username")) return "Ese nombre de usuario ya está ocupado.";
             if (mensajeMySql.Contains("uq_evrev_once") || mensajeMySql.Contains("uq_plrev_once")) return "Ya dejaste una reseña aquí.";
+            if (mensajeMySql.Contains("uq_rep_once")) return "Ya reportaste esto.";
             if (mensajeMySql.Contains("PRIMARY") && mensajeMySql.Contains("organizer_profile")) return "Ya enviaste una solicitud de organizador.";
             return "Ese registro ya existe.";
         }

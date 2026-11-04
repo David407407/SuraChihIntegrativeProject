@@ -129,8 +129,9 @@ namespace Interfaz.Estado
         public void Reportar(TipoObjetivoReporte tipo, int objetivoId) =>
             _ = Abrir<ModalReportar>(new Dictionary<string, object?> { ["Tipo"] = tipo, ["ObjetivoId"] = objetivoId });
 
-        /// <summary>"Modal / Reporte enviado".</summary>
-        public void ReporteEnviado() => _ = Abrir<ModalReporteEnviado>();
+        /// <summary>"Modal / Reporte enviado". Con <paramref name="repetido"/>: "Ya reportaste esto".</summary>
+        public void ReporteEnviado(bool repetido = false) =>
+            _ = Abrir<ModalReporteEnviado>(new Dictionary<string, object?> { ["Repetido"] = repetido });
 
         // ---------------------------------------------------------------- Moderación (WBS 4.3)
 

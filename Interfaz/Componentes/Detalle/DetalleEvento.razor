@@ -88,9 +88,12 @@
                 break;
         }
 
-        <button type="button" class="boleto__enlace t-small texto-2" @onclick="() => Acciones.Reportar(TipoObjetivoReporte.Evento, E.Id)">
-            <Icono Nombre="bandera" Caja="12" /><span>Reportar evento</span>
-        </button>
+        @if (E.OrganizadorId != Sesion.Usuario?.Id)
+        {
+            <button type="button" class="boleto__enlace t-small texto-2" @onclick="() => Acciones.ReportarAsync(TipoObjetivoReporte.Evento, E.Id)">
+                <Icono Nombre="bandera" Caja="12" /><span>Reportar evento</span>
+            </button>
+        }
     </aside>
 </div>
 
