@@ -240,3 +240,73 @@ export async function compartirSistema(titulo, texto, url) {
     return error?.name === 'AbortError';
   }
 }
+
+// ---------------------------------------------------------------------
+// Filas de tarjetas del Home (FilaTarjetas.razor)
+// ---------------------------------------------------------------------
+
+/**
+ * Prepara una fila deslizable: marca su sección con data-inicio / data-fin (las flechas se apagan en las
+ * orillas) y deja arrastrarla con el mouse. El touchpad y Shift + rueda ya la mueven solos. Si ya estaba
+ * conectada no hace nada.
+ */
+export function conectarPista(pista) {
+  if (!pista || pista.dataset.conectada) return;
+  pista.dataset.conectada = '1';
+  const fila = pista.closest('.fila') ?? pista.parentElement;
+
+  const actualizar = () => {
+    const inicio = pista.scrollLeft <= 4;
+    const fin = pista.scrollLeft + pista.clientWidth >= pista.scrollWidth - 4;
+    fila.toggleAttribute('data-inicio', inicio);
+    fila.toggleAttribute('data-fin', fin);
+  };
+  pista.addEventListener('scroll', actualizar, { passive: true });
+  new ResizeObserver(actualizar).observe(pista);
+  actualizar();
+
+  // Arrastrar con el mouse (en pantallas táctiles el dedo ya desliza solo).
+  let inicioX = 0, inicioScroll = 0, abajo = false, arrastro = false;
+  pista.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    abajo = true;
+    arrastro = false;
+    inicioX = e.clientX;
+    inicioScroll = pista.scrollLeft;
+  });
+  pista.addEventListener('pointermove', (e) => {
+    if (!abajo) return;
+    const dx = e.clientX - inicioX;
+    if (!arrastro && Math.abs(dx) < 6) return;   // un clic normal no es arrastre
+    if (!arrastro) {
+      arrastro = true;
+      pista.classList.add('fila__pista--arrastrando');
+      pista.setPointerCapture(e.pointerId);
+    }
+    pista.scrollLeft = inicioScroll - dx;
+  });
+  const soltar = (e) => {
+    if (!abajo) return;
+    abajo = false;
+    if (arrastro) {
+      pista.classList.remove('fila__pista--arrastrando');
+      if (pista.hasPointerCapture?.(e.pointerId)) pista.releasePointerCapture(e.pointerId);
+    }
+  };
+  pista.addEventListener('pointerup', soltar);
+  pista.addEventListener('pointercancel', soltar);
+  // Al soltar después de arrastrar, ese clic no abre la tarjeta.
+  pista.addEventListener('click', (e) => {
+    if (!arrastro) return;
+    arrastro = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+}
+
+/** Flechas ‹ ›: mueve la fila casi una pantalla (deja ver un pedazo de la última tarjeta). */
+export function moverPista(pista, direccion) {
+  if (!pista) return;
+  const paso = Math.max(pista.clientWidth * 0.8, 300);
+  pista.scrollBy({ left: direccion * paso, behavior: reducido() ? 'auto' : 'smooth' });
+}

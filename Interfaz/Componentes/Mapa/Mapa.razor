@@ -22,7 +22,7 @@
 @inject InteropJs Js
 
 <sc-mapa @ref="_elemento" class="@Clase" lat="@Coordenada(Lat)" lng="@Coordenada(Lng)" titulo="@Titulo" zoom="@Zoom"
-         arrastrable="@Arrastrable" aria-label="@AriaLabel"></sc-mapa>
+         arrastrable="@Arrastrable" agrupar="@Agrupar" aria-label="@AriaLabel"></sc-mapa>
 
 @code {
     [Parameter] public decimal? Lat { get; set; }
@@ -33,6 +33,8 @@
     [Parameter] public int? Zoom { get; set; }
     /// <summary>El pin se puede mover; un clic en el mapa lo coloca ahí.</summary>
     [Parameter] public bool Arrastrable { get; set; }
+    /// <summary>Junta los pines cercanos en un círculo con el número (pantalla Mapa, con muchos pines).</summary>
+    [Parameter] public bool Agrupar { get; set; }
     [Parameter] public string? AriaLabel { get; set; }
     [Parameter] public string? Clase { get; set; }
 
