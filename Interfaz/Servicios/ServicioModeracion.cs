@@ -242,7 +242,8 @@ namespace Interfaz.Servicios
         }
 
         /// <summary>"Volver a mostrar" una reseña oculta. Queda en el historial de reseñas.</summary>
-        public Task MostrarResenaAsync(TipoResena tipo, int resenaId) =>
+        /// <returns>false si ya estaba visible (otro moderador se adelantó).</returns>
+        public Task<bool> MostrarResenaAsync(TipoResena tipo, int resenaId) =>
             bd.Resenas.CambiarVisibilidadAsync(Moderador().Id, tipo, resenaId, false);
 
         // ---------------------------------------------------------------- Historial
@@ -258,7 +259,7 @@ namespace Interfaz.Servicios
             return new DatosHistorial<RegistroModeracion>(filas.Result, total.Result, conteos.Result);
         }
 
-        /// <summary>"Reseñas moderadas" del historial. Solo un supermoderador: BackendLogica revisa el permiso.</summary>
+        /// <summary>"Reseñas moderadas" del historial: un supermoderador ve todo y un moderador solo lo suyo (lo decide BackendLogica).</summary>
         public async Task<DatosHistorial<RegistroResena>> ObtenerHistorialResenasAsync(int limite)
         {
             int moderadorId = Moderador().Id;

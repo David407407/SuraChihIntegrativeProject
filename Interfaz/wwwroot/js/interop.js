@@ -96,6 +96,12 @@ export function escucharEsc(id, puente) {
   dialogo.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') dialogo.puente?.invokeMethodAsync('PedirCierre');
   }, true);
+  // Con el foco fuera del diálogo (en <body>) Esc no pasa por ese keydown: el navegador lo cierra por su cuenta y
+  // la app lo seguiría creyendo abierto. PedirCierre se puede repetir sin problema: si ya está cerrando, no hace nada.
+  dialogo.shadowRoot?.querySelector('dialog')?.addEventListener('cancel', (e) => {
+    e.preventDefault();
+    dialogo.puente?.invokeMethodAsync('PedirCierre');
+  });
 }
 
 /** Regresa al principio un FluentDialog que se desplaza por dentro (la hoja de detalle). */
@@ -136,7 +142,8 @@ export function enfocarPrimero(contenedor) {
     if (!contenedor || contenedor.contains(document.activeElement)) return;   // un campo ya pidió el foco
     // Los campos y botones de Fluent (fluent-text-input, fluent-button) pasan el foco a su control interno.
     const primero = contenedor.querySelector('[autofocus], input:not([type=hidden]):not([disabled]), fluent-text-input:not([disabled])')
-      ?? contenedor.querySelector('button:not([data-cerrar-modal]), fluent-button:not([data-cerrar-modal])');
+      ?? contenedor.querySelector('button:not([data-cerrar-modal]), fluent-button:not([data-cerrar-modal])')
+      ?? contenedor.querySelector('button, fluent-button');   // solo tiene "Listo" o "Entendido"
     primero?.focus({ preventScroll: true });
   });
 }

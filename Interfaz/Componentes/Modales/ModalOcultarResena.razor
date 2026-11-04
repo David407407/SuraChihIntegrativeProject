@@ -15,7 +15,8 @@
 <AvisoModal Errores="_errores" />
 <div class="modal__botones">
     <Boton Texto="Ocultar reseña" Variante="peligro" Icono="ojo-tachado-blanco-16" Clase="modal__ancho" Ocupado="_enviando" OnClick="OcultarAsync" />
-    <Boton Texto="Cancelar" Variante="secundario" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+    @* El foco empieza aquí: un Enter sin querer no oculta la reseña. *@
+    <Boton Texto="Cancelar" Variante="secundario" Clase="modal__ancho" autofocus data-cerrar-modal OnClick="() => Modales.Cerrar()" />
 </div>
 
 @code {

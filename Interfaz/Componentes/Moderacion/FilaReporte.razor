@@ -2,7 +2,9 @@
   Fila de "Moderación / Reportes" de Figma: bandera, tipo y motivo, el evento o lugar (el título lo abre), la reseña
   y lo que escribieron quienes reportaron. Los reportes repetidos del mismo objetivo van juntos en una fila y las
   acciones los cierran todos. Abierto: "Descartar" y, según el tipo, "Ocultar reseña" o "Ver evento" / "Ver lugar" y
-  "Marcar resuelto" (ya se revisó). Cerrado: "Reabrir" y, si la reseña sigue oculta, "Volver a mostrar".
+  "Marcar resuelto" (ya se revisó). Si reabrieron el reporte de una reseña que sigue oculta: "Mantener oculta" o
+  "Volver a mostrar" (descartarlo dejaría la reseña oculta sin motivo). Cerrado: "Reabrir" y, si sigue oculta,
+  "Volver a mostrar".
 *@
 @inject Acciones Acciones
 
@@ -18,6 +20,10 @@
             @if (G.Reportes.Count > 1)
             {
                 <Chip Texto="@($"{G.Reportes.Count} reportes")" Variante="sol-suave" Clase="chip--estado" />
+            }
+            @if (EsResena && P.ResenaOculta)
+            {
+                <Chip Texto="Reseña oculta" Variante="error-suave" Icono="x-circulo-error-12" Clase="chip--estado" />
             }
             @if (Abierto && Espera.TotalHours >= HorasLimite)
             {
@@ -37,7 +43,6 @@
                 <p class="t-caption texto-2">
                     Reseña de @@@P.ResenaAutor ·
                     <span role="img" aria-label="@($"{P.ResenaCalificacion} de 5 estrellas")">@(new string('★', P.ResenaCalificacion ?? 0))</span>
-                    @if (P.ResenaOculta) { <text> · Oculta</text> }
                 </p>
                 @if (P.ResenaComentario is { } comentario)
                 {
@@ -66,7 +71,12 @@
         </p>
     </div>
     <div class="fila-reporte__acciones">
-        @if (Abierto)
+        @if (Abierto && EsResena && P.ResenaOculta)
+        {
+            <Boton Texto="Volver a mostrar" Variante="secundario" Tamano="s" Icono="ojo-tinta-16" Deshabilitado="Ocupado" OnClick="AlMostrar" aria-label="@($"Volver a mostrar: {Titulo}")" />
+            <Boton Texto="Mantener oculta" Variante="oscuro" Tamano="s" Icono="check-blanco-16" Deshabilitado="Ocupado" OnClick="AlResolver" aria-label="@($"Mantener oculta: {Titulo}")" />
+        }
+        else if (Abierto)
         {
             <Boton Texto="Descartar" Variante="fantasma" Tamano="s" Deshabilitado="Ocupado" OnClick="AlDescartar" aria-label="@($"Descartar: {Titulo}")" />
             @if (EsResena)
@@ -75,7 +85,7 @@
             }
             else
             {
-                <Boton Texto="@(P.EventoId != null ? "Ver evento" : "Ver lugar")" Variante="secundario" Tamano="s" Icono="ojo-tinta-16" OnClick="VerObjetivo" aria-label="@($"Ver: {P.ObjetivoNombre}")" />
+                <Boton Texto="@VerTexto" Variante="secundario" Tamano="s" Icono="ojo-tinta-16" OnClick="VerObjetivo" aria-label="@($"{VerTexto}: {P.ObjetivoNombre}")" />
                 <Boton Texto="Marcar resuelto" Variante="oscuro" Tamano="s" Icono="check-blanco-16" Deshabilitado="Ocupado" OnClick="AlResolver" aria-label="@($"Marcar resuelto: {Titulo}")" />
             }
         }
@@ -110,6 +120,7 @@
     private ReporteDetalle P => G.Principal;
     private bool Abierto => P.Reporte.Estado == EstadoReporte.Abierto;
     private bool EsResena => P.Reporte.Tipo is TipoObjetivoReporte.ResenaEvento or TipoObjetivoReporte.ResenaLugar;
+    private string VerTexto => P.EventoId != null ? "Ver evento" : "Ver lugar";
     private string Titulo => EsResena ? $"Reseña en {P.ObjetivoNombre}" : P.ObjetivoNombre;
 
     /// <summary>Lo que lleva esperando el reporte más antiguo del grupo.</summary>

@@ -1,7 +1,7 @@
 @*
   "Moderación / Historial" de Figma: cada aprobación o rechazo (tabla moderation) con fecha, comentario y moderador.
-  Las píldoras Todo / Aprobados / Rechazados filtran en la BD. Un supermoderador ve además "Reseñas moderadas"
-  (tabla review_moderation), con la misma tabla y "Volver a mostrar"; BackendLogica vuelve a revisar ese permiso.
+  Las píldoras Todo / Aprobados / Rechazados filtran en la BD. "Reseñas moderadas" (tabla review_moderation), con la
+  misma tabla y "Volver a mostrar": un supermoderador ve todo y un moderador solo lo suyo; lo decide BackendLogica.
 *@
 @page "/moderacion/historial"
 @implements IDisposable
@@ -29,10 +29,7 @@
                 <Pildora Texto="Todo" Activa="_filtro == Filtro.Todo" OnClick="() => ElegirAsync(Filtro.Todo)" />
                 <Pildora Texto="Aprobados" Activa="_filtro == Filtro.Aprobados" OnClick="() => ElegirAsync(Filtro.Aprobados)" />
                 <Pildora Texto="Rechazados" Activa="_filtro == Filtro.Rechazados" OnClick="() => ElegirAsync(Filtro.Rechazados)" />
-                @if (Sesion.Usuario?.EsSuperModerador == true)
-                {
-                    <Pildora Texto="Reseñas moderadas" Activa="_filtro == Filtro.Resenas" OnClick="() => ElegirAsync(Filtro.Resenas)" />
-                }
+                <Pildora Texto="@TextoResenas" Activa="_filtro == Filtro.Resenas" OnClick="() => ElegirAsync(Filtro.Resenas)" />
             </div>
 
             <p class="solo-lectores" role="status">@Anuncio</p>
@@ -125,7 +122,18 @@
 
     private bool EsModerador => Sesion.Usuario?.EsModerador == true;
 
-    private string Anuncio => _error ? "No se pudo cargar el historial." : _filas == null ? "" : $"Mostrando {_filas.Count} de {_total}.";
+    private string Anuncio => _error ? "No se pudo cargar el historial." : _filas == null ? "" : $"{NombreFiltro}: mostrando {_filas.Count} de {_total}.";
+
+    private string NombreFiltro => _filtro switch
+    {
+        Filtro.Aprobados => "Aprobados",
+        Filtro.Rechazados => "Rechazados",
+        Filtro.Resenas => TextoResenas,
+        _ => "Todo",
+    };
+
+    private bool EsSuperModerador => Sesion.Usuario?.EsSuperModerador == true;
+    private string TextoResenas => EsSuperModerador ? "Reseñas moderadas" : "Mis reseñas moderadas";
 
     private bool SigueOculta(RegistroResena r) => _ocultasVigentes.Contains(r.Id);
 
@@ -170,8 +178,8 @@
         _ocupado = true;
         try
         {
-            await Servicio.MostrarResenaAsync(r.Tipo, r.ResenaId);
-            Avisos.Mostrar("La reseña volvió a mostrarse.");
+            bool cambio = await Servicio.MostrarResenaAsync(r.Tipo, r.ResenaId);
+            Avisos.Mostrar(cambio ? "La reseña volvió a mostrarse." : "Esa reseña ya estaba visible.", cambio ? TipoAviso.Exito : TipoAviso.Info);
             await CargarAsync();
         }
         catch (Exception ex)

@@ -63,10 +63,10 @@
                     {
                         <FilaReporte @key="(g.Principal.Reporte.Tipo, g.Principal.Reporte.ObjetivoId)" G="g" Ocupado="_ocupado"
                                      AlDescartar='() => DecidirAsync(g, () => Servicio.CerrarReportesAsync(g, EstadoReporte.Descartado), "Reporte descartado.")'
-                                     AlResolver='() => DecidirAsync(g, () => Servicio.CerrarReportesAsync(g, EstadoReporte.Resuelto), "Reporte marcado como resuelto.")'
+                                     AlResolver='() => DecidirAsync(g, () => Servicio.CerrarReportesAsync(g, EstadoReporte.Resuelto), g.Principal.ResenaOculta ? "Reporte cerrado. La reseña sigue oculta." : "Reporte marcado como resuelto.")'
                                      AlOcultar="() => OcultarAsync(g)"
                                      AlReabrir='() => DecidirAsync(g, () => Servicio.ReabrirReportesAsync(g), "Reporte reabierto.")'
-                                     AlMostrar='() => DecidirAsync(g, () => MostrarAsync(g), "La reseña volvió a mostrarse.")' />
+                                     AlMostrar="() => MostrarAsync(g)" />
                     }
                 </div>
             }
@@ -91,9 +91,16 @@
     /// <summary>Lo que oyen los lectores de pantalla al cambiar la lista.</summary>
     private string Anuncio => _error ? "No se pudieron cargar los reportes." : _lista == null ? "" : _lista.Count switch
     {
-        0 => "No hay reportes en esta lista.",
-        1 => "1 fila de reportes.",
-        var n => $"{n} filas de reportes.",
+        0 => $"{NombreEstado}: no hay reportes.",
+        1 => $"{NombreEstado}: 1 fila de reportes.",
+        var n => $"{NombreEstado}: {n} filas de reportes.",
+    };
+
+    private string NombreEstado => _estado switch
+    {
+        EstadoReporte.Abierto => "Abiertos",
+        EstadoReporte.Resuelto => "Resueltos",
+        _ => "Descartados",
     };
 
     protected override async Task OnInitializedAsync()
@@ -147,11 +154,12 @@
         }
     }
 
-    private Task MostrarAsync(GrupoReportes g)
+    /// <summary>Si el reporte sigue abierto, se queda abierto: falta decidir qué hacer con él.</summary>
+    private Task MostrarAsync(GrupoReportes g) => DecidirAsync(g, async () =>
     {
         TipoResena tipo = g.Principal.Reporte.Tipo == TipoObjetivoReporte.ResenaEvento ? TipoResena.Evento : TipoResena.Lugar;
-        return Servicio.MostrarResenaAsync(tipo, g.Principal.Reporte.ObjetivoId);
-    }
+        await Servicio.MostrarResenaAsync(tipo, g.Principal.Reporte.ObjetivoId);
+    }, g.Principal.Reporte.Estado == EstadoReporte.Abierto ? "La reseña volvió a mostrarse. El reporte sigue abierto." : "La reseña volvió a mostrarse.");
 
     /// <summary>La confirmación ya guardó; aquí solo se avisa y se actualiza la lista.</summary>
     private async Task OcultarAsync(GrupoReportes g)

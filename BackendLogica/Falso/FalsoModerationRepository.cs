@@ -65,20 +65,12 @@ namespace BackendLogica.Falso
         public Task<int> ContarHistorialAsync(DecisionModeracion? decision = null, TipoObjetivoModeracion? tipo = null, CancellationToken ct = default) =>
             Hacer(a => a.Moderaciones.Count(m => Coincide(m, decision, tipo)), ct);
 
-        public Task<List<RegistroResena>> ListarHistorialResenasAsync(int superModeradorId, int limite = 50, CancellationToken ct = default) =>
-            Hacer(a =>
-            {
-                ExigirSuperModerador(a, superModeradorId);
-                return a.AccionesResenas.OrderByDescending(h => h.DecididoEn).ThenByDescending(h => h.Id)
-                    .Take(limite).Select(h => ADatos(a, h)).ToList();
-            }, ct);
+        public Task<List<RegistroResena>> ListarHistorialResenasAsync(int moderadorId, int limite = 50, CancellationToken ct = default) =>
+            Hacer(a => AccionesVisibles(a, moderadorId).OrderByDescending(h => h.DecididoEn).ThenByDescending(h => h.Id)
+                .Take(limite).Select(h => ADatos(a, h)).ToList(), ct);
 
-        public Task<int> ContarHistorialResenasAsync(int superModeradorId, CancellationToken ct = default) =>
-            Hacer(a =>
-            {
-                ExigirSuperModerador(a, superModeradorId);
-                return a.AccionesResenas.Count;
-            }, ct);
+        public Task<int> ContarHistorialResenasAsync(int moderadorId, CancellationToken ct = default) =>
+            Hacer(a => AccionesVisibles(a, moderadorId).Count(), ct);
 
         public Task<RegistroModeracion?> ObtenerUltimaDecisionAsync(TipoObjetivoModeracion tipo, int objetivoId, CancellationToken ct = default) =>
             Hacer(a => a.Moderaciones.Where(m => m.Tipo == tipo && m.ObjetivoId == objetivoId)
@@ -105,10 +97,13 @@ namespace BackendLogica.Falso
         private static bool Coincide(FilaModeracion m, DecisionModeracion? decision, TipoObjetivoModeracion? tipo) =>
             (decision == null || m.Decision == decision) && (tipo == null || m.Tipo == tipo);
 
-        private static void ExigirSuperModerador(AlmacenFalso a, int usuarioId)
+        /// <summary>Un supermoderador ve todo el historial de reseñas; un moderador, solo lo suyo.</summary>
+        private static IEnumerable<FilaAccionResena> AccionesVisibles(AlmacenFalso a, int moderadorId)
         {
-            if (a.Usuario(usuarioId) is not { EsSuperModerador: true, Activo: true })
-                throw new ReglaNegocioException(Repositorios.ModeracionDB.SoloSuperHistorial);
+            var usuario = a.Usuario(moderadorId);
+            if (usuario is not { EsModerador: true, Activo: true })
+                throw new ReglaNegocioException(ConexionDB.SoloModeradores);
+            return a.AccionesResenas.Where(h => usuario.EsSuperModerador || h.ModeradorId == moderadorId);
         }
 
         private static RegistroModeracion ADatos(AlmacenFalso a, FilaModeracion m) =>

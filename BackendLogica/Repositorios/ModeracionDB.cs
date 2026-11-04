@@ -26,7 +26,10 @@ namespace BackendLogica.Repositorios
             LEFT JOIN organizer_profile o ON o.user_id = m.organizer_id
             """;
 
-        public const string SoloSuperHistorial = "Solo un supermoderador puede ver el historial de reseñas ocultas.";
+        /// <summary>Un supermoderador ve todo el historial de reseñas; un moderador, solo lo suyo.</summary>
+        private const string FiltroHistorialResenas = """
+            (h.mod_id = @moderadorId OR EXISTS (SELECT 1 FROM user yo WHERE yo.id = @moderadorId AND yo.is_super_mod))
+            """;
 
         public ModeracionDB(ConfiguracionBD? configuracion = null) : base(configuracion) { }
 
@@ -71,12 +74,15 @@ namespace BackendLogica.Repositorios
         public async Task<int> ContarHistorialAsync(DecisionModeracion? decision = null, TipoObjetivoModeracion? tipo = null, CancellationToken ct = default) =>
             await EscalarAsync<int>($"SELECT COUNT(*) FROM moderation m WHERE {FiltroHistorial(tipo)}", new { decision }, ct);
 
-        /// <summary>Historial de reseñas ocultadas o vueltas a mostrar, las más recientes primero.</summary>
-        /// <exception cref="ReglaNegocioException">No es supermoderador.</exception>
-        public async Task<List<RegistroResena>> ListarHistorialResenasAsync(int superModeradorId, int limite = 50, CancellationToken ct = default)
+        /// <summary>
+        /// Reseñas ocultadas o vueltas a mostrar, las más recientes primero.
+        /// Un supermoderador ve todas; un moderador, solo las acciones suyas.
+        /// </summary>
+        /// <exception cref="ReglaNegocioException">No es moderador.</exception>
+        public async Task<List<RegistroResena>> ListarHistorialResenasAsync(int moderadorId, int limite = 50, CancellationToken ct = default)
         {
-            await ExigirSuperModeradorAsync(superModeradorId, SoloSuperHistorial, ct);
-            return await ConsultarAsync("""
+            await ExigirModeradorAsync(moderadorId, ct);
+            return await ConsultarAsync($"""
                 SELECT h.id, h.mod_id, h.action, h.decided_at, h.event_review_id, h.place_review_id,
                        moderador.username AS mod_name, autor.username AS autor_nombre,
                        COALESCE(er.event_id, pr.place_id) AS objetivo_id,
@@ -90,6 +96,7 @@ namespace BackendLogica.Repositorios
                 LEFT JOIN event e ON e.id = er.event_id
                 LEFT JOIN place p ON p.id = pr.place_id
                 JOIN user autor ON autor.id = COALESCE(er.user_id, pr.user_id)
+                WHERE {FiltroHistorialResenas}
                 ORDER BY h.decided_at DESC, h.id DESC
                 LIMIT @limite
                 """, r => new RegistroResena(
@@ -97,15 +104,15 @@ namespace BackendLogica.Repositorios
                     r.EsNulo("event_review_id") ? TipoResena.Lugar : TipoResena.Evento,
                     r.EnteroONulo("event_review_id") ?? r.Entero("place_review_id"),
                     r.Entero("objetivo_id"), r.Texto("objetivo_nombre"), r.Texto("autor_nombre"), r.Entero("calificacion"),
-                    r.TextoONulo("comentario"), r.Enum<AccionResena>("action"), r.Fecha("decided_at")), new { limite }, ct);
+                    r.TextoONulo("comentario"), r.Enum<AccionResena>("action"), r.Fecha("decided_at")), new { moderadorId, limite }, ct);
         }
 
-        /// <summary>Total del historial de reseñas.</summary>
-        /// <exception cref="ReglaNegocioException">No es supermoderador.</exception>
-        public async Task<int> ContarHistorialResenasAsync(int superModeradorId, CancellationToken ct = default)
+        /// <summary>Total de lo que ese moderador puede ver en el historial de reseñas.</summary>
+        /// <exception cref="ReglaNegocioException">No es moderador.</exception>
+        public async Task<int> ContarHistorialResenasAsync(int moderadorId, CancellationToken ct = default)
         {
-            await ExigirSuperModeradorAsync(superModeradorId, SoloSuperHistorial, ct);
-            return await EscalarAsync<int>("SELECT COUNT(*) FROM review_moderation", ct: ct);
+            await ExigirModeradorAsync(moderadorId, ct);
+            return await EscalarAsync<int>($"SELECT COUNT(*) FROM review_moderation h WHERE {FiltroHistorialResenas}", new { moderadorId }, ct);
         }
 
         /// <summary>"Ver motivo" del panel del organizador: la decisión más reciente sobre ese objetivo.</summary>
