@@ -42,6 +42,10 @@ namespace Interfaz.Estado
             public static string EstadisticasEvento(int id) => $"organizador/evento/{id}/estadisticas";
             /// <summary>"Moderación / Organizadores": solicitudes pendientes.</summary>
             public const string ModeracionOrganizadores = "moderacion/organizadores";
+            /// <summary>"Moderación / Reportes".</summary>
+            public const string ModeracionReportes = "moderacion/reportes";
+            /// <summary>"Moderación / Historial".</summary>
+            public const string ModeracionHistorial = "moderacion/historial";
             /// <summary>La misma pantalla de "Publicar evento", con los datos de un evento propio.</summary>
             public static string EditarEvento(int id) => $"organizador/evento/{id}/editar";
         }
@@ -71,6 +75,13 @@ namespace Interfaz.Estado
         {
             if (sesion.Iniciada) Proximamente(que);
             else modales.RequiereSesion();
+        }
+
+        /// <summary>"Reportar" de un evento, lugar o reseña. Sin sesión: modal "Inicia sesión para continuar".</summary>
+        public void Reportar(TipoObjetivoReporte tipo, int objetivoId)
+        {
+            if (sesion.Iniciada) modales.Reportar(tipo, objetivoId);
+            else modales.RequiereSesion("Inicia sesión para reportar.");
         }
 
         // ---------------------------------------------------------------- Navegación

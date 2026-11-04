@@ -37,11 +37,18 @@ namespace BackendLogica.Falso
         public Task<List<Reporte>> ListarAsync(EstadoReporte estado = EstadoReporte.Abierto, CancellationToken ct = default) =>
             Hacer(a => a.Reportes.Where(r => r.Estado == estado).OrderBy(r => r.CreadoEn).Select(r => r.ADatos()).ToList(), ct);
 
+        public Task<List<ReporteDetalle>> ListarDetalleAsync(EstadoReporte estado = EstadoReporte.Abierto, CancellationToken ct = default) =>
+            Hacer(a => a.Reportes.Where(r => r.Estado == estado)
+                .OrderByDescending(r => r.CreadoEn).ThenByDescending(r => r.Id)
+                .Select(r => ADetalle(a, r)).ToList(), ct);
+
         public Task<bool> ResolverAsync(int reporteId, int moderadorId, EstadoReporte resultado, CancellationToken ct = default) =>
             Hacer(a =>
             {
                 if (resultado == EstadoReporte.Abierto)
                     throw new DatosInvalidosException("Elige si el reporte se resolvió o se descarta.");
+                if (a.Usuario(moderadorId) is not { EsModerador: true, Activo: true })
+                    throw new ReglaNegocioException(ConexionDB.SoloModeradores);
                 var fila = a.Reportes.FirstOrDefault(r => r.Id == reporteId && r.Estado == EstadoReporte.Abierto);
                 if (fila == null) return false;
                 fila.Estado = resultado;
@@ -49,5 +56,23 @@ namespace BackendLogica.Falso
                 fila.ResueltoEn = Ahora;
                 return true;
             }, ct);
+
+        private static ReporteDetalle ADetalle(AlmacenFalso a, FilaReporte r)
+        {
+            string reportante = a.Usuario(r.ReportanteId)!.NombreUsuario;
+            switch (r.Tipo)
+            {
+                case TipoObjetivoReporte.Evento:
+                    return new ReporteDetalle(r.ADatos(), reportante, r.ObjetivoId, null, a.Evento(r.ObjetivoId)!.Titulo);
+                case TipoObjetivoReporte.Lugar:
+                    return new ReporteDetalle(r.ADatos(), reportante, null, r.ObjetivoId, a.Lugar(r.ObjetivoId)!.Nombre);
+            }
+
+            bool deEvento = r.Tipo == TipoObjetivoReporte.ResenaEvento;
+            var resena = a.Resenas.First(f => f.Tipo == (deEvento ? TipoResena.Evento : TipoResena.Lugar) && f.Id == r.ObjetivoId);
+            string objetivo = deEvento ? a.Evento(resena.ObjetivoId)!.Titulo : a.Lugar(resena.ObjetivoId)!.Nombre;
+            return new ReporteDetalle(r.ADatos(), reportante, deEvento ? resena.ObjetivoId : null, deEvento ? null : resena.ObjetivoId, objetivo,
+                a.Usuario(resena.UsuarioId)!.NombreUsuario, resena.Calificacion, resena.Comentario, resena.Oculta);
+        }
     }
 }

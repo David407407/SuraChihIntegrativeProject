@@ -15,7 +15,11 @@ namespace BackendLogica.Contratos
         /// <summary>Bandeja de reportes (por defecto los abiertos, del más antiguo al más nuevo).</summary>
         Task<List<Reporte>> ListarAsync(EstadoReporte estado = EstadoReporte.Abierto, CancellationToken ct = default);
 
+        /// <summary>"Moderación / Reportes": cada reporte con su evento o lugar, los más nuevos primero.</summary>
+        Task<List<ReporteDetalle>> ListarDetalleAsync(EstadoReporte estado = EstadoReporte.Abierto, CancellationToken ct = default);
+
         /// <summary>Cierra un reporte como resuelto o descartado.</summary>
+        /// <exception cref="Datos.ReglaNegocioException">No es moderador.</exception>
         Task<bool> ResolverAsync(int reporteId, int moderadorId, EstadoReporte resultado, CancellationToken ct = default);
     }
 }

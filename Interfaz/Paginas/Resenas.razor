@@ -108,7 +108,7 @@
                                 <p class="t-small texto-2">@resena.Respuesta</p>
                             </div>
                         }
-                        <button type="button" class="resena__reportar t-small texto-2" @onclick='() => Acciones.RequiereSesion("Reportar reseñas")'>
+                        <button type="button" class="resena__reportar t-small texto-2" @onclick="() => Acciones.Reportar(EsEvento ? TipoObjetivoReporte.ResenaEvento : TipoObjetivoReporte.ResenaLugar, resena.Id)">
                             <Icono Nombre="bandera" Caja="12" /><span>Reportar</span>
                         </button>
                     </article>

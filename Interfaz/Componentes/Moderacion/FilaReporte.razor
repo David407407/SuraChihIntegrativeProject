@@ -1,0 +1,106 @@
+@*
+  Fila de "Moderación / Reportes" de Figma: bandera, tipo y motivo, el evento o lugar (el título lo abre),
+  la reseña o los detalles del reporte y quién lo envió. Abierto: "Descartar" y, según el tipo, "Ocultar reseña"
+  o "Ver evento" y "Marcar resuelto". Ya cerrado solo se lee.
+*@
+@inject Acciones Acciones
+
+<article class="fila-reporte">
+    <span class="fila-reporte__insignia"><Icono Nombre="bandera-error-18" Caja="18" /></span>
+    <div class="fila-reporte__info">
+        <div class="fila-reporte__etiquetas">
+            <Chip Texto="@TipoTexto" Variante="fondo" Icono="@TipoIcono" Clase="chip--estado" />
+            <Chip Texto="@MotivoTexto" Variante="error-suave" Icono="alerta-error-12" Clase="chip--estado" />
+        </div>
+        <h2 class="t-card-titulo">
+            <button type="button" class="fila-reporte__titulo" @onclick="VerObjetivo">@Titulo</button>
+        </h2>
+        @if (EsResena)
+        {
+            <p class="t-small texto-2">
+                @@@R.ResenaAutor ·
+                <span role="img" aria-label="@($"{R.ResenaCalificacion} de 5 estrellas")">@(new string('★', R.ResenaCalificacion ?? 0))</span>
+                @if (R.ResenaOculta) { <text> · Oculta</text> }
+            </p>
+            @Cita(R.ResenaComentario ?? "Sin comentario.")
+        }
+        else
+        {
+            <p class="t-small texto-2">@(R.EventoId != null ? "Evento publicado" : "Lugar publicado")</p>
+        }
+        @if (R.Reporte.Detalles is { } detalles)
+        {
+            @Cita(detalles)
+        }
+        <p class="fila-reporte__meta t-caption texto-2">
+            <Icono Nombre="persona-gris-12" Caja="12" />
+            <span>Reportado por @@@R.ReportanteNombre · @Formato.Hace(R.Reporte.CreadoEn).ToLowerInvariant()</span>
+        </p>
+    </div>
+    @if (R.Reporte.Estado == EstadoReporte.Abierto)
+    {
+        <div class="fila-reporte__acciones">
+            <Boton Texto="Descartar" Variante="fantasma" Tamano="s" Deshabilitado="Ocupado" OnClick="AlDescartar" />
+            @if (EsResena)
+            {
+                <Boton Texto="Ocultar reseña" Variante="peligro" Tamano="s" Icono="ojo-tachado-blanco-16" Deshabilitado="Ocupado" OnClick="AlOcultar" />
+            }
+            else
+            {
+                @if (R.EventoId != null)
+                {
+                    <Boton Texto="Ver evento" Variante="secundario" Tamano="s" Icono="ojo-tinta-16" OnClick="VerObjetivo" />
+                }
+                <Boton Texto="Marcar resuelto" Variante="oscuro" Tamano="s" Icono="check-blanco-16" Deshabilitado="Ocupado" OnClick="AlResolver" />
+            }
+        </div>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public ReporteDetalle R { get; set; } = default!;
+    /// <summary>Mientras se guarda una decisión de esta u otra fila.</summary>
+    [Parameter] public bool Ocupado { get; set; }
+    [Parameter] public EventCallback AlDescartar { get; set; }
+    [Parameter] public EventCallback AlResolver { get; set; }
+    [Parameter] public EventCallback AlOcultar { get; set; }
+
+    private bool EsResena => R.Reporte.Tipo is TipoObjetivoReporte.ResenaEvento or TipoObjetivoReporte.ResenaLugar;
+    private string Titulo => EsResena ? $"Reseña en {R.ObjetivoNombre}" : R.ObjetivoNombre;
+
+    private string TipoTexto => R.Reporte.Tipo switch
+    {
+        TipoObjetivoReporte.Evento => "Evento",
+        TipoObjetivoReporte.Lugar => "Lugar",
+        TipoObjetivoReporte.ResenaEvento => "Reseña de evento",
+        _ => "Reseña de lugar",
+    };
+
+    private string TipoIcono => R.Reporte.Tipo switch
+    {
+        TipoObjetivoReporte.Evento => "calendario-tinta-12",
+        TipoObjetivoReporte.Lugar => "ubicacion-tinta-12",
+        _ => "comentario-tinta-12",
+    };
+
+    private string MotivoTexto => R.Reporte.Motivo switch
+    {
+        MotivoReporte.Spam => "Spam",
+        MotivoReporte.Estafa => "Estafa",
+        MotivoReporte.Inapropiado => "Inapropiado",
+        MotivoReporte.InformacionFalsa => "Información falsa",
+        _ => "Otro",
+    };
+
+    private void VerObjetivo()
+    {
+        if (R.EventoId is { } evento) Acciones.VerEvento(evento);
+        else if (R.LugarId is { } lugar) Acciones.VerLugar(lugar);
+    }
+
+    private static RenderFragment Cita(string texto) =>
+        @<blockquote class="fila-reporte__cita">
+            <Icono Nombre="comentario-gris-14" Caja="14" />
+            <p class="t-small">“@texto”</p>
+        </blockquote>;
+}

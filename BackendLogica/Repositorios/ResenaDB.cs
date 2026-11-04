@@ -104,10 +104,33 @@ namespace BackendLogica.Repositorios
             return new ResumenResenas(promedio, cuantas, porEstrellas);
         }
 
-        /// <summary>Un moderador oculta (o vuelve a mostrar) una reseña tras un reporte.</summary>
-        public async Task<bool> CambiarVisibilidadAsync(TipoResena tipo, int resenaId, bool oculta, CancellationToken ct = default) =>
-            await EjecutarAsync($"UPDATE {De(tipo).Resenas} SET is_hidden = @oculta WHERE id = @resenaId",
-                new { resenaId, oculta }, ct) > 0;
+        /// <summary>
+        /// Un moderador oculta (o vuelve a mostrar) una reseña tras un reporte. Queda en el historial de reseñas y,
+        /// al ocultarla, sus reportes abiertos se cierran como resueltos: todo o nada.
+        /// </summary>
+        /// <returns><c>false</c> si no existe o ya estaba así.</returns>
+        /// <exception cref="ReglaNegocioException">No es moderador.</exception>
+        public async Task<bool> CambiarVisibilidadAsync(int moderadorId, TipoResena tipo, int resenaId, bool oculta, CancellationToken ct = default)
+        {
+            await ExigirModeradorAsync(moderadorId, ct);
+            // Misma columna en review_moderation y en report. Es constante: nunca viene del usuario.
+            string columna = tipo == TipoResena.Evento ? "event_review_id" : "place_review_id";
+            return await EnTransaccionAsync(async t =>
+            {
+                if (await t.EjecutarAsync($"UPDATE {De(tipo).Resenas} SET is_hidden = @oculta WHERE id = @resenaId AND is_hidden <> @oculta",
+                        new { resenaId, oculta }) == 0)
+                    return false;
+
+                await t.EjecutarAsync($"INSERT INTO review_moderation (mod_id, {columna}, action) VALUES (@moderadorId, @resenaId, @accion)",
+                    new { moderadorId, resenaId, accion = oculta ? AccionResena.Ocultada : AccionResena.Mostrada });
+                if (oculta)
+                    await t.EjecutarAsync($"""
+                        UPDATE report SET status = 'resolved', resolved_by = @moderadorId, resolved_at = NOW()
+                        WHERE {columna} = @resenaId AND status = 'open'
+                        """, new { moderadorId, resenaId });
+                return true;
+            }, ct);
+        }
 
         private static string? Limpiar(string? texto) => string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
     }

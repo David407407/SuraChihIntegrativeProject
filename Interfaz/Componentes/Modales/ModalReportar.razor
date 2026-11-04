@@ -1,0 +1,80 @@
+@*
+  "Modal / Reportar" de Figma: el motivo (Opcion, uno a la vez), detalles y "Enviar reporte" (rojo) / "Cancelar".
+  Con "Otro motivo" los detalles son obligatorios. Al enviar, cambia a "Reporte enviado". La abre
+  Acciones.Reportar desde el detalle del evento o lugar y desde cada reseña.
+*@
+@inject ServicioReportes Reportes
+@inject Modales Modales
+
+<EncabezadoModal Titulo="Reportar" Texto="@(EsResena ? "¿Qué está mal con esta reseña?" : "¿Qué está mal con esta publicación?")" />
+<EditForm Model="this" OnSubmit="EnviarAsync" class="modal__formulario" novalidate>
+    <div class="reportar__motivos" role="radiogroup" aria-label="Motivo del reporte">
+        @foreach (var (motivo, texto) in Motivos)
+        {
+            <Opcion Texto="@texto" Seleccionada="_motivo == motivo" OnClick="() => _motivo = motivo" />
+        }
+    </div>
+    <AreaTexto Nombre="detalles" Etiqueta="Detalles" EtiquetaVisible="false" Filas="3" Maximo="500"
+               Placeholder="@(_motivo == MotivoReporte.Otro ? "Cuéntanos qué está pasando (obligatorio)" : "Agrega detalles (opcional)")"
+               @bind-Valor="_detalles" Errores="_errores" />
+    <AvisoModal Errores="_errores" />
+    <div class="modal__botones">
+        <Boton Texto="Enviar reporte" Variante="peligro" Icono="bandera-blanca-18" Tipo="submit" Clase="modal__ancho" Ocupado="_enviando" />
+        <Boton Texto="Cancelar" Variante="secundario" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+    </div>
+</EditForm>
+
+@code {
+    private static readonly (MotivoReporte Motivo, string Texto)[] Motivos =
+    [
+        (MotivoReporte.Spam, "Es spam"),
+        (MotivoReporte.Estafa, "Parece una estafa"),
+        (MotivoReporte.Inapropiado, "Contenido inapropiado"),
+        (MotivoReporte.InformacionFalsa, "Información falsa"),
+        (MotivoReporte.Otro, "Otro motivo"),
+    ];
+
+    [Parameter, EditorRequired] public TipoObjetivoReporte Tipo { get; set; }
+    [Parameter, EditorRequired] public int ObjetivoId { get; set; }
+
+    private readonly ErroresFormulario _errores = new();
+    private MotivoReporte? _motivo;
+    private string? _detalles;
+    private bool _enviando;
+
+    private bool EsResena => Tipo is TipoObjetivoReporte.ResenaEvento or TipoObjetivoReporte.ResenaLugar;
+
+    private async Task EnviarAsync()
+    {
+        _errores.Limpiar();
+        if (_motivo is not { } motivo)
+        {
+            _errores.PonerAviso("Elige un motivo.");
+            return;
+        }
+        if (motivo == MotivoReporte.Otro && string.IsNullOrWhiteSpace(_detalles))
+        {
+            _errores.Poner("detalles", "Cuéntanos qué está pasando.");
+            return;
+        }
+
+        _enviando = true;
+        try
+        {
+            await Reportes.EnviarAsync(Tipo, ObjetivoId, motivo, _detalles);
+            Modales.ReporteEnviado();
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion("Inicia sesión para reportar.");
+        }
+        catch (Exception ex)
+        {
+            _errores.PonerAviso(MensajesError.Para(ex));
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+}

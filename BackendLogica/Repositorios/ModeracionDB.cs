@@ -16,6 +16,18 @@ namespace BackendLogica.Repositorios
     /// </remarks>
     public sealed class ModeracionDB : ConexionDB, IModerationRepository
     {
+        /// <summary>Decisión con quién la tomó y sobre qué. El filtro o el orden se agregan al final.</summary>
+        private const string SelectHistorial = """
+            SELECT m.*, u.username AS mod_name, COALESCE(e.title, p.name, o.business_name) AS objetivo_nombre
+            FROM moderation m
+            JOIN user u ON u.id = m.mod_id
+            LEFT JOIN event e ON e.id = m.event_id
+            LEFT JOIN place p ON p.id = m.place_id
+            LEFT JOIN organizer_profile o ON o.user_id = m.organizer_id
+            """;
+
+        public const string SoloSuperHistorial = "Solo un supermoderador puede ver el historial de reseñas ocultas.";
+
         public ModeracionDB(ConfiguracionBD? configuracion = null) : base(configuracion) { }
 
         /// <summary>Aprueba o rechaza. Rechazar exige <paramref name="comentario"/> (se le muestra al autor).</summary>
@@ -46,29 +58,62 @@ namespace BackendLogica.Repositorios
         public Task<int> RechazarAsync(int moderadorId, TipoObjetivoModeracion tipo, int objetivoId, string motivo, CancellationToken ct = default) =>
             DecidirAsync(moderadorId, tipo, objetivoId, DecisionModeracion.Rechazado, motivo, ct);
 
-        /// <summary>Historial de decisiones, las más recientes primero.</summary>
-        public Task<List<RegistroModeracion>> ListarHistorialAsync(int limite = 50, CancellationToken ct = default) =>
-            ConsultarAsync("""
-                SELECT m.*, u.username AS mod_name
-                FROM moderation m JOIN user u ON u.id = m.mod_id
+        /// <summary>Historial de decisiones, las más recientes primero. Sin filtro (null) trae todas.</summary>
+        public Task<List<RegistroModeracion>> ListarHistorialAsync(int limite = 50, DecisionModeracion? decision = null, TipoObjetivoModeracion? tipo = null, CancellationToken ct = default) =>
+            ConsultarAsync($"""
+                {SelectHistorial}
+                WHERE {FiltroHistorial(tipo)}
                 ORDER BY m.decided_at DESC, m.id DESC
                 LIMIT @limite
-                """, Mapear, new { limite }, ct);
+                """, Mapear, new { limite, decision }, ct);
+
+        /// <summary>Total del historial con esos filtros ("Mostrando 7 de 214").</summary>
+        public async Task<int> ContarHistorialAsync(DecisionModeracion? decision = null, TipoObjetivoModeracion? tipo = null, CancellationToken ct = default) =>
+            await EscalarAsync<int>($"SELECT COUNT(*) FROM moderation m WHERE {FiltroHistorial(tipo)}", new { decision }, ct);
+
+        /// <summary>Historial de reseñas ocultadas o vueltas a mostrar, las más recientes primero.</summary>
+        /// <exception cref="ReglaNegocioException">No es supermoderador.</exception>
+        public async Task<List<RegistroResena>> ListarHistorialResenasAsync(int superModeradorId, int limite = 50, CancellationToken ct = default)
+        {
+            await ExigirSuperModeradorAsync(superModeradorId, SoloSuperHistorial, ct);
+            return await ConsultarAsync("""
+                SELECT h.id, h.mod_id, h.action, h.decided_at, h.event_review_id, h.place_review_id,
+                       moderador.username AS mod_name, autor.username AS autor_nombre,
+                       COALESCE(er.event_id, pr.place_id) AS objetivo_id,
+                       COALESCE(e.title, p.name) AS objetivo_nombre,
+                       COALESCE(er.rating, pr.rating) AS calificacion,
+                       COALESCE(er.comment, pr.comment) AS comentario
+                FROM review_moderation h
+                JOIN user moderador ON moderador.id = h.mod_id
+                LEFT JOIN event_review er ON er.id = h.event_review_id
+                LEFT JOIN place_review pr ON pr.id = h.place_review_id
+                LEFT JOIN event e ON e.id = er.event_id
+                LEFT JOIN place p ON p.id = pr.place_id
+                JOIN user autor ON autor.id = COALESCE(er.user_id, pr.user_id)
+                ORDER BY h.decided_at DESC, h.id DESC
+                LIMIT @limite
+                """, r => new RegistroResena(
+                    r.Entero("id"), r.Entero("mod_id"), r.Texto("mod_name"),
+                    r.EsNulo("event_review_id") ? TipoResena.Lugar : TipoResena.Evento,
+                    r.EnteroONulo("event_review_id") ?? r.Entero("place_review_id"),
+                    r.Entero("objetivo_id"), r.Texto("objetivo_nombre"), r.Texto("autor_nombre"), r.Entero("calificacion"),
+                    r.TextoONulo("comentario"), r.Enum<AccionResena>("action"), r.Fecha("decided_at")), new { limite }, ct);
+        }
+
+        /// <summary>Total del historial de reseñas.</summary>
+        /// <exception cref="ReglaNegocioException">No es supermoderador.</exception>
+        public async Task<int> ContarHistorialResenasAsync(int superModeradorId, CancellationToken ct = default)
+        {
+            await ExigirSuperModeradorAsync(superModeradorId, SoloSuperHistorial, ct);
+            return await EscalarAsync<int>("SELECT COUNT(*) FROM review_moderation", ct: ct);
+        }
 
         /// <summary>"Ver motivo" del panel del organizador: la decisión más reciente sobre ese objetivo.</summary>
         public Task<RegistroModeracion?> ObtenerUltimaDecisionAsync(TipoObjetivoModeracion tipo, int objetivoId, CancellationToken ct = default)
         {
-            // Nombre de columna constante según el tipo: nunca viene del usuario.
-            string columna = tipo switch
-            {
-                TipoObjetivoModeracion.Evento => "event_id",
-                TipoObjetivoModeracion.Lugar => "place_id",
-                _ => "organizer_id"
-            };
             return ConsultarUnoAsync($"""
-                SELECT m.*, u.username AS mod_name
-                FROM moderation m JOIN user u ON u.id = m.mod_id
-                WHERE m.{columna} = @objetivoId
+                {SelectHistorial}
+                WHERE m.{Columna(tipo)} = @objetivoId
                 ORDER BY m.decided_at DESC, m.id DESC
                 LIMIT 1
                 """, Mapear, new { objetivoId }, ct);
@@ -93,6 +138,21 @@ namespace BackendLogica.Repositorios
                 WHERE id = @eventoId AND status = 'approved'
                 """, new { eventoId, orden, destacado = orden.HasValue }, ct) > 0;
 
+        /// <summary>Nombre de columna constante según el tipo: nunca viene del usuario.</summary>
+        private static string Columna(TipoObjetivoModeracion tipo) => tipo switch
+        {
+            TipoObjetivoModeracion.Evento => "event_id",
+            TipoObjetivoModeracion.Lugar => "place_id",
+            _ => "organizer_id"
+        };
+
+        /// <summary>Condición para @decision (null = todas) y el tipo elegido.</summary>
+        private static string FiltroHistorial(TipoObjetivoModeracion? tipo)
+        {
+            string filtro = "(@decision IS NULL OR m.decision = @decision)";
+            return tipo is { } t ? $"{filtro} AND m.{Columna(t)} IS NOT NULL" : filtro;
+        }
+
         private static RegistroModeracion Mapear(System.Data.Common.DbDataReader r)
         {
             var (tipo, objetivo) =
@@ -101,7 +161,7 @@ namespace BackendLogica.Repositorios
                 (TipoObjetivoModeracion.Organizador, r.Entero("organizer_id"));
             return new RegistroModeracion(
                 r.Entero("id"), r.Entero("mod_id"), r.Texto("mod_name"), tipo, objetivo,
-                r.Enum<DecisionModeracion>("decision"), r.TextoONulo("comment"), r.Fecha("decided_at"));
+                r.Enum<DecisionModeracion>("decision"), r.TextoONulo("comment"), r.Fecha("decided_at"), r.Texto("objetivo_nombre"));
         }
     }
 }

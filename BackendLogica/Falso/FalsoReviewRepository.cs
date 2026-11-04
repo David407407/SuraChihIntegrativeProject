@@ -83,12 +83,27 @@ namespace BackendLogica.Falso
                 .Where(r => r.ObjetivoId == objetivoId && a.Visible(r))
                 .GroupBy(r => r.Calificacion).Select(g => (g.Key, g.Count()))), ct);
 
-        public Task<bool> CambiarVisibilidadAsync(TipoResena tipo, int resenaId, bool oculta, CancellationToken ct = default) =>
+        public Task<bool> CambiarVisibilidadAsync(int moderadorId, TipoResena tipo, int resenaId, bool oculta, CancellationToken ct = default) =>
             Hacer(a =>
             {
+                if (a.Usuario(moderadorId) is not { EsModerador: true, Activo: true })
+                    throw new ReglaNegocioException(ConexionDB.SoloModeradores);
                 var fila = De(a, tipo).FirstOrDefault(r => r.Id == resenaId);
-                if (fila == null) return false;
+                if (fila == null || fila.Oculta == oculta) return false;
                 fila.Oculta = oculta;
+                a.AccionesResenas.Add(new FilaAccionResena(AlmacenFalso.Siguiente(a.AccionesResenas, h => h.Id), moderadorId, tipo, resenaId,
+                    oculta ? AccionResena.Ocultada : AccionResena.Mostrada, Ahora));
+
+                if (oculta)
+                {
+                    var tipoReporte = tipo == TipoResena.Evento ? TipoObjetivoReporte.ResenaEvento : TipoObjetivoReporte.ResenaLugar;
+                    foreach (var r in a.Reportes.Where(r => r.Tipo == tipoReporte && r.ObjetivoId == resenaId && r.Estado == EstadoReporte.Abierto))
+                    {
+                        r.Estado = EstadoReporte.Resuelto;
+                        r.ResueltoPor = moderadorId;
+                        r.ResueltoEn = Ahora;
+                    }
+                }
                 return true;
             }, ct);
 

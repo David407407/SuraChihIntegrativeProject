@@ -89,6 +89,22 @@ namespace BackendLogica.Datos
                 }
             }, ct);
 
+        public const string SoloModeradores = "Solo los moderadores pueden revisar reportes y ocultar reseñas.";
+
+        /// <summary>Corta la operación si el usuario no es un moderador activo (no hay trigger que lo revise).</summary>
+        protected async Task ExigirModeradorAsync(int usuarioId, CancellationToken ct)
+        {
+            if (await EscalarAsync<int>("SELECT COUNT(*) FROM user WHERE id = @usuarioId AND is_mod AND is_active", new { usuarioId }, ct) == 0)
+                throw new ReglaNegocioException(SoloModeradores);
+        }
+
+        /// <summary>Corta la operación si el usuario no es un supermoderador activo.</summary>
+        protected async Task ExigirSuperModeradorAsync(int usuarioId, string mensaje, CancellationToken ct)
+        {
+            if (await EscalarAsync<int>("SELECT COUNT(*) FROM user WHERE id = @usuarioId AND is_super_mod AND is_active", new { usuarioId }, ct) == 0)
+                throw new ReglaNegocioException(mensaje);
+        }
+
         /// <summary>Abre la conexión, ejecuta el trabajo, la cierra y traduce los errores de MySQL.</summary>
         private async Task<T> ConConexionAsync<T>(Func<MySqlConnection, Task<T>> trabajo, CancellationToken ct)
         {
