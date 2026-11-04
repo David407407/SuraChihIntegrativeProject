@@ -33,5 +33,10 @@ namespace BackendLogica.Falso
         public const string ResenaPropioEvento = "No puedes resenar tu propio evento.";
         public const string ResenaLugarNoDisponible = "Este lugar no esta disponible para resenas.";
         public const string ResenaPropioLugar = "No puedes resenar tu propio lugar.";
+
+        // trg_report_bi
+        public const string ReportePropioEvento = "No puedes reportar tu propio evento.";
+        public const string ReportePropioLugar = "No puedes reportar tu propio lugar.";
+        public const string ReportePropiaResena = "No puedes reportar algo que escribiste.";
     }
 }

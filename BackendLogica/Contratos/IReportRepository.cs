@@ -10,7 +10,12 @@ namespace BackendLogica.Contratos
     {
         /// <summary>Envía un reporte. Con motivo <see cref="MotivoReporte.Otro"/> los detalles son obligatorios.</summary>
         /// <returns>Id del reporte.</returns>
+        /// <exception cref="Datos.DuplicadoException">Esa persona ya reportó este objetivo, aunque el reporte ya se haya cerrado.</exception>
+        /// <exception cref="Datos.ReglaNegocioException">Es su propio evento, lugar o reseña.</exception>
         Task<int> CrearAsync(int reportanteId, TipoObjetivoReporte tipo, int objetivoId, MotivoReporte motivo, string? detalles, CancellationToken ct = default);
+
+        /// <summary>Si esa persona ya reportó este objetivo, en cualquier estado.</summary>
+        Task<bool> YaReportoAsync(int reportanteId, TipoObjetivoReporte tipo, int objetivoId, CancellationToken ct = default);
 
         /// <summary>Bandeja de reportes (por defecto los abiertos, del más antiguo al más nuevo).</summary>
         Task<List<Reporte>> ListarAsync(EstadoReporte estado = EstadoReporte.Abierto, CancellationToken ct = default);

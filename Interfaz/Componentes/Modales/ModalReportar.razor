@@ -1,7 +1,8 @@
 @*
   "Modal / Reportar" de Figma: el motivo (Opcion, uno a la vez), detalles y "Enviar reporte" (rojo) / "Cancelar".
   Con "Otro motivo" los detalles son obligatorios. Al enviar, cambia a "Reporte enviado". La abre
-  Acciones.Reportar desde el detalle del evento o lugar y desde cada reseña.
+  Acciones.ReportarAsync desde el detalle del evento o lugar y desde cada reseña. Si ya lo había reportado (otra
+  ventana, otro dispositivo), cambia a "Ya reportaste esto".
 *@
 @inject ServicioReportes Reportes
 @inject Modales Modales
@@ -74,6 +75,10 @@
         catch (RequiereSesionException)
         {
             Modales.RequiereSesion("Inicia sesión para reportar.");
+        }
+        catch (BackendLogica.Datos.DuplicadoException)
+        {
+            Modales.ReporteEnviado(repetido: true);
         }
         catch (Exception ex)
         {

@@ -1,13 +1,12 @@
 @*
-  Encabezado de las pantallas de moderación: insignia azul de 64px, "Moderación", título, texto y el
-  moderador a la derecha.
+  Encabezado de las pantallas de moderación: compacto, para que el trabajo se vea sin bajar. Insignia azul, título,
+  texto y el moderador a la derecha.
 *@
 <header class="encabezado">
-    <span class="encabezado__insignia"><Icono Nombre="escudo-blanco-26" Caja="26" /></span>
+    <span class="encabezado__insignia"><Icono Nombre="escudo-blanco-22" Caja="22" /></span>
     <div class="encabezado__titulo">
-        <p class="t-small-fuerte encabezado__seccion">Moderación</p>
-        <h1 class="t-h1">@Titulo</h1>
-        <p class="t-body texto-2">@Texto</p>
+        <h1 class="t-h2">@Titulo</h1>
+        <p class="t-small texto-2">@Texto</p>
     </div>
     @if (Usuario is { EsModerador: true } usuario)
     {

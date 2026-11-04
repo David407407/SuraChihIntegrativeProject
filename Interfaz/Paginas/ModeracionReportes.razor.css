@@ -7,5 +7,11 @@
 }
 
 .reportes__pildoras { display: flex; flex-wrap: wrap; gap: 8px; }
-.reportes__lista { display: flex; flex-direction: column; gap: 14px; }
-.reportes__esqueleto { height: 200px; border-radius: var(--radio-l); }
+/* Una sola lista con divisiones (cada fila las pone): se recorre mejor que una pila de tarjetas */
+.reportes__lista {
+  overflow: hidden;
+  border: 1px solid var(--color-linea);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+}
+.reportes__esqueleto { height: 130px; border-bottom: 1px solid var(--color-linea); }

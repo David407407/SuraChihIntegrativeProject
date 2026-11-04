@@ -1,0 +1,24 @@
+@*
+  Texto de una reseña o de un reporte en "Moderación / Reportes". Si es largo muestra el principio y "Ver más", para
+  que las filas de la cola no crezcan: todo el texto se puede leer sin salir de la fila.
+*@
+<p class="t-small texto-largo">@Apertura@(Largo && !_abierto ? $"{Texto[..Corte].TrimEnd()}…" : Texto)@Cierre</p>
+@if (Largo)
+{
+    <button type="button" class="texto-largo__boton t-small-fuerte" aria-expanded="@(_abierto ? "true" : "false")" @onclick="() => _abierto = !_abierto">@(_abierto ? "Ver menos" : "Ver más")</button>
+}
+
+@code {
+    private const int Limite = 240;
+    private const int Corte = 200;
+
+    [Parameter, EditorRequired] public string Texto { get; set; } = "";
+    /// <summary>Entre comillas: lo escribió el autor de la reseña.</summary>
+    [Parameter] public bool Comillas { get; set; }
+
+    private bool _abierto;
+
+    private bool Largo => Texto.Length > Limite;
+    private string Apertura => Comillas ? "“" : "";
+    private string Cierre => Comillas ? "”" : "";
+}

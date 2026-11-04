@@ -4,12 +4,13 @@
   - Izquierda, "Resumen": promedio grande, estrellas, "12 reseñas", barras 5 → 1 y "Escribir reseña"
     (los eventos solo se reseñan cuando ya terminaron).
   - Derecha, la lista: inicial o foto, nombre, "Hace 2 semanas", estrellas, comentario, la respuesta del
-    organizador si la hay y "Reportar".
+    organizador si la hay y "Reportar" (menos en las propias).
   Se entra con "Ver reseñas (N)" del evento terminado y "Ver las N reseñas" del lugar (Acciones.VerResenas).
 *@
 @page "/resenas/{Tipo}/{Id:int}"
 @implements IDisposable
 @inject ServicioResenas Servicio
+@inject Sesion Sesion
 @inject Acciones Acciones
 @inject Avisos Avisos
 @inject InteropJs Js
@@ -108,9 +109,12 @@
                                 <p class="t-small texto-2">@resena.Respuesta</p>
                             </div>
                         }
-                        <button type="button" class="resena__reportar t-small texto-2" @onclick="() => Acciones.Reportar(EsEvento ? TipoObjetivoReporte.ResenaEvento : TipoObjetivoReporte.ResenaLugar, resena.Id)">
-                            <Icono Nombre="bandera" Caja="12" /><span>Reportar</span>
-                        </button>
+                        @if (resena.UsuarioId != Sesion.Usuario?.Id)
+                        {
+                            <button type="button" class="resena__reportar t-small texto-2" @onclick="() => Acciones.ReportarAsync(EsEvento ? TipoObjetivoReporte.ResenaEvento : TipoObjetivoReporte.ResenaLugar, resena.Id)">
+                                <Icono Nombre="bandera" Caja="12" /><span>Reportar</span>
+                            </button>
+                        }
                     </article>
                 }
             </div>
@@ -132,7 +136,14 @@
     private bool EsEvento => Tipo == "evento";
     private TipoResena TipoActual => EsEvento ? TipoResena.Evento : TipoResena.Lugar;
 
-    protected override void OnInitialized() => Servicio.Publicada += AlPublicar;
+    protected override void OnInitialized()
+    {
+        Servicio.Publicada += AlPublicar;
+        Sesion.Cambio += AlCambiarSesion;
+    }
+
+    /// <summary>Al entrar o salir cambia en qué reseñas se ofrece "Reportar".</summary>
+    private void AlCambiarSesion() => InvokeAsync(StateHasChanged);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -199,5 +210,9 @@
         };
     }
 
-    public void Dispose() => Servicio.Publicada -= AlPublicar;
+    public void Dispose()
+    {
+        Servicio.Publicada -= AlPublicar;
+        Sesion.Cambio -= AlCambiarSesion;
+    }
 }
