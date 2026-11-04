@@ -38,15 +38,20 @@ namespace BackendLogica.Repositorios
                 """, new { limite }, ct);
 
         /// <summary>
-        /// Inicio del usuario: próximos eventos, con sus favoritos primero.
-        /// Sin <paramref name="usuarioId"/> (visitante) se ordenan solo por fecha.
+        /// Inicio del usuario: próximos eventos, con sus favoritos primero y luego los que tienen más
+        /// etiquetas de sus gustos (user_interest). Sin <paramref name="usuarioId"/> (visitante) se ordenan
+        /// solo por fecha.
         /// </summary>
         public Task<List<EventoTarjeta>> ListarProximosAsync(int? usuarioId = null, int limite = 30, CancellationToken ct = default) =>
             ConsultarTarjetasAsync($"""
                 {SelectTarjeta}
                 LEFT JOIN favorite mine ON mine.event_id = c.id AND mine.user_id = @usuarioId
                 WHERE {Vigente}
-                ORDER BY (mine.user_id IS NOT NULL) DESC, c.start_at
+                ORDER BY (mine.user_id IS NOT NULL) DESC,
+                         (SELECT COUNT(*) FROM event_tag et
+                          JOIN user_interest ui ON ui.tag_id = et.tag_id AND ui.user_id = @usuarioId
+                          WHERE et.event_id = c.id) DESC,
+                         c.start_at
                 LIMIT @limite
                 """, new { usuarioId, limite }, ct);
 

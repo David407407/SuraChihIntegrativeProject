@@ -1,7 +1,8 @@
 @*
   Botón "Continuar con Google" del diseño (modales Iniciar sesión y Crear cuenta).
   Abre el navegador del sistema para elegir la cuenta (ServicioCuenta.ContinuarConGoogleAsync). Con la
-  cuenta lista, cierra la modal y saluda. Si algo falla, el mensaje sale en Errores.
+  cuenta lista saluda y cierra la modal; si la cuenta es nueva, la cambia a "¿Qué te gusta hacer?"
+  (ModalGustos). Si algo falla, el mensaje sale en Errores.
   AlAvisar es para que la modal que lo contiene se vuelva a pintar y muestre el aviso.
 *@
 @inject ServicioCuenta Cuenta
@@ -29,8 +30,9 @@
         try
         {
             var (usuario, nueva) = await Cuenta.ContinuarConGoogleAsync();
-            Modales.Cerrar();
             Avisos.Mostrar(nueva ? $"¡Bienvenido a SuraChih, {usuario.NombreUsuario}!" : $"¡Hola de nuevo, {usuario.NombreUsuario}!");
+            if (nueva) _ = Modales.GustosAsync(bienvenida: true);   // cuenta nueva: "¿Qué te gusta hacer?"
+            else Modales.Cerrar();
         }
         catch (Exception ex)
         {

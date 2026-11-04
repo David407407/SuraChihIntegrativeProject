@@ -10,4 +10,12 @@ namespace BackendLogica.Modelos
         string ColorHex,
         AlcanceEtiqueta Alcance,
         int Orden);
+
+    /// <summary>Gustos del usuario (tabla <c>user_interest</c>): las categorías que eligió.</summary>
+    /// <param name="EtiquetaIds">Solo etiquetas activas.</param>
+    /// <param name="Avisos">Aceptó que le avisemos de eventos nuevos de sus gustos (<c>user.notify_interests</c>).</param>
+    public sealed record Gustos(IReadOnlySet<int> EtiquetaIds, bool Avisos)
+    {
+        public static readonly Gustos Ninguno = new(new HashSet<int>(), false);
+    }
 }

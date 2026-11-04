@@ -5,6 +5,7 @@
   - "Contraseña": actual y nueva → ServicioPerfil.CambiarContrasenaAsync.
   - Los dos bloques están bloqueados: los campos no se pueden tocar hasta picarle a su lápiz, y "Cancelar"
     deja todo como estaba. Así nadie cambia datos por accidente.
+  - "Tus gustos": las categorías que eligió (chips) y su lápiz abre ModalGustos para cambiarlas.
   - "Eliminar cuenta": abre la modal (ModalEliminarCuenta) → desactiva la cuenta y cierra la sesión. Un
     moderador no la ve: su cuenta solo la elimina un supermoderador (Paginas/EquipoModeracion.razor).
   Sin sesión pide iniciarla; si la cierra estando aquí, vuelve al Home.
@@ -13,6 +14,7 @@
 @implements IDisposable
 @inject Sesion Sesion
 @inject ServicioPerfil Servicio
+@inject ServicioGustos Gustos
 @inject Modales Modales
 @inject Avisos Avisos
 @inject Acciones Acciones
@@ -89,6 +91,36 @@
 
                 <hr class="perfil__divisor" />
 
+                <section class="perfil__bloque" aria-labelledby="titulo-gustos">
+                    <div class="perfil__cabeza">
+                        <h2 class="t-h3" id="titulo-gustos">Tus gustos</h2>
+                        @Lapiz("Editar tus gustos", () => _ = Modales.GustosAsync())
+                    </div>
+                    @if (_gustos == null)
+                    {
+                        <span class="esqueleto perfil__esqueleto-gustos" aria-hidden="true"></span>
+                    }
+                    else if (_gustos.Count == 0)
+                    {
+                        <p class="t-small texto-2">Aún no eliges categorías. Elígelas y te recomendamos eventos y lugares en el inicio.</p>
+                    }
+                    else
+                    {
+                        <div class="perfil__gustos">
+                            @foreach (var etiqueta in _gustos)
+                            {
+                                <ChipCategoria @key="etiqueta.Id" Etiqueta="etiqueta" Interactivo="false" />
+                            }
+                        </div>
+                    }
+                    @if (_avisos)
+                    {
+                        <p class="t-caption texto-2">Aceptaste avisos de eventos nuevos de tus gustos (llegarán en la app para celular).</p>
+                    }
+                </section>
+
+                <hr class="perfil__divisor" />
+
                 <section class="perfil__bloque" aria-labelledby="titulo-eliminar">
                     <h2 class="t-h3" id="titulo-eliminar">Eliminar cuenta</h2>
                     @if (usuario.EsModerador)
@@ -125,6 +157,9 @@
     private bool _huboSesion;
     /// <summary>Al eliminar la cuenta se espera a que se lea el aviso antes de ir al Home.</summary>
     private bool _cuentaEliminada;
+    /// <summary>Categorías de "Tus gustos" (null mientras cargan).</summary>
+    private List<Etiqueta>? _gustos;
+    private bool _avisos;
 
     private sealed class DatosCuenta
     {
@@ -138,12 +173,38 @@
         public string? Nueva { get; set; }
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         Sesion.Cambio += AlCambiarSesion;
+        Gustos.Cambio += AlCambiarGustos;
         LlenarDatos();
         if (!Sesion.Iniciada) Modales.RequiereSesion("Inicia sesión para ver y editar tu perfil.");
+        else await CargarGustosAsync();
     }
+
+    /// <summary>Las categorías que eligió (con nombre e icono para los chips) y si aceptó avisos.</summary>
+    private async Task CargarGustosAsync()
+    {
+        try
+        {
+            var categorias = Gustos.ListarCategoriasAsync();
+            var gustos = Gustos.ObtenerAsync();
+            await Task.WhenAll(categorias, gustos);
+            _gustos = categorias.Result.Where(t => gustos.Result.EtiquetaIds.Contains(t.Id)).ToList();
+            _avisos = gustos.Result.Avisos;
+        }
+        catch (Exception ex)
+        {
+            _gustos = [];
+            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
+        }
+    }
+
+    private void AlCambiarGustos() => InvokeAsync(async () =>
+    {
+        await CargarGustosAsync();
+        StateHasChanged();
+    });
 
     private void LlenarDatos()
     {
@@ -153,9 +214,13 @@
         _datos.Correo = usuario.Correo;
     }
 
-    private void AlCambiarSesion() => InvokeAsync(() =>
+    private void AlCambiarSesion() => InvokeAsync(async () =>
     {
-        if (Sesion.Iniciada) LlenarDatos();
+        if (Sesion.Iniciada)
+        {
+            LlenarDatos();
+            await CargarGustosAsync();
+        }
         else if (_huboSesion && !_cuentaEliminada) Acciones.IrA(Acciones.Rutas.Home);   // cerró sesión estando en su perfil
         StateHasChanged();
     });
@@ -272,5 +337,9 @@
         Acciones.IrA(Acciones.Rutas.Home);
     }
 
-    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
+    public void Dispose()
+    {
+        Sesion.Cambio -= AlCambiarSesion;
+        Gustos.Cambio -= AlCambiarGustos;
+    }
 }

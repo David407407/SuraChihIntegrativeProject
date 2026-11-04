@@ -26,6 +26,7 @@ namespace BackendLogica.Falso
         public readonly List<FilaModeracion> Moderaciones = [];
         public readonly List<FilaFavorito> Favoritos = [];
         public readonly List<FilaFavoritoLugar> FavoritosLugares = [];
+        public readonly List<FilaGusto> Gustos = [];
         public readonly List<FilaInscripcion> Inscripciones = [];
         public readonly List<FilaVista> Vistas = [];
         public readonly List<FilaResena> Resenas = [];
@@ -315,6 +316,8 @@ namespace BackendLogica.Falso
         public string NombreUsuario = "", Correo = "", Hash = "";
         public string? AvatarUrl;
         public bool EsModerador, EsSuperModerador, Activo;
+        /// <summary>user.notify_interests</summary>
+        public bool AvisosGustos;
         public DateTime CreadoEn;
 
         public Usuario ADatos() => new(Id, NombreUsuario, Correo, AvatarUrl, EsModerador, Activo, CreadoEn, EsSuperModerador);
@@ -387,6 +390,9 @@ namespace BackendLogica.Falso
     internal sealed record FilaFavorito(int UsuarioId, int EventoId, DateTime CreadoEn);
 
     internal sealed record FilaFavoritoLugar(int UsuarioId, int LugarId, DateTime CreadoEn);
+
+    /// <summary>user_interest</summary>
+    internal sealed record FilaGusto(int UsuarioId, int EtiquetaId);
 
     internal sealed class FilaInscripcion
     {

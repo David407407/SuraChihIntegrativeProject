@@ -28,6 +28,7 @@ CREATE TABLE user (
     is_mod         BOOLEAN      NOT NULL DEFAULT FALSE,
     is_super_mod   BOOLEAN      NOT NULL DEFAULT FALSE, -- elimina cuentas de moderador; siempre es moderador
     is_active      BOOLEAN      NOT NULL DEFAULT TRUE, -- "borrar cuenta" = FALSE
+    notify_interests BOOLEAN    NOT NULL DEFAULT FALSE, -- acepto avisos de eventos de mis gustos (app de celular)
     created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uq_user_username UNIQUE (username),
@@ -254,6 +255,18 @@ CREATE TABLE place_favorite (
     CONSTRAINT fk_plfav_user  FOREIGN KEY (user_id)  REFERENCES user(id)  ON DELETE CASCADE,
     CONSTRAINT fk_plfav_place FOREIGN KEY (place_id) REFERENCES place(id) ON DELETE CASCADE,
     INDEX ix_plfav_place (place_id)
+);
+
+-- Gustos: categorias que el usuario elige al crear su cuenta o en Mi perfil. Ordenan
+-- "Te podrian interesar" y "Recomendados para ti" del inicio (y, en el futuro, los avisos).
+CREATE TABLE user_interest (
+    user_id     INT UNSIGNED      NOT NULL,
+    tag_id      SMALLINT UNSIGNED NOT NULL,
+    created_at  DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, tag_id),
+    CONSTRAINT fk_interest_user FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    CONSTRAINT fk_interest_tag  FOREIGN KEY (tag_id)  REFERENCES tag(id),
+    INDEX ix_interest_tag (tag_id)
 );
 
 -- Inscripcion = RSVP "voy a ir". No garantiza cupo; los boletos se compran en ticket_url.
