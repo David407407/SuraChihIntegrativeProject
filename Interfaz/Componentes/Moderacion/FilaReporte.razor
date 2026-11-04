@@ -1,8 +1,7 @@
 @*
-  Fila de "Moderación / Reportes" de Figma: tipo y motivo, el evento o lugar (el título lo abre), la reseña y lo que
+  Fila de "Moderación / Reportes" de Figma: motivo, el evento o lugar (el título es el enlace que lo abre), la reseña y lo que
   escribieron quienes reportaron. El rojo queda para lo urgente: estafas y reportes que pasaron de las 48 horas. Los reportes repetidos del mismo objetivo van juntos en una fila y las
-  acciones los cierran todos. Abierto: "Descartar" y, según el tipo, "Ocultar reseña" o "Ver evento" / "Ver lugar" y
-  "Marcar resuelto" (ya se revisó). Si reabrieron el reporte de una reseña que sigue oculta: "Mantener oculta" o
+  acciones los cierran todos. Abierto: "Descartar" y, según el tipo, "Ocultar reseña" o "Marcar resuelto" (ya se revisó). Si reabrieron el reporte de una reseña que sigue oculta: "Mantener oculta" o
   "Volver a mostrar" (descartarlo dejaría la reseña oculta sin motivo). Cerrado: "Reabrir" y, si sigue oculta,
   "Volver a mostrar".
 *@
@@ -11,7 +10,6 @@
 <article class="fila-reporte" aria-labelledby="@_idTitulo">
     <div class="fila-reporte__info">
         <div class="fila-reporte__etiquetas">
-            <Chip Texto="@TipoTexto" Variante="fondo" Icono="@TipoIcono" Clase="chip--estado" />
             @foreach (var motivo in G.Reportes.Select(r => r.Reporte.Motivo).Distinct())
             {
                 @if (motivo == MotivoReporte.Estafa)
@@ -74,8 +72,8 @@
             </button>
         }
         <p class="fila-reporte__meta t-caption texto-2">
-            <Icono Nombre="persona-gris-12" Caja="12" />
-            <span>@Meta</span>
+            <Icono Nombre="@TipoIcono" Caja="12" />
+            <span>@TipoTexto · @Meta</span>
         </p>
     </div>
     <div class="fila-reporte__acciones">
@@ -93,7 +91,6 @@
             }
             else
             {
-                <Boton Texto="@VerTexto" Variante="secundario" Tamano="s" Icono="ojo-tinta-16" OnClick="VerObjetivo" aria-label="@($"{VerTexto}: {P.ObjetivoNombre}")" />
                 <Boton Texto="Marcar resuelto" Variante="oscuro" Tamano="s" Icono="check-blanco-16" Deshabilitado="Ocupado" OnClick="AlResolver" aria-label="@($"Marcar resuelto: {Titulo}")" />
             }
         }
@@ -131,7 +128,6 @@
     private List<ReporteDetalle> Comentarios => [.. G.Reportes.Where(r => r.Reporte.Detalles != null)];
     private bool Abierto => P.Reporte.Estado == EstadoReporte.Abierto;
     private bool EsResena => P.Reporte.Tipo is TipoObjetivoReporte.ResenaEvento or TipoObjetivoReporte.ResenaLugar;
-    private string VerTexto => P.EventoId != null ? "Ver evento" : "Ver lugar";
     private string Titulo => EsResena ? $"Reseña en {P.ObjetivoNombre}" : P.ObjetivoNombre;
 
     /// <summary>Lo que lleva esperando el reporte más antiguo del grupo.</summary>

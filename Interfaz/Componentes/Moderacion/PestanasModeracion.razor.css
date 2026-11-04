@@ -26,5 +26,6 @@
   color: var(--color-tinta);
   font: 500 12px/16px var(--fuente-cuerpo);
   letter-spacing: 0.2px;
+  font-variant-numeric: tabular-nums;
 }
 .pestana__conteo--activo { background: var(--color-sol); }

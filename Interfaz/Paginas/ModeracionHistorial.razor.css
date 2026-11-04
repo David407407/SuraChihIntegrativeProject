@@ -27,7 +27,7 @@ td { padding: 16px 10px; border-top: 1px solid var(--color-linea); overflow-wrap
 th:first-child, td:first-child { padding-left: 24px; }
 th:last-child, td:last-child { padding-right: 24px; }
 
-.historial__fecha { width: 150px; }
+.historial__fecha { width: 150px; font-variant-numeric: tabular-nums; }
 .historial__tipo { width: 130px; }
 .historial__decision { width: 140px; }
 .historial__decision ::deep .chip { vertical-align: middle; }
@@ -43,6 +43,7 @@ th:last-child, td:last-child { padding-right: 24px; }
   gap: 12px;
   padding: 16px 24px;
   border-top: 1px solid var(--color-linea);
+  font-variant-numeric: tabular-nums;
   text-align: center;
 }
 

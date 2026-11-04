@@ -1,16 +1,15 @@
-/* Insignia azul de 64px, título y el moderador a la derecha */
-.encabezado { display: flex; align-items: center; gap: 20px; }
+/* Insignia azul de 48px, título y el moderador a la derecha */
+.encabezado { display: flex; align-items: center; gap: 14px; }
 .encabezado__insignia {
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 64px;
-  height: 64px;
-  border-radius: var(--radio-l);
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   background: var(--color-cielo);
 }
-.encabezado__titulo { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
-.encabezado__seccion { color: var(--color-cielo-texto); }
+.encabezado__titulo { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
 
 .encabezado__moderador {
   display: flex;
@@ -32,8 +31,7 @@
 }
 
 @media (max-width: 640px) {
-  .encabezado { flex-wrap: wrap; }
-  /* Toda la fila junto a la insignia: el moderador baja en vez de aplastar el texto */
-  .encabezado__titulo { flex-basis: calc(100% - 84px); }
-  .encabezado__titulo .t-h1 { font-size: 34px; line-height: 40px; }
+  /* El moderador ya está en el avatar de la barra: aquí solo le quitaría espacio al texto */
+  .encabezado__moderador { display: none; }
+  .encabezado__titulo .t-h2 { font-size: 24px; line-height: 30px; }
 }
