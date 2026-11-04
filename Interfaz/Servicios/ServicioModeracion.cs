@@ -343,6 +343,9 @@ namespace Interfaz.Servicios
     public sealed record GrupoReportes(IReadOnlyList<ReporteDetalle> Reportes)
     {
         public ReporteDetalle Principal => Reportes[0];
+
+        /// <summary>Quiénes reportaron, sin repetir: lo que pesa son las personas, no las filas.</summary>
+        public IReadOnlyList<string> Reportantes => [.. Reportes.DistinctBy(r => r.Reporte.ReportanteId).Select(r => r.ReportanteNombre)];
     }
 
     /// <param name="Lista">Los reportes del estado elegido, en el orden de BackendLogica.</param>
