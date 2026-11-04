@@ -130,3 +130,13 @@
   .navbar__acciones,
   .navbar--logueado .navbar__acciones { gap: 12px; }
 }
+
+/* Celular: el logo y los enlaces se quedan con su icono para que quepa todo. El texto sigue ahí para los lectores. */
+@media (max-width: 640px) {
+  .navbar__contenido { gap: 12px; }
+  .logo span { display: none; }
+  .navbar ::deep .navbar__enlace { font-size: 0; gap: 0; margin-inline: 0; padding: 8px; }
+  .navbar__acciones,
+  .navbar--logueado .navbar__acciones { gap: 8px; }
+  .navbar__acciones ::deep .boton { padding-inline: 8px; font-size: 13px; }
+}

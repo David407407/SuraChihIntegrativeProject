@@ -33,5 +33,7 @@
 
 @media (max-width: 640px) {
   .encabezado { flex-wrap: wrap; }
+  /* Toda la fila junto a la insignia: el moderador baja en vez de aplastar el texto */
+  .encabezado__titulo { flex-basis: calc(100% - 84px); }
   .encabezado__titulo .t-h1 { font-size: 34px; line-height: 40px; }
 }

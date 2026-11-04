@@ -37,9 +37,9 @@ namespace BackendLogica.Repositorios
         public Task<List<Reporte>> ListarAsync(EstadoReporte estado = EstadoReporte.Abierto, CancellationToken ct = default) =>
             ConsultarAsync("SELECT * FROM report WHERE status = @estado ORDER BY created_at", Mapear, new { estado }, ct);
 
-        /// <summary>"Moderación / Reportes": cada reporte con su evento o lugar, los más nuevos primero.</summary>
+        /// <summary>"Moderación / Reportes": cada reporte con su evento o lugar. Abiertos: el que lleva más tiempo esperando primero. Cerrados: el último en cerrarse primero.</summary>
         public Task<List<ReporteDetalle>> ListarDetalleAsync(EstadoReporte estado = EstadoReporte.Abierto, CancellationToken ct = default) =>
-            ConsultarAsync("""
+            ConsultarAsync($"""
                 SELECT r.*, reportante.username AS reportante_nombre,
                        COALESCE(r.event_id, er.event_id) AS evento_vinculado,
                        COALESCE(r.place_id, pr.place_id) AS lugar_vinculado,
@@ -56,7 +56,7 @@ namespace BackendLogica.Repositorios
                 LEFT JOIN place p ON p.id = COALESCE(r.place_id, pr.place_id)
                 LEFT JOIN user autor ON autor.id = COALESCE(er.user_id, pr.user_id)
                 WHERE r.status = @estado
-                ORDER BY r.created_at DESC, r.id DESC
+                ORDER BY {(estado == EstadoReporte.Abierto ? "r.created_at, r.id" : "r.resolved_at DESC, r.id DESC")}
                 """, l => new ReporteDetalle(
                     Mapear(l), l.Texto("reportante_nombre"), l.EnteroONulo("evento_vinculado"), l.EnteroONulo("lugar_vinculado"),
                     l.Texto("objetivo_nombre"), l.TextoONulo("resena_autor"), l.EnteroONulo("resena_calificacion"),
@@ -73,6 +73,18 @@ namespace BackendLogica.Repositorios
                 UPDATE report SET status = @resultado, resolved_by = @moderadorId, resolved_at = NOW()
                 WHERE id = @reporteId AND status = 'open'
                 """, new { reporteId, moderadorId, resultado }, ct) > 0;
+        }
+
+        /// <summary>Vuelve a abrir un reporte cerrado (por si se cerró por error).</summary>
+        /// <returns><c>false</c> si no existe o ya estaba abierto.</returns>
+        /// <exception cref="ReglaNegocioException">No es moderador.</exception>
+        public async Task<bool> ReabrirAsync(int reporteId, int moderadorId, CancellationToken ct = default)
+        {
+            await ExigirModeradorAsync(moderadorId, ct);
+            return await EjecutarAsync("""
+                UPDATE report SET status = 'open', resolved_by = NULL, resolved_at = NULL
+                WHERE id = @reporteId AND status <> 'open'
+                """, new { reporteId }, ct) > 0;
         }
 
         private static Reporte Mapear(DbDataReader r)

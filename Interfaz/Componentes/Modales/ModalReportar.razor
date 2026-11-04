@@ -8,13 +8,13 @@
 
 <EncabezadoModal Titulo="Reportar" Texto="@(EsResena ? "¿Qué está mal con esta reseña?" : "¿Qué está mal con esta publicación?")" />
 <EditForm Model="this" OnSubmit="EnviarAsync" class="modal__formulario" novalidate>
-    <div class="reportar__motivos" role="radiogroup" aria-label="Motivo del reporte">
+    <div class="reportar__motivos" role="radiogroup" aria-label="Motivo del reporte" aria-required="true">
         @foreach (var (motivo, texto) in Motivos)
         {
-            <Opcion Texto="@texto" Seleccionada="_motivo == motivo" OnClick="() => _motivo = motivo" />
+            <Opcion Texto="@texto" Grupo="motivo-reporte" Seleccionada="_motivo == motivo" OnClick="() => Elegir(motivo)" />
         }
     </div>
-    <AreaTexto Nombre="detalles" Etiqueta="Detalles" EtiquetaVisible="false" Filas="3" Maximo="500"
+    <AreaTexto Nombre="detalles" Etiqueta="Detalles" EtiquetaVisible="false" Filas="3" Maximo="500" Requerido="_motivo == MotivoReporte.Otro"
                Placeholder="@(_motivo == MotivoReporte.Otro ? "Cuéntanos qué está pasando (obligatorio)" : "Agrega detalles (opcional)")"
                @bind-Valor="_detalles" Errores="_errores" />
     <AvisoModal Errores="_errores" />
@@ -43,6 +43,13 @@
     private bool _enviando;
 
     private bool EsResena => Tipo is TipoObjetivoReporte.ResenaEvento or TipoObjetivoReporte.ResenaLugar;
+
+    /// <summary>Con otro motivo ya no aplica el error de antes ("Elige un motivo", "Cuéntanos qué está pasando").</summary>
+    private void Elegir(MotivoReporte motivo)
+    {
+        _motivo = motivo;
+        _errores.Limpiar();
+    }
 
     private async Task EnviarAsync()
     {

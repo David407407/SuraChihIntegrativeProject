@@ -24,13 +24,16 @@ namespace BackendLogica.Contratos
         /// <summary>Total del historial con esos filtros ("Mostrando 7 de 214").</summary>
         Task<int> ContarHistorialAsync(DecisionModeracion? decision = null, TipoObjetivoModeracion? tipo = null, CancellationToken ct = default);
 
-        /// <summary>Historial de reseñas ocultadas o vueltas a mostrar, las más recientes primero.</summary>
-        /// <exception cref="Datos.ReglaNegocioException">No es supermoderador.</exception>
-        Task<List<RegistroResena>> ListarHistorialResenasAsync(int superModeradorId, int limite = 50, CancellationToken ct = default);
+        /// <summary>
+        /// Reseñas ocultadas o vueltas a mostrar, las más recientes primero.
+        /// Un supermoderador ve todas; un moderador, solo las acciones suyas.
+        /// </summary>
+        /// <exception cref="Datos.ReglaNegocioException">No es moderador.</exception>
+        Task<List<RegistroResena>> ListarHistorialResenasAsync(int moderadorId, int limite = 50, CancellationToken ct = default);
 
-        /// <summary>Total del historial de reseñas.</summary>
-        /// <exception cref="Datos.ReglaNegocioException">No es supermoderador.</exception>
-        Task<int> ContarHistorialResenasAsync(int superModeradorId, CancellationToken ct = default);
+        /// <summary>Total de lo que ese moderador puede ver en el historial de reseñas.</summary>
+        /// <exception cref="Datos.ReglaNegocioException">No es moderador.</exception>
+        Task<int> ContarHistorialResenasAsync(int moderadorId, CancellationToken ct = default);
 
         /// <summary>
         /// NUEVO para el rediseño: "Ver motivo" del panel del organizador (última decisión sobre ese objetivo).

@@ -142,6 +142,11 @@ namespace Interfaz.Estado
         public async Task<bool> ConfirmarEliminarModeradorAsync(Usuario moderador) =>
             await Abrir<ModalEliminarModerador>(new Dictionary<string, object?> { ["Moderador"] = moderador }) as bool? ?? false;
 
+        /// <summary>"¿Ocultar esta reseña?": confirma, oculta y cierra sus reportes abiertos.</summary>
+        /// <returns>true si se ocultó.</returns>
+        public async Task<bool> ConfirmarOcultarResenaAsync(GrupoReportes grupo) =>
+            await Abrir<ModalOcultarResena>(new Dictionary<string, object?> { ["Grupo"] = grupo }) as bool? ?? false;
+
         /// <summary>"Modal / Aprobar publicación" (¿Aprobar y publicar?). Aprueba y, si se pidió, destaca.</summary>
         /// <returns>true si se aprobó.</returns>
         public async Task<bool> AprobarEventoAsync(EventoTarjeta evento, string? comentario, bool destacar) =>

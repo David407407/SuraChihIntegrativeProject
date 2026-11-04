@@ -1,74 +1,150 @@
 @*
-  Fila de "Moderación / Reportes" de Figma: bandera, tipo y motivo, el evento o lugar (el título lo abre),
-  la reseña o los detalles del reporte y quién lo envió. Abierto: "Descartar" y, según el tipo, "Ocultar reseña"
-  o "Ver evento" y "Marcar resuelto". Ya cerrado solo se lee.
+  Fila de "Moderación / Reportes" de Figma: bandera, tipo y motivo, el evento o lugar (el título lo abre), la reseña
+  y lo que escribieron quienes reportaron. Los reportes repetidos del mismo objetivo van juntos en una fila y las
+  acciones los cierran todos. Abierto: "Descartar" y, según el tipo, "Ocultar reseña" o "Ver evento" / "Ver lugar" y
+  "Marcar resuelto" (ya se revisó). Si reabrieron el reporte de una reseña que sigue oculta: "Mantener oculta" o
+  "Volver a mostrar" (descartarlo dejaría la reseña oculta sin motivo). Cerrado: "Reabrir" y, si sigue oculta,
+  "Volver a mostrar".
 *@
 @inject Acciones Acciones
 
-<article class="fila-reporte">
+<article class="fila-reporte" aria-labelledby="@_idTitulo">
     <span class="fila-reporte__insignia"><Icono Nombre="bandera-error-18" Caja="18" /></span>
     <div class="fila-reporte__info">
         <div class="fila-reporte__etiquetas">
             <Chip Texto="@TipoTexto" Variante="fondo" Icono="@TipoIcono" Clase="chip--estado" />
-            <Chip Texto="@MotivoTexto" Variante="error-suave" Icono="alerta-error-12" Clase="chip--estado" />
+            @foreach (var motivo in G.Reportes.Select(r => r.Reporte.Motivo).Distinct())
+            {
+                <Chip Texto="@MotivoTexto(motivo)" Variante="error-suave" Icono="alerta-error-12" Clase="chip--estado" />
+            }
+            @if (G.Reportes.Count > 1)
+            {
+                <Chip Texto="@($"{G.Reportes.Count} reportes")" Variante="sol-suave" Clase="chip--estado" />
+            }
+            @if (EsResena && P.ResenaOculta)
+            {
+                <Chip Texto="Reseña oculta" Variante="error-suave" Icono="x-circulo-error-12" Clase="chip--estado" />
+            }
+            @if (Abierto && Espera.TotalHours >= HorasLimite)
+            {
+                <Chip Texto="@($"Pasó de {HorasLimite} h")" Variante="error-suave" Icono="reloj-error-12" Clase="chip--estado" />
+            }
+            else if (Abierto && Espera.TotalHours >= HorasAviso)
+            {
+                <Chip Texto="Vence pronto" Variante="sol-suave" Icono="reloj-arena-12" Clase="chip--estado" />
+            }
         </div>
-        <h2 class="t-card-titulo">
+        <h2 class="t-card-titulo" id="@_idTitulo">
             <button type="button" class="fila-reporte__titulo" @onclick="VerObjetivo">@Titulo</button>
         </h2>
         @if (EsResena)
         {
-            <p class="t-small texto-2">
-                @@@R.ResenaAutor ·
-                <span role="img" aria-label="@($"{R.ResenaCalificacion} de 5 estrellas")">@(new string('★', R.ResenaCalificacion ?? 0))</span>
-                @if (R.ResenaOculta) { <text> · Oculta</text> }
-            </p>
-            @Cita(R.ResenaComentario ?? "Sin comentario.")
+            <div class="fila-reporte__bloque fila-reporte__bloque--resena">
+                <p class="t-caption texto-2">
+                    Reseña de @@@P.ResenaAutor ·
+                    <span role="img" aria-label="@($"{P.ResenaCalificacion} de 5 estrellas")">@(new string('★', P.ResenaCalificacion ?? 0))</span>
+                </p>
+                @if (P.ResenaComentario is { } comentario)
+                {
+                    <p class="t-small">“@comentario”</p>
+                }
+                else
+                {
+                    <p class="t-small texto-2">Sin comentario</p>
+                }
+            </div>
         }
         else
         {
-            <p class="t-small texto-2">@(R.EventoId != null ? "Evento publicado" : "Lugar publicado")</p>
+            <p class="t-small texto-2">@(P.EventoId != null ? "Evento publicado" : "Lugar publicado")</p>
         }
-        @if (R.Reporte.Detalles is { } detalles)
+        @foreach (var r in G.Reportes.Where(r => r.Reporte.Detalles != null))
         {
-            @Cita(detalles)
+            <div class="fila-reporte__bloque">
+                <p class="t-caption texto-2">Comentario de @@@r.ReportanteNombre</p>
+                <p class="t-small">@r.Reporte.Detalles</p>
+            </div>
         }
         <p class="fila-reporte__meta t-caption texto-2">
             <Icono Nombre="persona-gris-12" Caja="12" />
-            <span>Reportado por @@@R.ReportanteNombre · @Formato.Hace(R.Reporte.CreadoEn).ToLowerInvariant()</span>
+            <span>@Meta</span>
         </p>
     </div>
-    @if (R.Reporte.Estado == EstadoReporte.Abierto)
-    {
-        <div class="fila-reporte__acciones">
-            <Boton Texto="Descartar" Variante="fantasma" Tamano="s" Deshabilitado="Ocupado" OnClick="AlDescartar" />
+    <div class="fila-reporte__acciones">
+        @if (Abierto && EsResena && P.ResenaOculta)
+        {
+            <Boton Texto="Volver a mostrar" Variante="secundario" Tamano="s" Icono="ojo-tinta-16" Deshabilitado="Ocupado" OnClick="AlMostrar" aria-label="@($"Volver a mostrar: {Titulo}")" />
+            <Boton Texto="Mantener oculta" Variante="oscuro" Tamano="s" Icono="check-blanco-16" Deshabilitado="Ocupado" OnClick="AlResolver" aria-label="@($"Mantener oculta: {Titulo}")" />
+        }
+        else if (Abierto)
+        {
+            <Boton Texto="Descartar" Variante="fantasma" Tamano="s" Deshabilitado="Ocupado" OnClick="AlDescartar" aria-label="@($"Descartar: {Titulo}")" />
             @if (EsResena)
             {
-                <Boton Texto="Ocultar reseña" Variante="peligro" Tamano="s" Icono="ojo-tachado-blanco-16" Deshabilitado="Ocupado" OnClick="AlOcultar" />
+                <Boton Texto="Ocultar reseña" Variante="peligro" Tamano="s" Icono="ojo-tachado-blanco-16" Deshabilitado="Ocupado" OnClick="AlOcultar" aria-label="@($"Ocultar reseña: {Titulo}")" />
             }
             else
             {
-                @if (R.EventoId != null)
-                {
-                    <Boton Texto="Ver evento" Variante="secundario" Tamano="s" Icono="ojo-tinta-16" OnClick="VerObjetivo" />
-                }
-                <Boton Texto="Marcar resuelto" Variante="oscuro" Tamano="s" Icono="check-blanco-16" Deshabilitado="Ocupado" OnClick="AlResolver" />
+                <Boton Texto="@VerTexto" Variante="secundario" Tamano="s" Icono="ojo-tinta-16" OnClick="VerObjetivo" aria-label="@($"{VerTexto}: {P.ObjetivoNombre}")" />
+                <Boton Texto="Marcar resuelto" Variante="oscuro" Tamano="s" Icono="check-blanco-16" Deshabilitado="Ocupado" OnClick="AlResolver" aria-label="@($"Marcar resuelto: {Titulo}")" />
             }
-        </div>
-    }
+        }
+        else
+        {
+            <Boton Texto="Reabrir" Variante="fantasma" Tamano="s" Deshabilitado="Ocupado" OnClick="AlReabrir" aria-label="@($"Reabrir: {Titulo}")" />
+            @if (EsResena && P.ResenaOculta)
+            {
+                <Boton Texto="Volver a mostrar" Variante="secundario" Tamano="s" Icono="ojo-tinta-16" Deshabilitado="Ocupado" OnClick="AlMostrar" aria-label="@($"Volver a mostrar: {Titulo}")" />
+            }
+        }
+    </div>
 </article>
 
 @code {
-    [Parameter, EditorRequired] public ReporteDetalle R { get; set; } = default!;
+    /// <summary>Se le promete a quien reporta una revisión en este tiempo ("Modal / Reporte enviado").</summary>
+    private const int HorasLimite = 48;
+    private const int HorasAviso = 36;
+
+    private static int _siguiente;
+    private readonly string _idTitulo = $"reporte-{Interlocked.Increment(ref _siguiente)}";
+
+    [Parameter, EditorRequired] public GrupoReportes G { get; set; } = default!;
     /// <summary>Mientras se guarda una decisión de esta u otra fila.</summary>
     [Parameter] public bool Ocupado { get; set; }
     [Parameter] public EventCallback AlDescartar { get; set; }
     [Parameter] public EventCallback AlResolver { get; set; }
     [Parameter] public EventCallback AlOcultar { get; set; }
+    [Parameter] public EventCallback AlReabrir { get; set; }
+    [Parameter] public EventCallback AlMostrar { get; set; }
 
-    private bool EsResena => R.Reporte.Tipo is TipoObjetivoReporte.ResenaEvento or TipoObjetivoReporte.ResenaLugar;
-    private string Titulo => EsResena ? $"Reseña en {R.ObjetivoNombre}" : R.ObjetivoNombre;
+    private ReporteDetalle P => G.Principal;
+    private bool Abierto => P.Reporte.Estado == EstadoReporte.Abierto;
+    private bool EsResena => P.Reporte.Tipo is TipoObjetivoReporte.ResenaEvento or TipoObjetivoReporte.ResenaLugar;
+    private string VerTexto => P.EventoId != null ? "Ver evento" : "Ver lugar";
+    private string Titulo => EsResena ? $"Reseña en {P.ObjetivoNombre}" : P.ObjetivoNombre;
 
-    private string TipoTexto => R.Reporte.Tipo switch
+    /// <summary>Lo que lleva esperando el reporte más antiguo del grupo.</summary>
+    private TimeSpan Espera => DateTime.Now - G.Reportes.Min(r => r.Reporte.CreadoEn);
+
+    private string Meta
+    {
+        get
+        {
+            string quienes = G.Reportes.Count switch
+            {
+                1 => $"@{P.ReportanteNombre}",
+                2 => $"@{G.Reportes[0].ReportanteNombre} y @{G.Reportes[1].ReportanteNombre}",
+                _ => $"@{P.ReportanteNombre} y {G.Reportes.Count - 1} más",
+            };
+            string cuando = Formato.Hace(G.Reportes.Min(r => r.Reporte.CreadoEn)).ToLowerInvariant();
+            string texto = $"Reportado por {quienes} · {cuando}";
+            if (P.Reporte.ResueltoEn is { } cerrado)
+                texto += $" · {(P.Reporte.Estado == EstadoReporte.Resuelto ? "Resuelto" : "Descartado")} {Formato.Hace(cerrado).ToLowerInvariant()}";
+            return texto;
+        }
+    }
+
+    private string TipoTexto => P.Reporte.Tipo switch
     {
         TipoObjetivoReporte.Evento => "Evento",
         TipoObjetivoReporte.Lugar => "Lugar",
@@ -76,14 +152,14 @@
         _ => "Reseña de lugar",
     };
 
-    private string TipoIcono => R.Reporte.Tipo switch
+    private string TipoIcono => P.Reporte.Tipo switch
     {
         TipoObjetivoReporte.Evento => "calendario-tinta-12",
         TipoObjetivoReporte.Lugar => "ubicacion-tinta-12",
         _ => "comentario-tinta-12",
     };
 
-    private string MotivoTexto => R.Reporte.Motivo switch
+    private static string MotivoTexto(MotivoReporte motivo) => motivo switch
     {
         MotivoReporte.Spam => "Spam",
         MotivoReporte.Estafa => "Estafa",
@@ -94,13 +170,7 @@
 
     private void VerObjetivo()
     {
-        if (R.EventoId is { } evento) Acciones.VerEvento(evento);
-        else if (R.LugarId is { } lugar) Acciones.VerLugar(lugar);
+        if (P.EventoId is { } evento) Acciones.VerEvento(evento);
+        else if (P.LugarId is { } lugar) Acciones.VerLugar(lugar);
     }
-
-    private static RenderFragment Cita(string texto) =>
-        @<blockquote class="fila-reporte__cita">
-            <Icono Nombre="comentario-gris-14" Caja="14" />
-            <p class="t-small">“@texto”</p>
-        </blockquote>;
 }

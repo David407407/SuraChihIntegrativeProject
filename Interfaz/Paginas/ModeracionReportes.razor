@@ -1,7 +1,8 @@
 @*
   "Moderación / Reportes" de Figma: lo que la comunidad marcó (tabla report), con píldoras Abiertos / Resueltos /
-  Descartados. "Descartar" y "Marcar resuelto" cierran el reporte; "Ocultar reseña" la oculta (is_hidden), cierra sus
-  reportes abiertos y queda en el historial de reseñas. Solo entran moderadores; BackendLogica lo vuelve a revisar.
+  Descartados y lo que lleva más tiempo esperando primero. "Descartar" y "Marcar resuelto" (ya se revisó) cierran
+  los reportes de la fila; "Ocultar reseña" pide confirmación, la oculta (is_hidden), cierra sus reportes abiertos y
+  queda en el historial de reseñas. Los cerrados se pueden reabrir. Solo entran moderadores; BackendLogica lo revisa.
 *@
 @page "/moderacion/reportes"
 @implements IDisposable
@@ -10,6 +11,7 @@
 @inject Modales Modales
 @inject Avisos Avisos
 @inject Acciones Acciones
+@inject InteropJs Js
 @inject ILogger<ModeracionReportes> Registro
 
 <PageTitle>SuraChih · Reportes</PageTitle>
@@ -23,12 +25,20 @@
                                 Organizadores="_conteos?.Organizadores" Reportes="_conteos?.Reportes" />
 
             <div class="reportes__pildoras" role="group" aria-label="Qué reportes mostrar">
-                <Pildora Texto="@($"Abiertos ({_conteos?.Reportes ?? 0})")" Activa="_estado == EstadoReporte.Abierto" OnClick="() => ElegirAsync(EstadoReporte.Abierto)" />
+                <Pildora Texto="@(_conteos == null ? "Abiertos" : $"Abiertos ({_conteos.Reportes})")" Activa="_estado == EstadoReporte.Abierto" OnClick="() => ElegirAsync(EstadoReporte.Abierto)" />
                 <Pildora Texto="Resueltos" Activa="_estado == EstadoReporte.Resuelto" OnClick="() => ElegirAsync(EstadoReporte.Resuelto)" />
                 <Pildora Texto="Descartados" Activa="_estado == EstadoReporte.Descartado" OnClick="() => ElegirAsync(EstadoReporte.Descartado)" />
             </div>
 
-            @if (_lista == null)
+            <p class="solo-lectores" role="status">@Anuncio</p>
+
+            @if (_error)
+            {
+                <VacioModeracion Icono="alerta-error" Titulo="No se pudieron cargar los reportes" Texto="Revisa tu conexión e inténtalo otra vez.">
+                    <Boton Texto="Reintentar" Variante="oscuro" OnClick="ReintentarAsync" />
+                </VacioModeracion>
+            }
+            else if (_lista == null)
             {
                 <div class="reportes__lista" aria-hidden="true">
                     @for (int i = 0; i < 3; i++)
@@ -37,25 +47,26 @@
                     }
                 </div>
             }
+            else if (_lista.Count == 0 && _estado == EstadoReporte.Abierto)
+            {
+                <VacioModeracion Icono="check-exito-24" Exito Titulo="Todo al día" Texto="No hay reportes esperando revisión." />
+            }
             else if (_lista.Count == 0)
             {
-                <VacioModeracion Icono="check-exito-24" Exito Titulo="@(_estado == EstadoReporte.Abierto ? "Todo al día" : "Nada por aquí")"
-                                 Texto="@(_estado switch
-                                 {
-                                     EstadoReporte.Abierto => "No hay reportes esperando revisión.",
-                                     EstadoReporte.Resuelto => "Aún no hay reportes resueltos.",
-                                     _ => "Aún no hay reportes descartados.",
-                                 })" />
+                <VacioModeracion Icono="bandeja" Titulo="Nada por aquí"
+                                 Texto="@(_estado == EstadoReporte.Resuelto ? "Aún no hay reportes resueltos." : "Aún no hay reportes descartados.")" />
             }
             else
             {
                 <div class="reportes__lista">
-                    @foreach (var r in _lista)
+                    @foreach (var g in _lista)
                     {
-                        <FilaReporte @key="r.Reporte.Id" R="r" Ocupado="_ocupado"
-                                     AlDescartar="() => DecidirAsync(() => Servicio.CerrarReporteAsync(r.Reporte.Id, EstadoReporte.Descartado))"
-                                     AlResolver="() => DecidirAsync(() => Servicio.CerrarReporteAsync(r.Reporte.Id, EstadoReporte.Resuelto))"
-                                     AlOcultar="() => DecidirAsync(() => Servicio.OcultarResenaAsync(r))" />
+                        <FilaReporte @key="(g.Principal.Reporte.Tipo, g.Principal.Reporte.ObjetivoId)" G="g" Ocupado="_ocupado"
+                                     AlDescartar='() => DecidirAsync(g, () => Servicio.CerrarReportesAsync(g, EstadoReporte.Descartado), "Reporte descartado.")'
+                                     AlResolver='() => DecidirAsync(g, () => Servicio.CerrarReportesAsync(g, EstadoReporte.Resuelto), g.Principal.ResenaOculta ? "Reporte cerrado. La reseña sigue oculta." : "Reporte marcado como resuelto.")'
+                                     AlOcultar="() => OcultarAsync(g)"
+                                     AlReabrir='() => DecidirAsync(g, () => Servicio.ReabrirReportesAsync(g), "Reporte reabierto.")'
+                                     AlMostrar="() => MostrarAsync(g)" />
                     }
                 </div>
             }
@@ -67,12 +78,30 @@
 
 @code {
     private EstadoReporte _estado = EstadoReporte.Abierto;
-    private IReadOnlyList<ReporteDetalle>? _lista;
+    private IReadOnlyList<GrupoReportes>? _lista;
     private ConteosModeracion? _conteos;
+    private bool _error;
     private bool _ocupado;
     private int? _usuarioId;
+    /// <summary>Lugar de la fila que se acaba de cerrar: el foco pasa a la que ocupó su lugar.</summary>
+    private int? _enfocar;
 
     private bool EsModerador => Sesion.Usuario?.EsModerador == true;
+
+    /// <summary>Lo que oyen los lectores de pantalla al cambiar la lista.</summary>
+    private string Anuncio => _error ? "No se pudieron cargar los reportes." : _lista == null ? "" : _lista.Count switch
+    {
+        0 => $"{NombreEstado}: no hay reportes.",
+        1 => $"{NombreEstado}: 1 fila de reportes.",
+        var n => $"{NombreEstado}: {n} filas de reportes.",
+    };
+
+    private string NombreEstado => _estado switch
+    {
+        EstadoReporte.Abierto => "Abiertos",
+        EstadoReporte.Resuelto => "Resueltos",
+        _ => "Descartados",
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -80,6 +109,13 @@
         _usuarioId = Sesion.Usuario?.Id;
         if (!Sesion.Iniciada) Modales.RequiereSesion("Inicia sesión con tu cuenta de moderador para revisar reportes.");
         else if (EsModerador) await CargarAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (_enfocar is not { } lugar || _lista == null) return;
+        _enfocar = null;
+        await Js.LlamarAsync("enfocarFila", ".fila-reporte__titulo", lugar, ".reportes__pildoras .pildora");
     }
 
     private async Task ElegirAsync(EstadoReporte estado)
@@ -90,9 +126,16 @@
         await CargarAsync();
     }
 
+    private async Task ReintentarAsync()
+    {
+        _lista = null;
+        await CargarAsync();
+    }
+
     private async Task CargarAsync()
     {
         EstadoReporte pedido = _estado;
+        _error = false;
         try
         {
             var datos = await Servicio.ObtenerReportesAsync(pedido);
@@ -107,20 +150,34 @@
         catch (Exception ex)
         {
             Registro.LogError(ex, "No se pudieron cargar los reportes");
-            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
-            _lista = [];
+            _error = true;
         }
     }
 
-    private async Task DecidirAsync(Func<Task> decision)
+    /// <summary>Si el reporte sigue abierto, se queda abierto: falta decidir qué hacer con él.</summary>
+    private Task MostrarAsync(GrupoReportes g) => DecidirAsync(g, async () =>
+    {
+        TipoResena tipo = g.Principal.Reporte.Tipo == TipoObjetivoReporte.ResenaEvento ? TipoResena.Evento : TipoResena.Lugar;
+        await Servicio.MostrarResenaAsync(tipo, g.Principal.Reporte.ObjetivoId);
+    }, g.Principal.Reporte.Estado == EstadoReporte.Abierto ? "La reseña volvió a mostrarse. El reporte sigue abierto." : "La reseña volvió a mostrarse.");
+
+    /// <summary>La confirmación ya guardó; aquí solo se avisa y se actualiza la lista.</summary>
+    private async Task OcultarAsync(GrupoReportes g)
+    {
+        if (!await Modales.ConfirmarOcultarResenaAsync(g)) return;
+        Avisos.Mostrar("Reseña ocultada. Sigue en los reportes resueltos.");
+        await TerminarAsync(g);
+    }
+
+    private async Task DecidirAsync(GrupoReportes g, Func<Task> decision, string aviso)
     {
         if (_ocupado) return;
         _ocupado = true;
         try
         {
             await decision();
-            await Modales.DecisionRegistradaAsync();
-            await CargarAsync();
+            Avisos.Mostrar(aviso);
+            await TerminarAsync(g);
         }
         catch (RequiereSesionException)
         {
@@ -135,6 +192,13 @@
         {
             _ocupado = false;
         }
+    }
+
+    private async Task TerminarAsync(GrupoReportes g)
+    {
+        int lugar = _lista?.ToList().IndexOf(g) ?? 0;
+        await CargarAsync();
+        _enfocar = Math.Max(0, lugar);
     }
 
     private void AlCambiarSesion() => InvokeAsync(async () =>

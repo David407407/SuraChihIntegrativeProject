@@ -80,6 +80,7 @@
                 await Js.LlamarAsync("claseHtml", ClaseHtml, true);
                 await _dialogo.ShowAsync();
             }
+            await Js.LlamarAsync("nombrarDialogo", Id, _contenido);
             await Js.LlamarAsync("enfocarPrimero", _contenido);
         }
     }

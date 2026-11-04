@@ -38,9 +38,14 @@ namespace BackendLogica.Falso
             Hacer(a => a.Reportes.Where(r => r.Estado == estado).OrderBy(r => r.CreadoEn).Select(r => r.ADatos()).ToList(), ct);
 
         public Task<List<ReporteDetalle>> ListarDetalleAsync(EstadoReporte estado = EstadoReporte.Abierto, CancellationToken ct = default) =>
-            Hacer(a => a.Reportes.Where(r => r.Estado == estado)
-                .OrderByDescending(r => r.CreadoEn).ThenByDescending(r => r.Id)
-                .Select(r => ADetalle(a, r)).ToList(), ct);
+            Hacer(a =>
+            {
+                var filas = a.Reportes.Where(r => r.Estado == estado);
+                filas = estado == EstadoReporte.Abierto
+                    ? filas.OrderBy(r => r.CreadoEn).ThenBy(r => r.Id)
+                    : filas.OrderByDescending(r => r.ResueltoEn).ThenByDescending(r => r.Id);
+                return filas.Select(r => ADetalle(a, r)).ToList();
+            }, ct);
 
         public Task<bool> ResolverAsync(int reporteId, int moderadorId, EstadoReporte resultado, CancellationToken ct = default) =>
             Hacer(a =>
@@ -54,6 +59,19 @@ namespace BackendLogica.Falso
                 fila.Estado = resultado;
                 fila.ResueltoPor = moderadorId;
                 fila.ResueltoEn = Ahora;
+                return true;
+            }, ct);
+
+        public Task<bool> ReabrirAsync(int reporteId, int moderadorId, CancellationToken ct = default) =>
+            Hacer(a =>
+            {
+                if (a.Usuario(moderadorId) is not { EsModerador: true, Activo: true })
+                    throw new ReglaNegocioException(ConexionDB.SoloModeradores);
+                var fila = a.Reportes.FirstOrDefault(r => r.Id == reporteId && r.Estado != EstadoReporte.Abierto);
+                if (fila == null) return false;
+                fila.Estado = EstadoReporte.Abierto;
+                fila.ResueltoPor = null;
+                fila.ResueltoEn = null;
                 return true;
             }, ct);
 

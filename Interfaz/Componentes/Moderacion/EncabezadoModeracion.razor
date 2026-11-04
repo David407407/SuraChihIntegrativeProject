@@ -13,7 +13,7 @@
     {
         <p class="encabezado__moderador t-small-fuerte">
             <span class="encabezado__avatar" aria-hidden="true">@usuario.NombreUsuario[..1].ToUpperInvariant()</span>
-            <span>@usuario.NombreUsuario · Moderador</span>
+            <span>@usuario.NombreUsuario · @(usuario.EsSuperModerador ? "Supermoderador" : "Moderador")</span>
         </p>
     }
 </header>

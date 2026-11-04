@@ -40,8 +40,8 @@ namespace Interfaz.Servicios
 
         public const string MotivoOtro = "Otro";
 
-        /// <summary>Filas que muestra "Moderación / Historial" ("Mostrando 50 de 214").</summary>
-        private const int FilasHistorial = 50;
+        /// <summary>Filas que muestra "Moderación / Historial" al entrar y las que suma "Ver más".</summary>
+        public const int FilasHistorial = 50;
 
         /// <summary>Filas de "Decididas recientemente" en Moderación / Organizadores.</summary>
         private const int DecididasRecientes = 5;
@@ -206,47 +206,64 @@ namespace Interfaz.Servicios
 
         // ---------------------------------------------------------------- Reportes
 
-        /// <summary>"Moderación / Reportes": los reportes en ese estado, cada uno con su evento o lugar.</summary>
+        /// <summary>"Moderación / Reportes": los reportes en ese estado, juntando los repetidos del mismo objetivo.</summary>
         public async Task<DatosReportes> ObtenerReportesAsync(EstadoReporte estado)
         {
             Moderador();
             var lista = bd.Reportes.ListarDetalleAsync(estado);
             var conteos = ContarAsync();
             await Task.WhenAll(lista, conteos);
-            return new DatosReportes(lista.Result, conteos.Result);
+            var grupos = lista.Result.GroupBy(r => (r.Reporte.Tipo, r.Reporte.ObjetivoId)).Select(g => new GrupoReportes([.. g])).ToList();
+            return new DatosReportes(grupos, conteos.Result);
         }
 
-        /// <summary>"Descartar" o "Marcar resuelto".</summary>
-        public Task CerrarReporteAsync(int reporteId, EstadoReporte resultado) =>
-            bd.Reportes.ResolverAsync(reporteId, Moderador().Id, resultado);
-
-        /// <summary>"Ocultar reseña": la oculta y cierra sus reportes abiertos. Si ya estaba oculta, solo cierra este.</summary>
-        public async Task OcultarResenaAsync(ReporteDetalle reporte)
+        /// <summary>"Descartar" o "Marcar resuelto": cierra todos los reportes del grupo.</summary>
+        public async Task CerrarReportesAsync(GrupoReportes grupo, EstadoReporte resultado)
         {
             int moderadorId = Moderador().Id;
-            TipoResena tipo = reporte.Reporte.Tipo == TipoObjetivoReporte.ResenaEvento ? TipoResena.Evento : TipoResena.Lugar;
-            if (!await bd.Resenas.CambiarVisibilidadAsync(moderadorId, tipo, reporte.Reporte.ObjetivoId, true))
-                await bd.Reportes.ResolverAsync(reporte.Reporte.Id, moderadorId, EstadoReporte.Resuelto);
+            foreach (var r in grupo.Reportes) await bd.Reportes.ResolverAsync(r.Reporte.Id, moderadorId, resultado);
         }
+
+        /// <summary>"Reabrir": vuelve a abrir los reportes del grupo.</summary>
+        public async Task ReabrirReportesAsync(GrupoReportes grupo)
+        {
+            int moderadorId = Moderador().Id;
+            foreach (var r in grupo.Reportes) await bd.Reportes.ReabrirAsync(r.Reporte.Id, moderadorId);
+        }
+
+        /// <summary>"Ocultar reseña": la oculta y cierra sus reportes abiertos. Si ya estaba oculta, solo cierra los del grupo.</summary>
+        public async Task OcultarResenaAsync(GrupoReportes grupo)
+        {
+            int moderadorId = Moderador().Id;
+            Reporte reporte = grupo.Principal.Reporte;
+            TipoResena tipo = reporte.Tipo == TipoObjetivoReporte.ResenaEvento ? TipoResena.Evento : TipoResena.Lugar;
+            if (!await bd.Resenas.CambiarVisibilidadAsync(moderadorId, tipo, reporte.ObjetivoId, true))
+                await CerrarReportesAsync(grupo, EstadoReporte.Resuelto);
+        }
+
+        /// <summary>"Volver a mostrar" una reseña oculta. Queda en el historial de reseñas.</summary>
+        /// <returns>false si ya estaba visible (otro moderador se adelantó).</returns>
+        public Task<bool> MostrarResenaAsync(TipoResena tipo, int resenaId) =>
+            bd.Resenas.CambiarVisibilidadAsync(Moderador().Id, tipo, resenaId, false);
 
         // ---------------------------------------------------------------- Historial
 
         /// <summary>"Moderación / Historial": las decisiones más recientes y el total con ese filtro.</summary>
-        public async Task<DatosHistorial<RegistroModeracion>> ObtenerHistorialAsync(DecisionModeracion? decision)
+        public async Task<DatosHistorial<RegistroModeracion>> ObtenerHistorialAsync(DecisionModeracion? decision, int limite)
         {
             Moderador();
-            var filas = bd.Moderacion.ListarHistorialAsync(FilasHistorial, decision);
+            var filas = bd.Moderacion.ListarHistorialAsync(limite, decision);
             var total = bd.Moderacion.ContarHistorialAsync(decision);
             var conteos = ContarAsync();
             await Task.WhenAll(filas, total, conteos);
             return new DatosHistorial<RegistroModeracion>(filas.Result, total.Result, conteos.Result);
         }
 
-        /// <summary>"Reseñas ocultas" del historial. Solo un supermoderador: BackendLogica revisa el permiso.</summary>
-        public async Task<DatosHistorial<RegistroResena>> ObtenerHistorialResenasAsync()
+        /// <summary>"Reseñas moderadas" del historial: un supermoderador ve todo y un moderador solo lo suyo (lo decide BackendLogica).</summary>
+        public async Task<DatosHistorial<RegistroResena>> ObtenerHistorialResenasAsync(int limite)
         {
             int moderadorId = Moderador().Id;
-            var filas = bd.Moderacion.ListarHistorialResenasAsync(moderadorId, FilasHistorial);
+            var filas = bd.Moderacion.ListarHistorialResenasAsync(moderadorId, limite);
             var total = bd.Moderacion.ContarHistorialResenasAsync(moderadorId);
             var conteos = ContarAsync();
             await Task.WhenAll(filas, total, conteos);
@@ -322,8 +339,14 @@ namespace Interfaz.Servicios
     /// <summary>Lo que muestran las pestañas de moderación.</summary>
     public sealed record ConteosModeracion(int Publicaciones, int Organizadores, int Reportes);
 
-    /// <param name="Lista">Los reportes del estado elegido, los más nuevos primero.</param>
-    public sealed record DatosReportes(IReadOnlyList<ReporteDetalle> Lista, ConteosModeracion Conteos);
+    /// <summary>Los reportes de un mismo evento, lugar o reseña: una sola fila en "Moderación / Reportes".</summary>
+    public sealed record GrupoReportes(IReadOnlyList<ReporteDetalle> Reportes)
+    {
+        public ReporteDetalle Principal => Reportes[0];
+    }
+
+    /// <param name="Lista">Los reportes del estado elegido, en el orden de BackendLogica.</param>
+    public sealed record DatosReportes(IReadOnlyList<GrupoReportes> Lista, ConteosModeracion Conteos);
 
     /// <param name="Filas">Las más recientes primero.</param>
     /// <param name="Total">Con el mismo filtro ("Mostrando 7 de 214").</param>

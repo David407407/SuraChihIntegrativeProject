@@ -647,7 +647,17 @@ async Task PruebasFalso()
         Afirmar(lista.Single(r => r.Reporte.Tipo == TipoObjetivoReporte.ResenaLugar && r.Reporte.ObjetivoId == 3) is { LugarId: 2, EventoId: null, ResenaAutor: "sofia_c" }, "reseña de lugar → su lugar");
         Afirmar(lista.Single(r => r.Reporte.Tipo == TipoObjetivoReporte.Evento) is { EventoId: 1, ResenaAutor: null }, "evento");
         Afirmar(lista.Single(r => r.Reporte.Tipo == TipoObjetivoReporte.Lugar) is { LugarId: 2, ResenaAutor: null, ReportanteNombre: "sofia_c" }, "lugar");
-        Afirmar(lista.Zip(lista.Skip(1)).All(p => p.First.Reporte.CreadoEn >= p.Second.Reporte.CreadoEn), "los más nuevos primero");
+        Afirmar(lista.Zip(lista.Skip(1)).All(p => p.First.Reporte.CreadoEn <= p.Second.Reporte.CreadoEn), "el que lleva más tiempo esperando primero");
+        return "";
+    });
+    await Prueba("Reportes: reabrir uno cerrado, solo moderadores", async () =>
+    {
+        int id = await f.Reportes.CrearAsync(6, TipoObjetivoReporte.Lugar, 1, MotivoReporte.Spam, null);
+        Afirmar(!await f.Reportes.ReabrirAsync(id, 1), "ya estaba abierto");
+        Afirmar(await f.Reportes.ResolverAsync(id, 1, EstadoReporte.Resuelto), "cerrar");
+        await EsperarError<ReglaNegocioException>(() => f.Reportes.ReabrirAsync(id, 6), ConexionDB.SoloModeradores);
+        Afirmar(await f.Reportes.ReabrirAsync(id, 2), "reabrir");
+        Afirmar((await f.Reportes.ListarAsync()).Any(r => r.Id == id && r.ResueltoPor == null && r.ResueltoEn == null), "abierto y sin quién lo cerró");
         return "";
     });
     await Prueba("Ocultar reseña: solo moderadores, cierra sus reportes y queda en el historial", async () =>
@@ -667,14 +677,16 @@ async Task PruebasFalso()
         Afirmar(abiertos.Any(r => r.Id == otra), "los de otra reseña (con el mismo id, en la otra tabla) siguen abiertos");
         Afirmar(!await f.Resenas.CambiarVisibilidadAsync(2, TipoResena.Lugar, 3, true), "ocultarla otra vez no hace nada");
 
-        await EsperarError<ReglaNegocioException>(() => f.Moderacion.ListarHistorialResenasAsync(2), ModeracionDB.SoloSuperHistorial);
-        await EsperarError<ReglaNegocioException>(() => f.Moderacion.ContarHistorialResenasAsync(6), ModeracionDB.SoloSuperHistorial);
+        await EsperarError<ReglaNegocioException>(() => f.Moderacion.ListarHistorialResenasAsync(6), ConexionDB.SoloModeradores);
+        await EsperarError<ReglaNegocioException>(() => f.Moderacion.ContarHistorialResenasAsync(6), ConexionDB.SoloModeradores);
         var historial = await f.Moderacion.ListarHistorialResenasAsync(1);
         Afirmar(historial.Count == 1 && historial[0] is { ModeradorNombre: "mod_luis", Tipo: TipoResena.Lugar, ResenaId: 3, ObjetivoId: 2, AutorNombre: "sofia_c", Accion: AccionResena.Ocultada }, "historial");
 
         Afirmar(await f.Resenas.CambiarVisibilidadAsync(1, TipoResena.Lugar, 3, false), "volver a mostrar");
         Afirmar((await f.Moderacion.ListarHistorialResenasAsync(1))[0].Accion == AccionResena.Mostrada, "lo más nuevo primero");
-        Afirmar(await f.Moderacion.ContarHistorialResenasAsync(1) == 2, "conteo");
+        Afirmar(await f.Moderacion.ContarHistorialResenasAsync(1) == 2, "el supermoderador ve las dos");
+        var delModerador = await f.Moderacion.ListarHistorialResenasAsync(2);
+        Afirmar(delModerador.Count == 1 && delModerador[0].ModeradorId == 2 && await f.Moderacion.ContarHistorialResenasAsync(2) == 1, "el moderador solo ve la suya");
         return "";
     });
     await Prueba("Historial de moderación: filtros, nombre del objetivo y total", async () =>
@@ -1083,6 +1095,19 @@ async Task PruebasEscrituraMySql(SuraChihBD bd)
         await EsperarError<ReglaNegocioException>(() => bd.Reportes.ResolverAsync(deLugar, 6, EstadoReporte.Descartado), ConexionDB.SoloModeradores);
         return "";
     });
+    await Prueba("Reportes: orden y reabrir con la BD real", async () =>
+    {
+        int id = await bd.Reportes.CrearAsync(6, TipoObjetivoReporte.Lugar, 1, MotivoReporte.Spam, null);
+        var abiertos = await bd.Reportes.ListarDetalleAsync();
+        Afirmar(abiertos.Zip(abiertos.Skip(1)).All(p => p.First.Reporte.CreadoEn <= p.Second.Reporte.CreadoEn), "el más antiguo primero");
+        Afirmar(await bd.Reportes.ResolverAsync(id, 1, EstadoReporte.Descartado), "cerrar");
+        Afirmar((await bd.Reportes.ListarDetalleAsync(EstadoReporte.Descartado))[0].Reporte.Id == id, "el último en cerrarse primero");
+        await EsperarError<ReglaNegocioException>(() => bd.Reportes.ReabrirAsync(id, 6), ConexionDB.SoloModeradores);
+        Afirmar(await bd.Reportes.ReabrirAsync(id, 2) && !await bd.Reportes.ReabrirAsync(id, 2), "reabrir una vez");
+        Afirmar((await bd.Reportes.ListarAsync()).Any(r => r.Id == id && r.ResueltoPor == null), "abierto otra vez");
+        Afirmar(await bd.Reportes.ResolverAsync(id, 1, EstadoReporte.Descartado), "dejarlo cerrado");
+        return "";
+    });
     await Prueba("Ocultar reseña: todo junto y queda en el historial de reseñas", async () =>
     {
         int reporte = (await bd.Reportes.ListarDetalleAsync()).First(r => r.Reporte.Tipo == TipoObjetivoReporte.ResenaLugar && r.Reporte.ObjetivoId == 1).Reporte.Id;
@@ -1091,13 +1116,19 @@ async Task PruebasEscrituraMySql(SuraChihBD bd)
         Afirmar(!await bd.Resenas.CambiarVisibilidadAsync(2, TipoResena.Lugar, 1, true), "dos veces no");
         Afirmar((await bd.Reportes.ListarAsync(EstadoReporte.Resuelto)).Any(r => r.Id == reporte && r.ResueltoPor == 2), "su reporte se cerró");
 
-        await EsperarError<ReglaNegocioException>(() => bd.Moderacion.ListarHistorialResenasAsync(2), ModeracionDB.SoloSuperHistorial);
+        await EsperarError<ReglaNegocioException>(() => bd.Moderacion.ListarHistorialResenasAsync(6), ConexionDB.SoloModeradores);
         int antes = await bd.Moderacion.ContarHistorialResenasAsync(1);
         var historial = await bd.Moderacion.ListarHistorialResenasAsync(1);
         Afirmar(historial[0] is { ModeradorNombre: "mod_luis", Tipo: TipoResena.Lugar, ResenaId: 1, Accion: AccionResena.Ocultada } && historial[0].ObjetivoNombre.Length > 0, "historial");
 
         Afirmar(await bd.Resenas.CambiarVisibilidadAsync(2, TipoResena.Lugar, 1, false), "volver a mostrar");
         Afirmar(await bd.Moderacion.ContarHistorialResenasAsync(1) == antes + 1, "también queda");
+        Afirmar(await bd.Resenas.CambiarVisibilidadAsync(1, TipoResena.Lugar, 1, true), "la oculta el supermoderador");
+        Afirmar(await bd.Resenas.CambiarVisibilidadAsync(1, TipoResena.Lugar, 1, false), "y la muestra");
+        var deLuis = await bd.Moderacion.ListarHistorialResenasAsync(2);
+        Afirmar(deLuis.Count > 0 && deLuis.All(h => h.ModeradorId == 2), "el moderador solo ve lo suyo");
+        Afirmar(await bd.Moderacion.ContarHistorialResenasAsync(2) == deLuis.Count, "conteo del moderador");
+        Afirmar((await bd.Moderacion.ListarHistorialResenasAsync(1)).Any(h => h.ModeradorId == 1), "el supermoderador ve también lo de otros");
         return "";
     });
     await Prueba("Historial de moderación: filtros y total con los JOIN reales", async () =>

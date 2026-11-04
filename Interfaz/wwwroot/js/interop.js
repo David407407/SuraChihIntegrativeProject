@@ -96,6 +96,12 @@ export function escucharEsc(id, puente) {
   dialogo.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') dialogo.puente?.invokeMethodAsync('PedirCierre');
   }, true);
+  // Con el foco fuera del diálogo (en <body>) Esc no pasa por ese keydown: el navegador lo cierra por su cuenta y
+  // la app lo seguiría creyendo abierto. PedirCierre se puede repetir sin problema: si ya está cerrando, no hace nada.
+  dialogo.shadowRoot?.querySelector('dialog')?.addEventListener('cancel', (e) => {
+    e.preventDefault();
+    dialogo.puente?.invokeMethodAsync('PedirCierre');
+  });
 }
 
 /** Regresa al principio un FluentDialog que se desplaza por dentro (la hoja de detalle). */
@@ -109,13 +115,35 @@ export function claseHtml(clase, activa) {
 }
 
 /** Foco al primer campo (o al primer botón si no hay campos), como un formulario normal. */
+// Después de cerrar una fila: el foco pasa a la que ocupó su lugar (o a la última, o a respaldo si ya no hay filas).
+export function enfocarFila(selector, lugar, respaldo) {
+  const filas = document.querySelectorAll(selector);
+  (filas[Math.min(lugar, filas.length - 1)] ?? document.querySelector(respaldo))?.focus({ preventScroll: true });
+}
+
+// Pestaña activa de moderación: a la vista dentro de su fila y, si el foco se perdió al navegar, con el foco.
+export function mostrarPestana(selector) {
+  const pestana = document.querySelector(selector);
+  if (!pestana) return;
+  pestana.parentElement.scrollLeft = pestana.offsetLeft - pestana.parentElement.offsetLeft - 16;
+  if (document.activeElement === document.body) pestana.focus({ preventScroll: true });
+}
+
+// El <dialog> real de FluentDialog está en su shadow DOM: aria-labelledby no alcanza el título, que está afuera.
+export function nombrarDialogo(id, contenedor) {
+  const titulo = contenedor?.querySelector('#modal-titulo')?.textContent?.trim();
+  const dialogo = document.getElementById(id)?.shadowRoot?.querySelector('dialog');
+  if (titulo && dialogo) dialogo.setAttribute('aria-label', titulo);
+}
+
 export function enfocarPrimero(contenedor) {
   // Un cuadro después: FluentDialog pone el foco en sí mismo al abrirse, y esto debe ir después.
   requestAnimationFrame(() => {
     if (!contenedor || contenedor.contains(document.activeElement)) return;   // un campo ya pidió el foco
     // Los campos y botones de Fluent (fluent-text-input, fluent-button) pasan el foco a su control interno.
     const primero = contenedor.querySelector('[autofocus], input:not([type=hidden]):not([disabled]), fluent-text-input:not([disabled])')
-      ?? contenedor.querySelector('button:not([data-cerrar-modal]), fluent-button:not([data-cerrar-modal])');
+      ?? contenedor.querySelector('button:not([data-cerrar-modal]), fluent-button:not([data-cerrar-modal])')
+      ?? contenedor.querySelector('button, fluent-button');   // solo tiene "Listo" o "Entendido"
     primero?.focus({ preventScroll: true });
   });
 }
