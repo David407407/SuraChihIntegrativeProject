@@ -1,0 +1,47 @@
+@*
+  "¿Ocultar esta reseña?": lo abre "Moderación / Reportes" con Modales.ConfirmarOcultarResenaAsync(grupo). Muestra la
+  reseña y cuántos reportes abiertos se cierran con ella. No se borra: se puede volver a mostrar desde los resueltos.
+*@
+@inject ServicioModeracion Moderacion
+@inject Modales Modales
+
+<EncabezadoModal Titulo="¿Ocultar esta reseña?" Icono="alerta-error" Peligro
+                 Texto="@($"Dejará de verse en {Principal.ObjetivoNombre}. Puedes volver a mostrarla desde los reportes resueltos.")" />
+<div class="modal__resumen">
+    <p class="t-small-fuerte">Reseña de @@@Principal.ResenaAutor</p>
+    <p class="t-small texto-2">@(Principal.ResenaComentario ?? "Sin comentario")</p>
+</div>
+<p class="t-small texto-2">@(Grupo.Reportes.Count == 1 ? "También se cerrará su reporte abierto." : $"También se cerrarán sus {Grupo.Reportes.Count} reportes abiertos.")</p>
+<AvisoModal Errores="_errores" />
+<div class="modal__botones">
+    <Boton Texto="Ocultar reseña" Variante="peligro" Icono="ojo-tachado-blanco-16" Clase="modal__ancho" Ocupado="_enviando" OnClick="OcultarAsync" />
+    <Boton Texto="Cancelar" Variante="secundario" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public GrupoReportes Grupo { get; set; } = default!;
+
+    private readonly ErroresFormulario _errores = new();
+    private bool _enviando;
+
+    private ReporteDetalle Principal => Grupo.Principal;
+
+    private async Task OcultarAsync()
+    {
+        _errores.Limpiar();
+        _enviando = true;
+        try
+        {
+            await Moderacion.OcultarResenaAsync(Grupo);
+            Modales.Cerrar(true);
+        }
+        catch (Exception ex)
+        {
+            _errores.PonerAviso(MensajesError.Para(ex));
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+}

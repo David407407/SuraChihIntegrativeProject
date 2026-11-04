@@ -1,4 +1,5 @@
 .opcion {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -14,5 +15,5 @@
   transition: border-color var(--duracion-rapida), background var(--duracion-rapida);
 }
 .opcion:hover { border-color: #c9d2e3; }
-.opcion[aria-checked="true"] { border-color: var(--color-sol); background: var(--color-sol-suave); }
-.opcion:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; }
+.opcion--activa { border-color: var(--color-sol); background: var(--color-sol-suave); }
+.opcion:has(input:focus-visible) { outline: 2px solid var(--color-cielo); outline-offset: 2px; }

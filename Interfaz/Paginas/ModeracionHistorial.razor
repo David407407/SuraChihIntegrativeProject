@@ -1,7 +1,7 @@
 @*
   "Moderación / Historial" de Figma: cada aprobación o rechazo (tabla moderation) con fecha, comentario y moderador.
-  Las píldoras Todo / Aprobados / Rechazados filtran en la BD. Un supermoderador ve además "Reseñas ocultas"
-  (tabla review_moderation), con la misma tabla; BackendLogica vuelve a revisar ese permiso.
+  Las píldoras Todo / Aprobados / Rechazados filtran en la BD. Un supermoderador ve además "Reseñas moderadas"
+  (tabla review_moderation), con la misma tabla y "Volver a mostrar"; BackendLogica vuelve a revisar ese permiso.
 *@
 @page "/moderacion/historial"
 @implements IDisposable
@@ -31,11 +31,19 @@
                 <Pildora Texto="Rechazados" Activa="_filtro == Filtro.Rechazados" OnClick="() => ElegirAsync(Filtro.Rechazados)" />
                 @if (Sesion.Usuario?.EsSuperModerador == true)
                 {
-                    <Pildora Texto="Reseñas ocultas" Activa="_filtro == Filtro.Resenas" OnClick="() => ElegirAsync(Filtro.Resenas)" />
+                    <Pildora Texto="Reseñas moderadas" Activa="_filtro == Filtro.Resenas" OnClick="() => ElegirAsync(Filtro.Resenas)" />
                 }
             </div>
 
-            @if (_filas == null)
+            <p class="solo-lectores" role="status">@Anuncio</p>
+
+            @if (_error)
+            {
+                <VacioModeracion Icono="alerta-error" Titulo="No se pudo cargar el historial" Texto="Revisa tu conexión e inténtalo otra vez.">
+                    <Boton Texto="Reintentar" Variante="oscuro" OnClick="ReintentarAsync" />
+                </VacioModeracion>
+            }
+            else if (_filas == null)
             {
                 <div class="esqueleto historial__esqueleto" aria-hidden="true"></div>
             }
@@ -46,32 +54,49 @@
             else
             {
                 <div class="historial__tabla">
-                    <table>
-                        <thead class="t-caption texto-2">
-                            <tr>
-                                <th scope="col" class="historial__fecha">FECHA</th>
-                                <th scope="col">OBJETIVO</th>
-                                <th scope="col" class="historial__tipo">TIPO</th>
-                                <th scope="col" class="historial__decision">DECISIÓN</th>
-                                <th scope="col" class="historial__comentario">COMENTARIO</th>
-                                <th scope="col" class="historial__moderador">MODERADOR</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var f in _filas)
-                            {
+                    @* tabindex: con teclado también se puede desplazar la tabla en pantallas angostas *@
+                    <div class="historial__desplazar" role="region" aria-label="Tabla del historial" tabindex="0">
+                        <table>
+                            <caption class="solo-lectores">Historial de decisiones de moderación</caption>
+                            <thead class="t-caption texto-2">
                                 <tr>
-                                    <td class="t-small texto-2 historial__fecha">@Formato.RangoFechas(f.Fecha), @f.Fecha.ToString("HH:mm")</td>
-                                    <td class="t-body-fuerte">@f.Objetivo</td>
-                                    <td class="t-small historial__tipo">@f.Tipo</td>
-                                    <td class="historial__decision"><Chip Texto="@f.Decision" Variante="@(f.Positiva ? "exito-suave" : "error-suave")" Icono="@(f.Positiva ? "check-circulo-exito-12" : "x-circulo-error-12")" Clase="chip--estado" /></td>
-                                    <td class="t-small historial__comentario">@(f.Comentario ?? "—")</td>
-                                    <td class="t-small texto-2 historial__moderador">@f.Moderador</td>
+                                    <th scope="col" class="historial__fecha">FECHA</th>
+                                    <th scope="col">OBJETIVO</th>
+                                    <th scope="col" class="historial__tipo">TIPO</th>
+                                    <th scope="col" class="historial__decision">DECISIÓN</th>
+                                    <th scope="col" class="historial__comentario">@(_filtro == Filtro.Resenas ? "RESEÑA" : "COMENTARIO")</th>
+                                    <th scope="col" class="historial__moderador">MODERADOR</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
-                    <p class="t-small texto-2 historial__pie">Mostrando @_filas.Count de @_total</p>
+                            </thead>
+                            <tbody>
+                                @foreach (var f in _filas)
+                                {
+                                    <tr>
+                                        <td class="t-small texto-2 historial__fecha">@Fecha(f.Fecha)</td>
+                                        <td class="t-body-fuerte">@f.Objetivo</td>
+                                        <td class="t-small historial__tipo">@f.Tipo</td>
+                                        <td class="historial__decision"><Chip Texto="@f.Decision" Variante="@(f.Positiva ? "exito-suave" : "error-suave")" Icono="@(f.Positiva ? "check-circulo-exito-12" : "x-circulo-error-12")" Clase="chip--estado" /></td>
+                                        <td class="t-small historial__comentario">
+                                            <span>@(f.Comentario ?? "—")</span>
+                                            @if (f.Resena is { } oculta && SigueOculta(oculta))
+                                            {
+                                                <Boton Texto="Volver a mostrar" Variante="secundario" Tamano="s" Icono="ojo-tinta-16" Clase="historial__mostrar" Deshabilitado="_ocupado"
+                                                       OnClick="() => MostrarAsync(oculta)" aria-label="@($"Volver a mostrar: {f.Objetivo}")" />
+                                            }
+                                        </td>
+                                        <td class="t-small texto-2 historial__moderador">@f.Moderador</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="historial__pie">
+                        <p class="t-small texto-2">Mostrando @_filas.Count de @_total</p>
+                        @if (_filas.Count < _total)
+                        {
+                            <Boton Texto="Ver más" Variante="secundario" Tamano="s" Ocupado="_cargandoMas" OnClick="VerMasAsync" />
+                        }
+                    </div>
                 </div>
             }
         </AccesoModeracion>
@@ -84,15 +109,29 @@
     private enum Filtro { Todo, Aprobados, Rechazados, Resenas }
 
     /// <summary>Una fila de la tabla, venga de moderation o de review_moderation.</summary>
-    private sealed record Fila(DateTime Fecha, string Objetivo, string Tipo, string Decision, bool Positiva, string? Comentario, string Moderador);
+    private sealed record Fila(DateTime Fecha, string Objetivo, string Tipo, string Decision, bool Positiva, string? Comentario, string Moderador, RegistroResena? Resena = null);
 
     private Filtro _filtro = Filtro.Todo;
     private IReadOnlyList<Fila>? _filas;
     private int _total;
+    private int _limite = ServicioModeracion.FilasHistorial;
     private ConteosModeracion? _conteos;
+    private bool _error;
+    private bool _cargandoMas;
+    private bool _ocupado;
+    /// <summary>Lo más reciente que se hizo con cada reseña: "Volver a mostrar" solo sale si sigue oculta.</summary>
+    private HashSet<int> _ocultasVigentes = [];
     private int? _usuarioId;
 
     private bool EsModerador => Sesion.Usuario?.EsModerador == true;
+
+    private string Anuncio => _error ? "No se pudo cargar el historial." : _filas == null ? "" : $"Mostrando {_filas.Count} de {_total}.";
+
+    private bool SigueOculta(RegistroResena r) => _ocultasVigentes.Contains(r.Id);
+
+    /// <summary>"9 oct, 11:05"; con el año si no es este.</summary>
+    private static string Fecha(DateTime fecha) =>
+        fecha.Year == DateTime.Today.Year ? $"{Formato.RangoFechas(fecha)}, {fecha:HH:mm}" : $"{Formato.RangoFechas(fecha)} {fecha.Year}, {fecha:HH:mm}";
 
     protected override async Task OnInitializedAsync()
     {
@@ -107,19 +146,58 @@
         if (_filtro == filtro) return;
         _filtro = filtro;
         _filas = null;
+        _limite = ServicioModeracion.FilasHistorial;
         await CargarAsync();
+    }
+
+    private async Task ReintentarAsync()
+    {
+        _filas = null;
+        await CargarAsync();
+    }
+
+    private async Task VerMasAsync()
+    {
+        _cargandoMas = true;
+        _limite += ServicioModeracion.FilasHistorial;
+        await CargarAsync();
+        _cargandoMas = false;
+    }
+
+    private async Task MostrarAsync(RegistroResena r)
+    {
+        if (_ocupado) return;
+        _ocupado = true;
+        try
+        {
+            await Servicio.MostrarResenaAsync(r.Tipo, r.ResenaId);
+            Avisos.Mostrar("La reseña volvió a mostrarse.");
+            await CargarAsync();
+        }
+        catch (Exception ex)
+        {
+            Registro.LogError(ex, "No se pudo volver a mostrar la reseña");
+            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
+        }
+        finally
+        {
+            _ocupado = false;
+        }
     }
 
     private async Task CargarAsync()
     {
         Filtro pedido = _filtro;
+        _error = false;
         try
         {
             if (pedido == Filtro.Resenas)
             {
-                var datos = await Servicio.ObtenerHistorialResenasAsync();
+                var datos = await Servicio.ObtenerHistorialResenasAsync(_limite);
                 if (pedido != _filtro) return;   // mientras cargaba eligió otra píldora
                 _filas = [.. datos.Filas.Select(DeResena)];
+                // Filas de la más reciente a la más antigua: la primera de cada reseña es su estado actual.
+                _ocultasVigentes = [.. datos.Filas.GroupBy(r => (r.Tipo, r.ResenaId)).Select(g => g.First()).Where(r => r.Accion == AccionResena.Ocultada).Select(r => r.Id)];
                 (_total, _conteos) = (datos.Total, datos.Conteos);
             }
             else
@@ -129,7 +207,7 @@
                     Filtro.Aprobados => DecisionModeracion.Aprobado,
                     Filtro.Rechazados => DecisionModeracion.Rechazado,
                     _ => null,
-                });
+                }, _limite);
                 if (pedido != _filtro) return;
                 _filas = [.. datos.Filas.Select(DeDecision)];
                 (_total, _conteos) = (datos.Total, datos.Conteos);
@@ -142,8 +220,7 @@
         catch (Exception ex)
         {
             Registro.LogError(ex, "No se pudo cargar el historial de moderación");
-            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
-            _filas = [];
+            _error = true;
         }
     }
 
@@ -164,7 +241,7 @@
         r.Accion == AccionResena.Ocultada ? "Oculta" : "Visible",
         r.Accion == AccionResena.Mostrada,
         r.Comentario == null ? $"Sin comentario, de @{r.AutorNombre}" : $"“{r.Comentario}”, de @{r.AutorNombre}",
-        r.ModeradorNombre);
+        r.ModeradorNombre, r);
 
     private void AlCambiarSesion() => InvokeAsync(async () =>
     {

@@ -7,7 +7,7 @@
 <div class="area @(MensajeError != null ? "area--error" : "") @Clase">
     <label class="@(EtiquetaVisible ? "t-small-fuerte" : "solo-lectores")" for="@_id">@Etiqueta</label>
     <textarea @ref="_caja" id="@_id" name="@Nombre" class="area__caja t-body" rows="@Filas" placeholder="@Placeholder"
-              maxlength="@Maximo" aria-invalid="@(MensajeError != null ? "true" : null)"
+              maxlength="@Maximo" aria-required="@(Requerido ? "true" : null)" aria-invalid="@(MensajeError != null ? "true" : null)"
               aria-describedby="@(MensajeError != null ? $"{_id}-error" : null)"
               value="@Valor" @oninput="AlEscribir"></textarea>
     @if (MensajeError != null)
@@ -37,6 +37,8 @@
     /// <summary>Texto pequeño debajo (si no hay error).</summary>
     [Parameter] public string? Ayuda { get; set; }
     [Parameter] public int Filas { get; set; } = 3;
+    /// <summary>Lo anuncia a los lectores de pantalla (quien la usa revisa que no quede vacía).</summary>
+    [Parameter] public bool Requerido { get; set; }
     [Parameter] public int? Maximo { get; set; }
     [Parameter] public string? Clase { get; set; }
 

@@ -647,7 +647,17 @@ async Task PruebasFalso()
         Afirmar(lista.Single(r => r.Reporte.Tipo == TipoObjetivoReporte.ResenaLugar && r.Reporte.ObjetivoId == 3) is { LugarId: 2, EventoId: null, ResenaAutor: "sofia_c" }, "reseña de lugar → su lugar");
         Afirmar(lista.Single(r => r.Reporte.Tipo == TipoObjetivoReporte.Evento) is { EventoId: 1, ResenaAutor: null }, "evento");
         Afirmar(lista.Single(r => r.Reporte.Tipo == TipoObjetivoReporte.Lugar) is { LugarId: 2, ResenaAutor: null, ReportanteNombre: "sofia_c" }, "lugar");
-        Afirmar(lista.Zip(lista.Skip(1)).All(p => p.First.Reporte.CreadoEn >= p.Second.Reporte.CreadoEn), "los más nuevos primero");
+        Afirmar(lista.Zip(lista.Skip(1)).All(p => p.First.Reporte.CreadoEn <= p.Second.Reporte.CreadoEn), "el que lleva más tiempo esperando primero");
+        return "";
+    });
+    await Prueba("Reportes: reabrir uno cerrado, solo moderadores", async () =>
+    {
+        int id = await f.Reportes.CrearAsync(6, TipoObjetivoReporte.Lugar, 1, MotivoReporte.Spam, null);
+        Afirmar(!await f.Reportes.ReabrirAsync(id, 1), "ya estaba abierto");
+        Afirmar(await f.Reportes.ResolverAsync(id, 1, EstadoReporte.Resuelto), "cerrar");
+        await EsperarError<ReglaNegocioException>(() => f.Reportes.ReabrirAsync(id, 6), ConexionDB.SoloModeradores);
+        Afirmar(await f.Reportes.ReabrirAsync(id, 2), "reabrir");
+        Afirmar((await f.Reportes.ListarAsync()).Any(r => r.Id == id && r.ResueltoPor == null && r.ResueltoEn == null), "abierto y sin quién lo cerró");
         return "";
     });
     await Prueba("Ocultar reseña: solo moderadores, cierra sus reportes y queda en el historial", async () =>
@@ -1081,6 +1091,19 @@ async Task PruebasEscrituraMySql(SuraChihBD bd)
         Afirmar(lista.Single(r => r.Reporte.Id == deEvento) is { EventoId: 1, LugarId: null, ResenaAutor: null, ReportanteNombre: "diego_m" }, "evento");
         Afirmar(await bd.Reportes.ResolverAsync(deEvento, 1, EstadoReporte.Resuelto), "resolver");
         await EsperarError<ReglaNegocioException>(() => bd.Reportes.ResolverAsync(deLugar, 6, EstadoReporte.Descartado), ConexionDB.SoloModeradores);
+        return "";
+    });
+    await Prueba("Reportes: orden y reabrir con la BD real", async () =>
+    {
+        int id = await bd.Reportes.CrearAsync(6, TipoObjetivoReporte.Lugar, 1, MotivoReporte.Spam, null);
+        var abiertos = await bd.Reportes.ListarDetalleAsync();
+        Afirmar(abiertos.Zip(abiertos.Skip(1)).All(p => p.First.Reporte.CreadoEn <= p.Second.Reporte.CreadoEn), "el más antiguo primero");
+        Afirmar(await bd.Reportes.ResolverAsync(id, 1, EstadoReporte.Descartado), "cerrar");
+        Afirmar((await bd.Reportes.ListarDetalleAsync(EstadoReporte.Descartado))[0].Reporte.Id == id, "el último en cerrarse primero");
+        await EsperarError<ReglaNegocioException>(() => bd.Reportes.ReabrirAsync(id, 6), ConexionDB.SoloModeradores);
+        Afirmar(await bd.Reportes.ReabrirAsync(id, 2) && !await bd.Reportes.ReabrirAsync(id, 2), "reabrir una vez");
+        Afirmar((await bd.Reportes.ListarAsync()).Any(r => r.Id == id && r.ResueltoPor == null), "abierto otra vez");
+        Afirmar(await bd.Reportes.ResolverAsync(id, 1, EstadoReporte.Descartado), "dejarlo cerrado");
         return "";
     });
     await Prueba("Ocultar reseña: todo junto y queda en el historial de reseñas", async () =>

@@ -9,18 +9,22 @@
 .historial__pildoras { display: flex; flex-wrap: wrap; gap: 8px; }
 .historial__esqueleto { height: 480px; border-radius: var(--radio-l); }
 
-/* En pantallas angostas la tabla se desplaza sola; la página no */
 .historial__tabla {
-  overflow-x: auto;
+  overflow: hidden;
   border: 1px solid var(--color-linea);
   border-radius: var(--radio-l);
   background: var(--color-superficie);
 }
 
-table { width: 100%; min-width: 900px; border-collapse: collapse; text-align: left; }
+/* En pantallas angostas la tabla se desplaza sola; la página no */
+.historial__desplazar { overflow-x: auto; }
+.historial__desplazar:focus-visible { outline: 3px solid var(--color-cielo); outline-offset: -3px; }
+
+/* break-word (no anywhere): las palabras no se parten para hacer angosta la columna OBJETIVO */
+table { width: 100%; min-width: 1060px; border-collapse: collapse; text-align: left; }
 thead { background: var(--color-fondo); }
 th { padding: 14px 10px; font: inherit; letter-spacing: inherit; }
-td { padding: 16px 10px; border-top: 1px solid var(--color-linea); overflow-wrap: anywhere; }
+td { padding: 16px 10px; border-top: 1px solid var(--color-linea); overflow-wrap: break-word; }
 th:first-child, td:first-child { padding-left: 24px; }
 th:last-child, td:last-child { padding-right: 24px; }
 
@@ -31,4 +35,14 @@ th:last-child, td:last-child { padding-right: 24px; }
 .historial__comentario { width: 340px; }
 .historial__moderador { width: 110px; }
 
-.historial__pie { padding: 16px 24px; border-top: 1px solid var(--color-linea); text-align: center; }
+.historial__comentario ::deep .historial__mostrar { display: inline-flex; margin-top: 8px; }
+
+.historial__pie {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-linea);
+  text-align: center;
+}

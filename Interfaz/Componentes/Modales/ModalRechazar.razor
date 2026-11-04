@@ -13,7 +13,7 @@
     <div class="rechazar__motivos" role="radiogroup" aria-label="Motivo del rechazo">
         @foreach (var motivo in Motivos)
         {
-            <Opcion Texto="@motivo" Seleccionada="_motivo == motivo" OnClick="() => _motivo = motivo" />
+            <Opcion Texto="@motivo" Grupo="motivo-rechazo" Seleccionada="_motivo == motivo" OnClick="() => _motivo = motivo" />
         }
     </div>
     <AreaTexto Nombre="comentario" Etiqueta="Comentario (obligatorio)" Filas="3" Maximo="500"

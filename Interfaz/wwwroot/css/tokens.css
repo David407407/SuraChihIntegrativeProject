@@ -22,6 +22,8 @@
   --color-favorito: #e11d48;     /* corazón */
   --color-favorito-suave: #ffe4e6;
   --color-error: #d93636;        /* botón "Peligro", campo con error */
+  --color-exito-texto: #14683f;  /* texto sobre exito-suave: 12px necesita 4.5:1 */
+  --color-error-texto: #a12626;  /* texto sobre error-suave: 12px necesita 4.5:1 */
   --color-error-suave: #fdecec;  /* aviso "Este evento fue cancelado", insignia de "¿Cancelar tu inscripción?" */
 
   /* Fondos del "Chip categoría" (uno por categoría de evento) */

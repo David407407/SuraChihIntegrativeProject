@@ -5,6 +5,7 @@
 *@
 @inject Sesion Sesion
 @inject Acciones Acciones
+@inject InteropJs Js
 
 <nav class="pestanas" aria-label="Secciones de moderación">
     @Pestana("Publicaciones", Publicaciones, Seccion.Publicaciones, () => Acciones.IrA(Acciones.Rutas.Moderacion))
@@ -29,6 +30,12 @@
     [Parameter] public int? Publicaciones { get; set; }
     [Parameter] public int? Organizadores { get; set; }
     [Parameter] public int? Reportes { get; set; }
+
+    /// <summary>Al cambiar de pantalla: la activa queda a la vista (en angosto puede salir de la fila) y con el foco.</summary>
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (primeraVez) await Js.LlamarAsync("mostrarPestana", ".pestana--activa");
+    }
 
     private RenderFragment Pestana(string texto, int? conteo, Seccion? seccion, Action alElegir)
     {
