@@ -33,6 +33,12 @@ namespace Interfaz.Estado
             public const string Buscar = "buscar";
             /// <summary>"Moderación / Revisar evento" de un evento pendiente.</summary>
             public static string RevisarEvento(int id) => $"moderacion/evento/{id}";
+            /// <summary>"Moderación / Revisar lugar" de un lugar pendiente.</summary>
+            public static string RevisarLugar(int id) => $"moderacion/lugar/{id}";
+            /// <summary>"Registrar lugar" (solo organizadores aprobados).</summary>
+            public const string RegistrarLugar = "organizador/lugar/nuevo";
+            /// <summary>La misma pantalla de "Registrar lugar", con los datos de un lugar propio.</summary>
+            public static string EditarLugar(int id) => $"organizador/lugar/{id}/editar";
             /// <summary>"Publicar evento" (WBS 4.6).</summary>
             public const string PublicarEvento = "organizador/evento/nuevo";
             /// <summary>"Organizador / Hazte organizador": la solicitud y su estado.</summary>
@@ -154,6 +160,19 @@ namespace Interfaz.Estado
 
         /// <summary>Editar un evento propio (la misma pantalla de "Publicar evento").</summary>
         public void EditarEvento(int id) => SoloConSesion(() => IrA(Rutas.EditarEvento(id)));
+
+        /// <summary>"Registrar lugar" del Panel de organizador: igual que Publicar evento, solo para organizadores aprobados.</summary>
+        public void RegistrarLugar()
+        {
+            if (!sesion.Iniciada) modales.RequiereSesion("Inicia sesión con tu cuenta de organizador para registrar lugares.");
+            else if (!sesion.EsOrganizador) IrA(Rutas.HazteOrganizador);
+            else IrA(Rutas.RegistrarLugar);
+        }
+
+        /// <summary>Editar un lugar propio (la misma pantalla de "Registrar lugar").</summary>
+        public void EditarLugar(int id) => SoloConSesion(() => IrA(Rutas.EditarLugar(id)));
+
+        public void RevisarLugar(int id) => IrA(Rutas.RevisarLugar(id));
 
         public void CerrarSesion()
         {

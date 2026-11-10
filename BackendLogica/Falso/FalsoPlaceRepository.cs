@@ -67,6 +67,7 @@ namespace BackendLogica.Falso
                     DuenoId = duenoId, Estado = EstadoLugar.Pendiente, CreadoEn = Ahora
                 };
                 Copiar(datos, l);
+                GuardarGaleria(a, l, datos.Galeria);
                 a.Lugares.Add(l);
                 return l.Id;
             }, ct);
@@ -84,10 +85,30 @@ namespace BackendLogica.Falso
                     l.Nombre != datos.Nombre.Trim() || l.Descripcion != datos.Descripcion || l.ImagenUrl != datos.ImagenUrl ||
                     l.SitioWebUrl != datos.SitioWebUrl || l.Direccion != datos.Direccion.Trim() ||
                     l.Latitud != datos.Latitud || l.Longitud != datos.Longitud;
-                if (l.Estado == EstadoLugar.Aprobado && cambioContenido) l.Estado = EstadoLugar.Pendiente;
+                // trg_placeimg_ai: agregarle fotos también lo regresa (quitarlas no).
+                bool fotosNuevas = datos.Galeria.Any(url => l.Galeria.All(f => f.Url != url));
+                if (l.Estado == EstadoLugar.Aprobado && (cambioContenido || fotosNuevas)) l.Estado = EstadoLugar.Pendiente;
                 Copiar(datos, l);
+                GuardarGaleria(a, l, datos.Galeria);
                 return true;
             }, ct);
+
+        public Task<bool> EnviarARevisionAsync(int lugarId, int duenoId, CancellationToken ct = default) =>
+            Hacer(a =>
+            {
+                var l = a.Lugares.FirstOrDefault(x => x.Id == lugarId && x.DuenoId == duenoId && x.Estado == EstadoLugar.Rechazado);
+                if (l == null) return false;
+                l.Estado = EstadoLugar.Pendiente;
+                return true;
+            }, ct);
+
+        private static void GuardarGaleria(AlmacenFalso a, FilaLugar l, IReadOnlyList<string> galeria)
+        {
+            l.Galeria = galeria.Distinct().Select((url, i) =>
+                l.Galeria.FirstOrDefault(f => f.Url == url) is { } actual
+                    ? actual with { Orden = i + 1 }
+                    : new FilaImagen(a.SiguienteImagenLugar(), url, i + 1)).ToList();
+        }
 
         public Task<int> AgregarImagenAsync(int lugarId, string url, CancellationToken ct = default) =>
             Hacer(a =>

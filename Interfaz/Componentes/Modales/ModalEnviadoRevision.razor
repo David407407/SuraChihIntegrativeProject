@@ -5,7 +5,7 @@
 *@
 @inject Modales Modales
 
-<EncabezadoModal Titulo="Tu evento está en revisión" Icono="check-circulo-exito-24" Exito
+<EncabezadoModal Titulo="@(EsLugar ? "Tu lugar está en revisión" : "Tu evento está en revisión")" Icono="check-circulo-exito-24" Exito
                  Texto="Aparecerá como “En revisión” en tu panel. Si lo rechazan, verás el motivo para corregirlo." />
 
 <div class="modal__resumen enviado__resumen">
@@ -17,12 +17,15 @@
 </div>
 <div class="modal__botones">
     <Boton Texto="Ir a mi panel" Icono="tienda-18" Clase="modal__ancho" OnClick="() => Modales.Cerrar(IrAlPanel)" />
-    <Boton Texto="Publicar otro evento" Icono="mas-18" Variante="secundario" Clase="modal__ancho" OnClick="() => Modales.Cerrar(PublicarOtro)" />
+    <Boton Texto="@(EsLugar ? "Registrar otro lugar" : "Publicar otro evento")" Icono="mas-18" Variante="secundario" Clase="modal__ancho" OnClick="() => Modales.Cerrar(PublicarOtro)" />
 </div>
 
 @code {
     public const string IrAlPanel = "panel";
     public const string PublicarOtro = "otro";
+
+    /// <summary>Lo abre Registrar lugar: los textos hablan del lugar.</summary>
+    [Parameter] public bool EsLugar { get; set; }
 
     [Parameter, EditorRequired] public string Titulo { get; set; } = "";
     [Parameter] public string? ImagenUrl { get; set; }

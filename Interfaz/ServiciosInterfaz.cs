@@ -40,6 +40,7 @@ namespace Interfaz
             servicios.AddScoped<ServicioPanelOrganizador>();
             servicios.AddScoped<ServicioBusqueda>();
             servicios.AddScoped<ServicioPublicacion>();
+            servicios.AddScoped<ServicioRegistroLugar>();
             servicios.AddScoped<ServicioImagenes>();
 
             servicios.AddScoped<InteropJs>();

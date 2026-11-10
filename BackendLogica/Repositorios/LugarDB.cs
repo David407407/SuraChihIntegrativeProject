@@ -111,6 +111,7 @@ namespace BackendLogica.Repositorios
                             @SitioWebUrl, @PrecioMin, @PrecioMax, @ImagenUrl)
                     """, ParametrosLugar(duenoId, datos));
                 await GuardarEtiquetasYHorarioAsync(tx, id, datos);
+                await GuardarGaleriaAsync(tx, id, datos.Galeria);
                 return id;
             }, ct);
         }
@@ -133,9 +134,17 @@ namespace BackendLogica.Repositorios
                 await tx.EjecutarAsync("DELETE FROM place_tag WHERE place_id = @lugarId", new { lugarId });
                 await tx.EjecutarAsync("DELETE FROM place_hours WHERE place_id = @lugarId", new { lugarId });
                 await GuardarEtiquetasYHorarioAsync(tx, lugarId, datos);
+                await GuardarGaleriaAsync(tx, lugarId, datos.Galeria);
                 return true;
             }, ct);
         }
+
+        /// <summary>Un lugar rechazado y corregido vuelve a la bandeja de moderación.</summary>
+        public async Task<bool> EnviarARevisionAsync(int lugarId, int duenoId, CancellationToken ct = default) =>
+            await EjecutarAsync("""
+                UPDATE place SET status = 'pending'
+                WHERE id = @lugarId AND owner_id = @duenoId AND status = 'rejected'
+                """, new { lugarId, duenoId }, ct) > 0;
 
         /// <summary>Agrega una foto a la galería. Si el lugar estaba aprobado, vuelve a moderación.</summary>
         public Task<int> AgregarImagenAsync(int lugarId, string url, CancellationToken ct = default) =>
@@ -217,6 +226,31 @@ namespace BackendLogica.Repositorios
                     """, new { lugarId, dia = (int)h.Dia, abre = h.Abre, cierra = h.Cierra });
         }
 
+        /// <summary>
+        /// Deja la galería igual a <paramref name="galeria"/>: quita las fotos que ya no vienen, reordena las que siguen e
+        /// inserta solo las nuevas (cada INSERT dispara <c>trg_placeimg_ai</c>, que regresa a moderación un lugar aprobado).
+        /// </summary>
+        private static async Task GuardarGaleriaAsync(Transaccion tx, int lugarId, IReadOnlyList<string> galeria)
+        {
+            var actuales = await tx.ConsultarAsync("SELECT id, url FROM place_image WHERE place_id = @lugarId",
+                r => (Id: r.Entero("id"), Url: r.Texto("url")), new { lugarId });
+            var urls = galeria.Distinct().ToList();
+
+            var quitar = actuales.Where(i => !urls.Contains(i.Url)).Select(i => i.Id).ToList();
+            if (quitar.Count > 0)
+                await tx.EjecutarAsync("DELETE FROM place_image WHERE id IN @quitar", new { quitar });
+
+            for (int i = 0; i < urls.Count; i++)
+            {
+                var existente = actuales.FirstOrDefault(a => a.Url == urls[i]);
+                if (existente.Url != null)
+                    await tx.EjecutarAsync("UPDATE place_image SET sort_order = @orden WHERE id = @id", new { orden = i + 1, id = existente.Id });
+                else
+                    await tx.EjecutarAsync("INSERT INTO place_image (place_id, url, sort_order) VALUES (@lugarId, @url, @orden)",
+                        new { lugarId, url = urls[i], orden = i + 1 });
+            }
+        }
+
         /// <summary>Validaciones del formulario de lugar. La usa también el repositorio falso.</summary>
         internal static void ValidarDatos(DatosLugar d)
         {
@@ -228,6 +262,13 @@ namespace BackendLogica.Repositorios
                 throw new DatosInvalidosException("Cada día solo puede tener un horario.");
             if (d.Horario.Any(h => h.Abre == h.Cierra))
                 throw new DatosInvalidosException("La hora de apertura y de cierre no pueden ser iguales.");
+            if (d.Nombre.Trim().Length > 120)
+                throw new DatosInvalidosException("El nombre puede tener hasta 120 caracteres.");
+            if (d.Telefono?.Length > 15)
+                throw new DatosInvalidosException("El teléfono puede tener hasta 15 dígitos.");
+            if (d.ImagenUrl != null) Validar.UrlImagen(d.ImagenUrl);
+            foreach (string url in d.Galeria)
+                Validar.UrlImagen(url);
         }
     }
 }
