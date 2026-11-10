@@ -1,0 +1,771 @@
+@*
+  "Registrar lugar": la misma estructura de "Publicar evento" para que un organizador aprobado dé de alta su
+  café, museo, parque... La misma pantalla sirve para editarlo (no hay diseño propio en Figma).
+  - Izquierda, cinco secciones: 1. Información básica (nombre, descripción y tipo), 2. Imágenes (la primera es
+    la portada; se suben a Cloudinary hasta que se guarda), 3. Ubicación (dirección y pin arrastrable),
+    4. Horario (los 7 días; si cierra después de medianoche se pone la hora de cierre aunque sea menor) y
+    5. Contacto y precio (teléfono, sitio web y rango de precio).
+  - Derecha: "Vista previa" (como la Card lugar), "Antes de enviar" (se palomea solo) y el botón.
+  - Un lugar nuevo queda "En revisión" hasta que un moderador lo aprueba (Moderación / Revisar lugar).
+    Editar el contenido de uno publicado lo regresa a revisión; uno rechazado se corrige y se envía de nuevo.
+  Validaciones (las mismas que la BD): nombre de hasta 120 caracteres, coordenadas dentro de Chihuahua,
+  precio mínimo ≤ máximo y horas de apertura y cierre distintas.
+*@
+@page "/organizador/lugar/nuevo"
+@page "/organizador/lugar/{Id:int}/editar"
+@using System.Globalization
+@implements IDisposable
+@inject Sesion Sesion
+@inject ServicioRegistroLugar Servicio
+@inject ServicioImagenes Imagenes
+@inject Modales Modales
+@inject Avisos Avisos
+@inject Acciones Acciones
+@inject InteropJs Js
+@inject NavigationManager Nav
+@inject ILogger<RegistrarLugar> Registro
+
+<PageTitle>SuraChih · @(Editando ? "Editar lugar" : "Registrar lugar")</PageTitle>
+
+<main class="publicar contenedor">
+    <button type="button" class="publicar__volver t-small-fuerte texto-2" @onclick="Acciones.PanelOrganizador">
+        <Icono Nombre="flecha-volver-gris-12" Caja="12" /><span>Volver al panel</span>
+    </button>
+
+    @if (_error != null)
+    {
+        <div class="publicar__error">
+            <h1 class="t-h2">@_error</h1>
+            <div><Boton Texto="Ir a mi panel" Variante="oscuro" OnClick="Acciones.PanelOrganizador" /></div>
+        </div>
+    }
+    else if (_datos == null)
+    {
+        <div class="esqueleto publicar__esqueleto-titulo" aria-hidden="true"></div>
+        <div class="publicar__cuerpo">
+            <div class="esqueleto publicar__esqueleto-form" aria-hidden="true"></div>
+            <div class="esqueleto publicar__esqueleto-lateral" aria-hidden="true"></div>
+        </div>
+    }
+    else
+    {
+        <header class="publicar__encabezado">
+            <div class="publicar__titulo">
+                <h1 class="t-h1">@(Editando ? "Editar lugar" : "Registrar lugar")</h1>
+                <p class="t-body texto-2">@Subtitulo</p>
+            </div>
+            @if (ChipEstado is { } chip)
+            {
+                <Chip Texto="@chip.Texto" Variante="@chip.Variante" Clase="chip--estado" />
+            }
+        </header>
+
+        @if (_estado == EstadoLugar.Rechazado && _datos.Rechazo is { } rechazo)
+        {
+            <div class="rechazo" role="note">
+                <Icono Nombre="comentario-error-14" Caja="14" />
+                <div class="rechazo__texto">
+                    <p class="t-caption rechazo__autor">Moderación · @rechazo.ModeradorNombre</p>
+                    <p class="t-small">@(rechazo.Comentario ?? "Sin comentario.")</p>
+                </div>
+            </div>
+        }
+
+        <div class="publicar__cuerpo">
+            <form class="formulario" novalidate @onsubmit:preventDefault>
+                @* ---- 1. Información básica ---- *@
+                <section class="seccion" id="seccion-info" aria-labelledby="seccion-info-titulo">
+                    @Cabeza("editar-cielo-16", "seccion-info-titulo", "1. Información básica", "Lo que la gente ve primero en el mapa.")
+                    <Campo Nombre="nombre" Etiqueta="Nombre del lugar" EtiquetaVisible Placeholder="Ej.: Café de la Tercera"
+                           @bind-Valor="_nombre" Maximo="MaximoNombre" Errores="_errores"
+                           Ayuda="@($"{_nombre.Length} / {MaximoNombre} caracteres")" />
+                    <AreaTexto Nombre="descripcion" Etiqueta="Descripción" Clase="seccion__descripcion" Filas="5" Maximo="2000"
+                               Placeholder="Qué lo hace especial, qué se puede hacer y qué conviene saber antes de ir."
+                               @bind-Valor="_descripcion" Errores="_errores" />
+                    <fieldset class="seccion__grupo">
+                        <legend class="seccion__leyenda"><span class="t-small-fuerte">Tipo de lugar</span><span class="t-caption texto-2">La primera define el pin del mapa</span></legend>
+                        <div class="seccion__chips">
+                            @foreach (var etiqueta in _datos.Etiquetas)
+                            {
+                                <ChipCategoria @key="etiqueta.Id" Etiqueta="etiqueta" Activo="_etiquetas.Contains(etiqueta.Id)"
+                                               ActivoChanged="activo => AlternarEtiqueta(etiqueta.Id, activo)" />
+                            }
+                        </div>
+                        @if (_errores["etiquetas"] is { } errorEtiquetas)
+                        {
+                            <p class="seccion__error t-caption" role="alert">@errorEtiquetas</p>
+                        }
+                    </fieldset>
+                </section>
+
+                @* ---- 2. Imágenes ---- *@
+                <section class="seccion" id="seccion-imagenes" aria-labelledby="seccion-imagenes-titulo">
+                    @Cabeza("imagen-cielo-16", "seccion-imagenes-titulo", "2. Imágenes", "JPG o PNG. La primera es la portada.")
+                    <div class="fotos">
+                        @foreach (var (foto, i) in _fotos.Select((f, i) => (f, i)))
+                        {
+                            <div @key="foto" class="foto @(i == 0 ? "foto--portada" : "")">
+                                <Imagen Src="@foto.Vista" Alt="@(i == 0 ? "Portada" : $"Foto {i + 1}")" Ancho="@(i == 0 ? 320 : 120)" Alto="180" />
+                                @if (i == 0)
+                                {
+                                    <span class="foto__portada t-caption"><Icono Nombre="estrella-tinta-12" Caja="12" />Portada</span>
+                                }
+                                else
+                                {
+                                    <button type="button" class="foto__boton foto__boton--portada" aria-label="@($"Usar la foto {i + 1} como portada")"
+                                            title="Usar como portada" @onclick="() => HacerPortada(i)">
+                                        <Icono Nombre="estrella-tinta-12" Caja="12" />
+                                    </button>
+                                }
+                                <button type="button" class="foto__boton foto__boton--quitar" aria-label="@($"Quitar la foto {i + 1}")"
+                                        title="Quitar" @onclick="() => _fotos.RemoveAt(i)">
+                                    <Icono Nombre="cerrar" Caja="12" />
+                                </button>
+                            </div>
+                        }
+                        @if (_fotos.Count < ServicioImagenes.MaximoFotos)
+                        {
+                            <label class="subir @(_preparando > 0 ? "subir--ocupado" : "")">
+                                <InputFile class="subir__archivo" OnChange="AgregarFotosAsync" multiple accept="@ServicioImagenes.Formatos"
+                                           disabled="@(_preparando > 0)" aria-describedby="fotos-ayuda" />
+                                @if (_preparando > 0)
+                                {
+                                    <FluentSpinner Size="SpinnerSize.Tiny" />
+                                    <span class="t-small-fuerte">Preparando @(_preparando == 1 ? "1 foto" : $"{_preparando} fotos")…</span>
+                                }
+                                else
+                                {
+                                    <Icono Nombre="subir-nube-cielo-24" Caja="24" />
+                                    <span class="t-small-fuerte">Arrastra o sube fotos</span>
+                                }
+                                <span class="t-caption texto-2" id="fotos-ayuda">Hasta @ServicioImagenes.MaximoFotos imágenes · 5 MB c/u</span>
+                            </label>
+                        }
+                    </div>
+                    @if (_errores["fotos"] is { } errorFotos)
+                    {
+                        <p class="seccion__error t-caption" role="alert">@errorFotos</p>
+                    }
+                    else if (_fotos.Any(f => f.Pendiente))
+                    {
+                        <p class="t-caption texto-2">Las fotos nuevas se suben cuando envíes o guardes el lugar.</p>
+                    }
+                </section>
+
+                @* ---- 3. Ubicación ---- *@
+                <section class="seccion" id="seccion-ubicacion" aria-labelledby="seccion-ubicacion-titulo">
+                    @Cabeza("ubicacion-cielo-16", "seccion-ubicacion-titulo", "3. Ubicación", "Solo direcciones dentro del estado de Chihuahua.")
+                    <Campo Nombre="direccion" Etiqueta="Dirección" EtiquetaVisible Icono="ubicacion-gris-16" Maximo="255"
+                           Placeholder="Calle, número y colonia" @bind-Valor="_direccion" Errores="_errores" />
+                    <div class="mapa-caja @(_errores["mapa"] != null ? "mapa-caja--error" : "")">
+                        <Mapa Clase="mapa-caja__mapa" Arrastrable Lat="_lat" Lng="_lng" Titulo="@(string.IsNullOrWhiteSpace(_nombre) ? "Tu lugar" : _nombre)"
+                              AlMoverUbicacion="MoverPin" AriaLabel="Mapa para marcar la ubicación del lugar" />
+                    </div>
+                    @if (_errores["mapa"] is { } errorMapa)
+                    {
+                        <p class="seccion__error t-caption" role="alert">@errorMapa</p>
+                    }
+                    else
+                    {
+                        <p class="t-caption texto-2">Arrastra el pin (o haz clic en el mapa) para marcar la entrada.</p>
+                    }
+                </section>
+
+                @* ---- 4. Horario ---- *@
+                <section class="seccion" id="seccion-horario" aria-labelledby="seccion-horario-titulo">
+                    @Cabeza("reloj-cielo", "seccion-horario-titulo", "4. Horario", "Así sale “Abierto hasta 9 p.m.” en el mapa y en el detalle.")
+                    <div class="horario" role="table" aria-label="Horario de la semana">
+                        @foreach (var dia in _dias)
+                        {
+                            <div @key="dia.Dia" class="horario__dia @(dia.Abierto ? "" : "horario__dia--cerrado")" role="row">
+                                <div class="horario__nombre" role="cell">
+                                    <Interruptor Activo="dia.Abierto" ActivoChanged="v => CambiarAbierto(dia, v)" Etiqueta="@($"{dia.Nombre} abierto")" />
+                                    <span class="t-small-fuerte">@dia.Nombre</span>
+                                </div>
+                                @if (dia.Abierto)
+                                {
+                                    <div class="horario__horas" role="cell">
+                                        @Hora($"abre-{dia.Dia}", $"{dia.Nombre}: abre", dia.Abre, v => dia.Abre = v)
+                                        <span class="t-small texto-2" aria-hidden="true">a</span>
+                                        @Hora($"cierra-{dia.Dia}", $"{dia.Nombre}: cierra", dia.Cierra, v => dia.Cierra = v)
+                                        @if (CruzaMedianoche(dia))
+                                        {
+                                            <span class="horario__nota t-caption">Cierra al día siguiente</span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="horario__horas t-small texto-2" role="cell">Cerrado</p>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="horario__pie">
+                        <button type="button" class="horario__copiar t-small-fuerte" @onclick="CopiarLunes">
+                            <Icono Nombre="copiar-tinta-16" Caja="16" /><span>Copiar el horario del lunes a toda la semana</span>
+                        </button>
+                    </div>
+                    @if (_errores["horario"] is { } errorHorario)
+                    {
+                        <p class="seccion__error t-caption" role="alert">@errorHorario</p>
+                    }
+                    else
+                    {
+                        <p class="t-caption texto-2">Si cierra después de medianoche (por ejemplo, de 6 p.m. a 2 a.m.), pon la hora de cierre aunque sea menor.</p>
+                    }
+                </section>
+
+                @* ---- 5. Contacto y precio ---- *@
+                <section class="seccion" id="seccion-contacto" aria-labelledby="seccion-contacto-titulo">
+                    @Cabeza("etiqueta-cielo-16", "seccion-contacto-titulo", "5. Contacto y precio", "Para que la gente pueda llamar o ver tu página.")
+                    <div class="seccion__fila">
+                        <Campo Nombre="telefono" Etiqueta="Teléfono" EtiquetaVisible Tipo="tel" Icono="telefono-gris-16" Maximo="20"
+                               Placeholder="614 222 0190" @bind-Valor="_telefono" Errores="_errores" Autocompletar="tel" />
+                        <Campo Nombre="sitio" Etiqueta="Sitio web o red social" EtiquetaVisible Tipo="url" Icono="enlace-gris-16" Maximo="500"
+                               Placeholder="https://" @bind-Valor="_sitio" Errores="_errores" />
+                    </div>
+                    <div class="seccion__pildoras" role="group" aria-label="Precio">
+                        <Pildora Texto="Sin dato" Activa="_precio == TipoPrecio.SinDato" OnClick="() => CambiarPrecio(TipoPrecio.SinDato)" />
+                        <Pildora Texto="Gratis" Activa="_precio == TipoPrecio.Gratis" OnClick="() => CambiarPrecio(TipoPrecio.Gratis)" />
+                        <Pildora Texto="Precio promedio" Activa="_precio == TipoPrecio.Rango" OnClick="() => CambiarPrecio(TipoPrecio.Rango)" />
+                    </div>
+                    @if (_precio == TipoPrecio.Rango)
+                    {
+                        <div class="seccion__fila">
+                            <Campo Nombre="precioMin" Etiqueta="Desde" EtiquetaVisible Tipo="number" Icono="etiqueta-gris-16"
+                                   Placeholder="100" @bind-Valor="_precioMin" Errores="_errores" />
+                            <Campo Nombre="precioMax" Etiqueta="Hasta" EtiquetaVisible Tipo="number" Icono="etiqueta-gris-16"
+                                   Placeholder="200" @bind-Valor="_precioMax" Errores="_errores" />
+                        </div>
+                        <p class="t-caption texto-2">Lo que gasta una persona en promedio. Sale como “$100–200” en la tarjeta.</p>
+                    }
+                </section>
+            </form>
+
+            @* ---- Columna derecha ---- *@
+            <aside class="lateral" aria-label="Resumen y envío">
+                <section class="lateral__caja previa-caja" aria-labelledby="previa-titulo">
+                    <p class="t-small-fuerte texto-2" id="previa-titulo">Vista previa</p>
+                    <article class="previa">
+                        <div class="previa__imagen">
+                            <Imagen Src="@_fotos.FirstOrDefault()?.Vista" Alt="" Ancho="332" Alto="200" />
+                            @if (TipoPrevio is { } tipo)
+                            {
+                                <span class="previa__tipo"><Chip Texto="@tipo" Variante="superficie" /></span>
+                            }
+                        </div>
+                        <div class="previa__info">
+                            <p class="t-card-titulo previa__titulo">@(string.IsNullOrWhiteSpace(_nombre) ? "Nombre del lugar" : _nombre.Trim())</p>
+                            <p class="t-small texto-2">@(string.IsNullOrWhiteSpace(_direccion) ? "Dirección" : _direccion.Trim())</p>
+                            <p class="t-small previa__meta">
+                                @if (PrecioPrevio is { Length: > 0 } precio)
+                                {
+                                    <span class="texto-2">@precio</span>
+                                }
+                                <span class="@(HorarioPrevio.Abierto ? "previa__abierto" : "texto-2")">@HorarioPrevio.Texto</span>
+                            </p>
+                        </div>
+                    </article>
+                </section>
+
+                <section class="lateral__caja lista" aria-labelledby="lista-titulo">
+                    <h2 class="t-card-titulo" id="lista-titulo">Antes de enviar</h2>
+                    <ul class="lista__puntos" role="list">
+                        @Revision("Nombre, descripción y tipo", TextosListos)
+                        @Revision("Ubicación dentro de Chihuahua", UbicacionLista)
+                        @Revision("Horario de los días que abre", _dias.Any(d => d.Abierto))
+                        @Revision("Fotos propias o con permiso", _fotos.Count > 0)
+                        @Revision("Teléfono o sitio web", !string.IsNullOrWhiteSpace(_telefono) || !string.IsNullOrWhiteSpace(_sitio))
+                    </ul>
+                </section>
+
+                <div class="acciones">
+                    @if (_aviso != null)
+                    {
+                        <p class="acciones__aviso t-small" role="alert">@_aviso</p>
+                    }
+                    <Boton Texto="@TextoBoton" Icono="@(Editando && _estado != EstadoLugar.Rechazado ? "check-18" : "subir")" Clase="acciones__boton"
+                           Ocupado="_guardando" Deshabilitado="@(_guardando || _preparando > 0)" OnClick="GuardarAsync" />
+                    <p class="t-caption texto-2">@NotaBoton</p>
+                </div>
+            </aside>
+        </div>
+    }
+</main>
+
+<VolverArriba />
+
+@code {
+    /// <summary>Id del lugar que se edita; null en "/organizador/lugar/nuevo".</summary>
+    [Parameter] public int? Id { get; set; }
+
+    private const int MaximoNombre = 120;
+
+    private enum TipoPrecio { SinDato, Gratis, Rango }
+
+    /// <summary>Un renglón del horario. Abre y Cierra en "HH:mm" (lo que mandan los input time).</summary>
+    private sealed class DiaFormulario(DayOfWeek dia, string nombre)
+    {
+        public DayOfWeek Dia { get; } = dia;
+        public string Nombre { get; } = nombre;
+        public bool Abierto { get; set; }
+        public string Abre { get; set; } = "09:00";
+        public string Cierra { get; set; } = "21:00";
+    }
+
+    private DatosFormularioLugar? _datos;
+    private string? _error;
+    private string? _aviso;
+    private int? _cargado;
+    private int? _usuarioId;
+    private EstadoLugar? _estado;
+    private bool _guardando;
+    private int _preparando;
+    private readonly ErroresFormulario _errores = new();
+
+    // Formulario
+    private string _nombre = "";
+    private string _descripcion = "";
+    private HashSet<int> _etiquetas = [];
+    /// <summary>La primera es la portada. Las nuevas esperan en memoria hasta guardar (ServicioImagenes).</summary>
+    private List<FotoFormulario> _fotos = [];
+    private string _direccion = "";
+    private decimal? _lat, _lng;
+    private List<DiaFormulario> _dias = DiasVacios();
+    private string _telefono = "";
+    private string _sitio = "";
+    private TipoPrecio _precio = TipoPrecio.SinDato;
+    private string _precioMin = "", _precioMax = "";
+    /// <summary>Orden en que se eligieron los tipos (el primero define el pin del mapa).</summary>
+    private List<int> _ordenEtiquetas = [];
+
+    private bool Editando => Id != null;
+    private int Clave => Id ?? 0;
+
+    private static List<DiaFormulario> DiasVacios() =>
+    [
+        new(DayOfWeek.Monday, "Lunes"), new(DayOfWeek.Tuesday, "Martes"), new(DayOfWeek.Wednesday, "Miércoles"),
+        new(DayOfWeek.Thursday, "Jueves"), new(DayOfWeek.Friday, "Viernes"), new(DayOfWeek.Saturday, "Sábado"),
+        new(DayOfWeek.Sunday, "Domingo"),
+    ];
+
+    private string Subtitulo => _estado switch
+    {
+        EstadoLugar.Aprobado => "Está publicado. Si cambias el nombre, la descripción, las fotos, la ubicación o el sitio web, un moderador lo revisará de nuevo.",
+        EstadoLugar.Pendiente => "Está en revisión. Puedes corregirlo mientras tanto.",
+        EstadoLugar.Rechazado => "Lo rechazaron: corrígelo y envíalo de nuevo a revisión.",
+        _ => "Un moderador lo revisará antes de que aparezca en el mapa de SuraChih.",
+    };
+
+    private (string Texto, string Variante)? ChipEstado => _estado switch
+    {
+        EstadoLugar.Pendiente => ("En revisión", "sol-suave"),
+        EstadoLugar.Aprobado => ("Publicado", "exito-suave"),
+        EstadoLugar.Rechazado => ("Rechazado", "error-suave"),
+        _ => null,
+    };
+
+    private string TextoBoton => !Editando ? "Enviar a revisión"
+        : _estado == EstadoLugar.Rechazado ? "Enviar de nuevo a revisión"
+        : "Guardar cambios";
+
+    private string NotaBoton => !Editando || _estado == EstadoLugar.Rechazado
+        ? "Mientras esté en revisión lo verás como “En revisión” en tu panel."
+        : _estado == EstadoLugar.Aprobado
+            ? "Cambiar el horario, el teléfono o el precio no lo regresa a revisión."
+            : "Sigue en revisión: el moderador verá la versión nueva.";
+
+    // ---------------------------------------------------------------- Piezas
+
+    /// <summary>Encabezado de sección: insignia azul de 40px, título numerado y subtítulo.</summary>
+    private static RenderFragment Cabeza(string icono, string id, string titulo, string? subtitulo) =>
+        @<div class="seccion__cabeza">
+            <span class="seccion__insignia"><Icono Nombre="@icono" Caja="16" /></span>
+            <div class="seccion__textos">
+                <h2 class="t-h3" id="@id">@titulo</h2>
+                @if (subtitulo != null)
+                {
+                    <p class="t-small texto-2">@subtitulo</p>
+                }
+            </div>
+        </div>;
+
+    /// <summary>Hora nativa con la forma del "Campo" de Figma (reloj, 48px, píldora).</summary>
+    private RenderFragment Hora(string id, string etiqueta, string valor, Action<string> cambiar) =>
+        @<div class="entrada horario__hora @(_errores["horario"] != null ? "entrada--error" : "")">
+            <label class="solo-lectores" for="@id">@etiqueta</label>
+            <div class="entrada__caja">
+                <Icono Nombre="reloj-gris-16" />
+                <input id="@id" name="@id" type="time" class="entrada__control" value="@valor"
+                       @onchange="e => CambiarHora(cambiar, e)" />
+            </div>
+        </div>;
+
+    private static RenderFragment Revision(string texto, bool hecho) =>
+        @<li class="lista__punto t-small @(hecho ? "" : "texto-2")">
+            <Icono Nombre="@(hecho ? "check-circulo-exito" : "circulo-gris-16")" Caja="16" />
+            <span>@texto</span>
+            <span class="solo-lectores">@(hecho ? "(listo)" : "(pendiente)")</span>
+        </li>;
+
+    // ---------------------------------------------------------------- Vista previa y "Antes de enviar"
+
+    private bool TextosListos => !string.IsNullOrWhiteSpace(_nombre) && !string.IsNullOrWhiteSpace(_descripcion) && _etiquetas.Count > 0;
+    private bool UbicacionLista => _lat is { } lat && _lng is { } lng && DentroDeChihuahua(lat, lng) && !string.IsNullOrWhiteSpace(_direccion);
+
+    private string? TipoPrevio => _ordenEtiquetas.Select(id => _datos?.Etiquetas.FirstOrDefault(t => t.Id == id)?.Nombre).FirstOrDefault(n => n != null);
+
+    private string PrecioPrevio => _precio switch
+    {
+        TipoPrecio.Gratis => "Gratis",
+        TipoPrecio.Rango => Formato.Precio(Numero(_precioMin), Numero(_precioMax)),
+        _ => "",
+    };
+
+    /// <summary>"Abierto hasta 9 p.m." con el horario que se va llenando (mismo cálculo que la BD).</summary>
+    private (string Texto, bool Abierto) HorarioPrevio => Formato.HorarioLugar(EstadoHorario.Calcular(Horario(), DateTime.Now));
+
+    // ---------------------------------------------------------------- Carga
+
+    protected override void OnInitialized() => Sesion.Cambio += AlCambiarSesion;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_cargado == Clave) return;
+        if (!Sesion.Iniciada)
+        {
+            Modales.RequiereSesion("Inicia sesión con tu cuenta de organizador para registrar lugares.");
+            return;
+        }
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _usuarioId = Sesion.Usuario?.Id;
+        _cargado = Clave;
+        _datos = null;
+        _error = null;
+        _aviso = null;
+        _errores.Limpiar();
+        try
+        {
+            var datos = await Servicio.ObtenerFormularioAsync(Id);
+            Llenar(datos);
+            _datos = datos;
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            if (ex is not BackendLogica.Datos.SuraChihException) Registro.LogError(ex, "No se pudo abrir el formulario del lugar {Id}", Id);
+            _error = MensajesError.Para(ex);
+        }
+    }
+
+    /// <summary>Pasa el lugar (al editar) a los campos, o los deja vacíos para uno nuevo.</summary>
+    private void Llenar(DatosFormularioLugar datos)
+    {
+        LugarTarjeta? l = datos.Lugar?.Lugar;
+        _estado = l?.Estado;
+        _nombre = l?.Nombre ?? "";
+        _descripcion = l?.Descripcion ?? "";
+        _ordenEtiquetas = l?.Etiquetas.Select(t => t.Id).ToList() ?? new List<int>();
+        _etiquetas = _ordenEtiquetas.ToHashSet();
+        _fotos = l == null
+            ? new List<FotoFormulario>()
+            : new[] { l.ImagenUrl }.Concat(datos.Lugar!.Galeria).OfType<string>().Distinct().Select(FotoFormulario.Existente).ToList();
+        _direccion = l?.Direccion ?? "";
+        _lat = l?.Latitud;
+        _lng = l?.Longitud;
+        _dias = DiasVacios();
+        foreach (var h in l?.Horario ?? Array.Empty<HorarioDia>())
+        {
+            var dia = _dias.First(d => d.Dia == h.Dia);
+            dia.Abierto = true;
+            dia.Abre = $"{h.Abre:hh\\:mm}";
+            dia.Cierra = $"{h.Cierra:hh\\:mm}";
+        }
+        _telefono = l?.Telefono ?? "";
+        _sitio = l?.SitioWebUrl ?? "";
+        _precio = l == null || (l.PrecioMin == null && l.PrecioMax == null) ? TipoPrecio.SinDato
+            : l.PrecioMax == 0 ? TipoPrecio.Gratis : TipoPrecio.Rango;
+        _precioMin = _precio == TipoPrecio.Rango && l?.PrecioMin is { } min ? Texto(min) : "";
+        _precioMax = _precio == TipoPrecio.Rango && l?.PrecioMax is { } max ? Texto(max) : "";
+    }
+
+    // ---------------------------------------------------------------- Interacción
+
+    private void AlternarEtiqueta(int id, bool activo)
+    {
+        if (activo) { _etiquetas.Add(id); if (!_ordenEtiquetas.Contains(id)) _ordenEtiquetas.Add(id); }
+        else { _etiquetas.Remove(id); _ordenEtiquetas.Remove(id); }
+        _errores.Quitar("etiquetas");
+    }
+
+    private void MoverPin((decimal Lat, decimal Lng) punto)
+    {
+        (_lat, _lng) = punto;
+        _errores.Quitar("mapa");
+    }
+
+    private void CambiarAbierto(DiaFormulario dia, bool abierto)
+    {
+        dia.Abierto = abierto;
+        _errores.Quitar("horario");
+    }
+
+    private void CambiarHora(Action<string> cambiar, ChangeEventArgs e)
+    {
+        cambiar(e.Value?.ToString() ?? "");
+        _errores.Quitar("horario");
+    }
+
+    private void CopiarLunes()
+    {
+        var lunes = _dias[0];
+        foreach (var dia in _dias.Skip(1))
+            (dia.Abierto, dia.Abre, dia.Cierra) = (lunes.Abierto, lunes.Abre, lunes.Cierra);
+        _errores.Quitar("horario");
+    }
+
+    private void CambiarPrecio(TipoPrecio precio)
+    {
+        _precio = precio;
+        _errores.Quitar("precioMin");
+        _errores.Quitar("precioMax");
+    }
+
+    private void HacerPortada(int i)
+    {
+        FotoFormulario foto = _fotos[i];
+        _fotos.RemoveAt(i);
+        _fotos.Insert(0, foto);
+    }
+
+    /// <summary>Agrega las fotos elegidas (o arrastradas) hasta llenar las 8. Se suben a Cloudinary al guardar.</summary>
+    private async Task AgregarFotosAsync(InputFileChangeEventArgs e)
+    {
+        _errores.Quitar("fotos");
+        int espacio = ServicioImagenes.MaximoFotos - _fotos.Count;
+        var archivos = e.GetMultipleFiles(Math.Max(e.FileCount, 1)).ToList();
+        if (archivos.Count > espacio)
+            _errores.Poner("fotos", $"Solo caben {ServicioImagenes.MaximoFotos} fotos: se agregaron las primeras {espacio}.", enfocar: false);
+
+        var porAgregar = archivos.Take(espacio).ToList();
+        _preparando = porAgregar.Count;
+        foreach (IBrowserFile archivo in porAgregar)
+        {
+            try
+            {
+                _fotos.Add(await ServicioImagenes.PrepararAsync(archivo));
+            }
+            catch (Exception ex)
+            {
+                if (ex is not BackendLogica.Datos.SuraChihException) Registro.LogError(ex, "No se pudo leer la foto {Nombre}", archivo.Name);
+                _errores.Poner("fotos", $"{archivo.Name}: {MensajesError.Para(ex)}", enfocar: false);
+            }
+            finally
+            {
+                _preparando--;
+                StateHasChanged();
+            }
+        }
+        _preparando = 0;
+    }
+
+    // ---------------------------------------------------------------- Guardar
+
+    private async Task GuardarAsync()
+    {
+        _aviso = null;
+        if (Validar() is { } seccion)
+        {
+            _aviso = "Revisa los campos marcados.";
+            await Js.DesplazarAAsync(seccion);
+            return;
+        }
+
+        _guardando = true;
+        EstadoLugar? antes = _estado;
+        try
+        {
+            // Hasta aquí las fotos nuevas solo estaban en memoria: se suben a Cloudinary al guardar.
+            if (_fotos.Any(f => f.Pendiente))
+            {
+                StateHasChanged();
+                await Imagenes.SubirPendientesAsync(_fotos);
+            }
+            DatosLugar datos = Datos();
+
+            if (Id is not { } id)
+            {
+                int nuevo = await Servicio.CrearAsync(datos);
+                _estado = EstadoLugar.Pendiente;
+                await EnviadoAsync(nuevo, datos);
+                return;
+            }
+
+            _estado = await Servicio.ActualizarAsync(id, datos);
+            if (antes == EstadoLugar.Rechazado && _estado == EstadoLugar.Pendiente) await EnviadoAsync(id, datos);
+            else if (antes == EstadoLugar.Aprobado && _estado == EstadoLugar.Pendiente)
+                Avisos.Mostrar("Guardaste los cambios. Como cambiaste el contenido, vuelve a revisión.", TipoAviso.Info);
+            else Avisos.Mostrar("Guardaste los cambios");
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            if (ex is not BackendLogica.Datos.SuraChihException) Registro.LogError(ex, "No se pudo guardar el lugar {Id}", Id);
+            _aviso = MensajesError.Para(ex);
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+
+    /// <summary>"Tu lugar está en revisión" y lo que elija: su panel, otro lugar nuevo o quedarse a verlo.</summary>
+    private async Task EnviadoAsync(int id, DatosLugar datos)
+    {
+        string? eleccion = await Modales.EnviadoARevisionAsync(datos.Nombre.Trim(), datos.ImagenUrl, datos.Direccion.Trim(), esLugar: true);
+        if (eleccion == ModalEnviadoRevision.PublicarOtro)
+        {
+            if (Editando) Nav.NavigateTo(Acciones.Rutas.RegistrarLugar);
+            else { _cargado = null; await CargarAsync(); }
+        }
+        else if (eleccion == ModalEnviadoRevision.IrAlPanel)
+        {
+            Acciones.PanelOrganizador();
+        }
+        else if (Id != id)
+        {
+            _cargado = id;   // ya está en pantalla: no se vuelve a pedir
+            Nav.NavigateTo(Acciones.Rutas.EditarLugar(id), replace: true);
+        }
+    }
+
+    /// <summary>Lo mismo que revisa la BD, para marcar cada campo.</summary>
+    /// <returns>Id de la primera sección con errores, o null si todo está bien.</returns>
+    private string? Validar()
+    {
+        _errores.Limpiar();
+        string? primera = null;
+        void Error(string seccion, string campo, string mensaje)
+        {
+            _errores.Poner(campo, mensaje, enfocar: primera == null);
+            primera ??= seccion;
+        }
+
+        string nombre = _nombre.Trim();
+        if (nombre.Length == 0) Error("seccion-info", "nombre", "Escribe el nombre del lugar.");
+        else if (nombre.Length > MaximoNombre) Error("seccion-info", "nombre", $"El nombre puede tener hasta {MaximoNombre} caracteres.");
+        if (string.IsNullOrWhiteSpace(_descripcion)) Error("seccion-info", "descripcion", "Escribe una descripción.");
+        if (_etiquetas.Count == 0) Error("seccion-info", "etiquetas", "Elige al menos un tipo de lugar.");
+
+        if (string.IsNullOrWhiteSpace(_direccion)) Error("seccion-ubicacion", "direccion", "Escribe la dirección.");
+        if (_lat is not { } lat || _lng is not { } lng) Error("seccion-ubicacion", "mapa", "Marca la entrada del lugar en el mapa.");
+        else if (!DentroDeChihuahua(lat, lng)) Error("seccion-ubicacion", "mapa", "La ubicación debe estar dentro del estado de Chihuahua.");
+
+        foreach (var dia in _dias.Where(d => d.Abierto))
+        {
+            if (HoraDe(dia.Abre) is not { } abre || HoraDe(dia.Cierra) is not { } cierra)
+            {
+                Error("seccion-horario", "horario", $"Pon la hora de apertura y de cierre del {dia.Nombre.ToLowerInvariant()}, o márcalo como cerrado.");
+                break;
+            }
+            if (abre == cierra)
+            {
+                Error("seccion-horario", "horario", $"El {dia.Nombre.ToLowerInvariant()} abre y cierra a la misma hora.");
+                break;
+            }
+        }
+
+        string telefono = SoloDigitos(_telefono);
+        if (_telefono.Trim().Length > 0 && telefono.Length is < 10 or > 15)
+            Error("seccion-contacto", "telefono", "Escribe el teléfono con lada: de 10 a 15 dígitos.");
+        string sitio = _sitio.Trim();
+        if (sitio.Length > 0 && (!Uri.TryCreate(sitio, UriKind.Absolute, out Uri? uri) || uri.Scheme is not ("https" or "http")))
+            Error("seccion-contacto", "sitio", "Escribe la dirección completa, empezando con https://");
+
+        if (_precio == TipoPrecio.Rango)
+        {
+            decimal? min = Numero(_precioMin), max = Numero(_precioMax);
+            if (min is not { } a || a < 0) Error("seccion-contacto", "precioMin", "Escribe un precio válido (0 o más).");
+            if (max is not { } b || b <= 0) Error("seccion-contacto", "precioMax", "Escribe un precio mayor a 0.");
+            else if (min is { } c && c > b) Error("seccion-contacto", "precioMin", "El precio mínimo no puede ser mayor que el máximo.");
+        }
+
+        return primera;
+    }
+
+    private DatosLugar Datos()
+    {
+        (decimal? min, decimal? max) = _precio switch
+        {
+            TipoPrecio.Gratis => ((decimal?)0m, (decimal?)0m),
+            TipoPrecio.Rango => (Numero(_precioMin), Numero(_precioMax)),
+            _ => ((decimal?)null, (decimal?)null),
+        };
+        string telefono = SoloDigitos(_telefono);
+        return new DatosLugar
+        {
+            Nombre = _nombre.Trim(),
+            Descripcion = _descripcion.Trim(),
+            Direccion = _direccion.Trim(),
+            Latitud = _lat!.Value,
+            Longitud = _lng!.Value,
+            Telefono = telefono.Length == 0 ? null : telefono,
+            SitioWebUrl = string.IsNullOrWhiteSpace(_sitio) ? null : _sitio.Trim(),
+            PrecioMin = min,
+            PrecioMax = max,
+            ImagenUrl = _fotos.FirstOrDefault()?.Url,
+            EtiquetaIds = [.. _ordenEtiquetas],
+            Horario = [.. Horario()],
+            Galeria = [.. _fotos.Skip(1).Select(f => f.Url!)],
+        };
+    }
+
+    // ---------------------------------------------------------------- Apoyo
+
+    /// <summary>Los días abiertos con hora válida, como los guarda place_hours.</summary>
+    private List<HorarioDia> Horario() =>
+        _dias.Where(d => d.Abierto)
+             .Select(d => (d.Dia, Abre: HoraDe(d.Abre), Cierra: HoraDe(d.Cierra)))
+             .Where(d => d.Abre != null && d.Cierra != null && d.Abre != d.Cierra)
+             .Select(d => new HorarioDia(d.Dia, d.Abre!.Value, d.Cierra!.Value))
+             .ToList();
+
+    private static bool CruzaMedianoche(DiaFormulario dia) =>
+        HoraDe(dia.Abre) is { } abre && HoraDe(dia.Cierra) is { } cierra && cierra < abre;
+
+    private static TimeSpan? HoraDe(string texto) =>
+        TimeSpan.TryParseExact(texto, ["hh\\:mm", "hh\\:mm\\:ss"], CultureInfo.InvariantCulture, out TimeSpan valor) ? valor : null;
+
+    /// <summary>Caja del estado de Chihuahua (los CHECK ck_place_lat / ck_place_lng).</summary>
+    private static bool DentroDeChihuahua(decimal lat, decimal lng) => lat is >= 25.5m and <= 31.8m && lng is >= -109.2m and <= -103.3m;
+
+    private static string SoloDigitos(string texto) => new(texto.Where(char.IsAsciiDigit).ToArray());
+
+    private static decimal? Numero(string texto) =>
+        decimal.TryParse(texto.Trim().TrimStart('$').Replace(",", ""), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal valor) ? valor : null;
+
+    private static string Texto(decimal valor) => valor.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private void AlCambiarSesion() => InvokeAsync(async () =>
+    {
+        int? id = Sesion.Usuario?.Id;
+        if (id == _usuarioId) return;
+        if (_usuarioId != null && id == null) { Acciones.Inicio(); return; }
+        _cargado = null;
+        await CargarAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
+}

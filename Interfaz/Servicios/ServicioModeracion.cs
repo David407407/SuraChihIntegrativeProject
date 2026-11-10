@@ -169,6 +169,67 @@ namespace Interfaz.Servicios
             return bd.Moderacion.RechazarAsync(moderador.Id, TipoObjetivoModeracion.Evento, eventoId, TextoRechazo(motivo, comentario));
         }
 
+        // ---------------------------------------------------------------- Revisar lugar
+
+        /// <summary>"Moderación / Revisar lugar": vista previa, datos del dueño y la cola de lugares pendientes.</summary>
+        public async Task<DatosRevisionLugar> ObtenerRevisionLugarAsync(int lugarId)
+        {
+            Usuario moderador = Moderador();
+            var detalle = bd.Lugares.ObtenerAsync(lugarId);
+            var envios = bd.Moderacion.ListarEnviosPendientesAsync();
+            var editado = YaAprobadoAsync(TipoObjetivoModeracion.Lugar, lugarId);
+            await Task.WhenAll(detalle, envios, editado);
+
+            LugarDetalle lugar = detalle.Result ?? throw new ReglaNegocioException("Este lugar ya no existe.");
+            LugarTarjeta l = lugar.Lugar;
+            if (l.Estado != EstadoLugar.Pendiente)
+                throw new ReglaNegocioException("Este lugar ya no está pendiente de revisión.");
+
+            int duenoId = l.DuenoId;
+            var perfil = bd.Organizadores.ObtenerAsync(duenoId);
+            var aprobacion = bd.Moderacion.ObtenerUltimaDecisionAsync(TipoObjetivoModeracion.Organizador, duenoId);
+            var eventos = bd.Eventos.ListarDeOrganizadorAsync(duenoId);
+            var lugares = bd.Lugares.ListarDeDuenoAsync(duenoId);
+            var abiertos = bd.Reportes.ListarAsync(EstadoReporte.Abierto);
+            var resueltos = bd.Reportes.ListarAsync(EstadoReporte.Resuelto);
+            await Task.WhenAll(perfil, aprobacion, eventos, lugares, abiertos, resueltos);
+
+            // Historial del dueño (sus eventos y sus otros lugares), sin contar el lugar que se revisa.
+            var otrosLugares = lugares.Result.Where(x => x.Id != lugarId).ToList();
+            var eventosIds = eventos.Result.Select(x => x.Id).ToHashSet();
+            var lugaresIds = lugares.Result.Select(x => x.Id).ToHashSet();
+            int reportes = abiertos.Result.Concat(resueltos.Result).Count(r =>
+                (r.Tipo == TipoObjetivoReporte.Evento && eventosIds.Contains(r.ObjetivoId)) ||
+                (r.Tipo == TipoObjetivoReporte.Lugar && lugaresIds.Contains(r.ObjetivoId)));
+            int aprobados = eventos.Result.Count(Publicado) + otrosLugares.Count(x => x.Estado == EstadoLugar.Aprobado);
+            int rechazados = eventos.Result.Count(x => x.Estado == EstadoEvento.Rechazado) + otrosLugares.Count(x => x.Estado == EstadoLugar.Rechazado);
+
+            var cola = envios.Result.Where(x => x.Tipo == TipoObjetivoModeracion.Lugar)
+                .OrderBy(x => x.EnviadoEn).ThenBy(x => x.ObjetivoId).ToList();
+            DateTime? enviadoEn = cola.FirstOrDefault(x => x.ObjetivoId == lugarId)?.EnviadoEn;
+
+            var dueno = new OrganizadorRevision(
+                perfil.Result?.NombreNegocio ?? "Organizador",
+                aprobacion.Result is { Decision: DecisionModeracion.Aprobado } a ? a.DecididoEn : null,
+                aprobados, rechazados, reportes,
+                perfil.Result?.RedSocialUrl,
+                perfil.Result?.WhatsApp);
+
+            return new DatosRevisionLugar(
+                lugar, enviadoEn, dueno,
+                Editado: editado.Result,
+                EsPropio: duenoId == moderador.Id,
+                Cola: [.. cola.Select(x => x.ObjetivoId)]);
+        }
+
+        /// <summary>"Aprobar y publicar" un lugar: aparece en el mapa y en las búsquedas.</summary>
+        public Task AprobarLugarAsync(int lugarId, string? comentario) =>
+            bd.Moderacion.AprobarAsync(Moderador().Id, TipoObjetivoModeracion.Lugar, lugarId, string.IsNullOrWhiteSpace(comentario) ? null : comentario.Trim());
+
+        /// <summary>"Rechazar" un lugar: el dueño ve el motivo y el comentario en su panel.</summary>
+        public Task RechazarLugarAsync(int lugarId, string motivo, string comentario) =>
+            bd.Moderacion.RechazarAsync(Moderador().Id, TipoObjetivoModeracion.Lugar, lugarId, TextoRechazo(motivo, comentario));
+
         // ---------------------------------------------------------------- Solicitudes de organizador
 
         /// <summary>"Moderación / Organizadores": las solicitudes pendientes (las más antiguas primero) y las decididas.</summary>
@@ -411,6 +472,18 @@ namespace Interfaz.Servicios
     /// <param name="AprobadoEn">"Aprobado como organizador el 12 sep".</param>
     /// <param name="Aprobados">Sus otros eventos publicados.</param>
     /// <param name="Reportes">Reportes (abiertos o resueltos) sobre sus eventos y lugares.</param>
+    /// <param name="Cola">Ids de los lugares pendientes en orden, para "1 de 3" y las flechas.</param>
+    public sealed record DatosRevisionLugar(
+        LugarDetalle Detalle,
+        DateTime? EnviadoEn,
+        OrganizadorRevision Dueno,
+        bool Editado,
+        bool EsPropio,
+        IReadOnlyList<int> Cola)
+    {
+        public LugarTarjeta Lugar => Detalle.Lugar;
+    }
+
     public sealed record OrganizadorRevision(
         string Nombre,
         DateTime? AprobadoEn,

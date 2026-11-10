@@ -158,6 +158,16 @@ namespace Interfaz.Estado
         public async Task<bool> RechazarEventoAsync(EventoTarjeta evento, string? comentario) =>
             await Abrir<ModalRechazar>(new Dictionary<string, object?> { ["Tipo"] = TipoObjetivoModeracion.Evento, ["ObjetivoId"] = evento.Id, ["Comentario"] = comentario }) as bool? ?? false;
 
+        /// <summary>"¿Aprobar y publicar?" de un lugar (Moderación / Revisar lugar).</summary>
+        /// <returns>true si se aprobó.</returns>
+        public async Task<bool> AprobarLugarAsync(LugarTarjeta lugar, string? comentario) =>
+            await Abrir<ModalAprobarLugar>(new Dictionary<string, object?> { ["Lugar"] = lugar, ["Comentario"] = comentario }) as bool? ?? false;
+
+        /// <summary>"Modal / Rechazar" de un lugar: motivo y comentario obligatorio.</summary>
+        /// <returns>true si se rechazó.</returns>
+        public async Task<bool> RechazarLugarAsync(LugarTarjeta lugar, string? comentario) =>
+            await Abrir<ModalRechazar>(new Dictionary<string, object?> { ["Tipo"] = TipoObjetivoModeracion.Lugar, ["ObjetivoId"] = lugar.Id, ["Comentario"] = comentario }) as bool? ?? false;
+
         /// <summary>"¿Aprobar a este organizador?": confirma y aprueba la solicitud.</summary>
         /// <returns>true si se aprobó.</returns>
         public async Task<bool> AprobarOrganizadorAsync(SolicitudPendiente solicitud) =>
@@ -190,8 +200,9 @@ namespace Interfaz.Estado
         /// <param name="imagenUrl">Portada (miniatura de 64px).</param>
         /// <param name="detalle">"17 – 31 oct · Centro Histórico".</param>
         /// <returns>Lo que eligió: <see cref="ModalEnviadoRevision.IrAlPanel"/>, <see cref="ModalEnviadoRevision.PublicarOtro"/> o null (cerró).</returns>
-        public async Task<string?> EnviadoARevisionAsync(string titulo, string? imagenUrl, string detalle) =>
-            await Abrir<ModalEnviadoRevision>(new Dictionary<string, object?> { ["Titulo"] = titulo, ["ImagenUrl"] = imagenUrl, ["Detalle"] = detalle }) as string;
+        /// <param name="esLugar">"Tu lugar está en revisión" y "Registrar otro lugar" (Registrar lugar).</param>
+        public async Task<string?> EnviadoARevisionAsync(string titulo, string? imagenUrl, string detalle, bool esLugar = false) =>
+            await Abrir<ModalEnviadoRevision>(new Dictionary<string, object?> { ["Titulo"] = titulo, ["ImagenUrl"] = imagenUrl, ["Detalle"] = detalle, ["EsLugar"] = esLugar }) as string;
 
         /// <summary>"Modal / Editar evento publicado" (Si lo editas, vuelve a revisión).</summary>
         /// <param name="inscritos">"Las N inscripciones se conservan."</param>

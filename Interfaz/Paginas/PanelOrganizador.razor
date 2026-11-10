@@ -3,11 +3,13 @@
   moderación. Cada estado tiene su acción: Publicado y Cancelado → Estadísticas, En revisión → "Enviado 8 oct",
   Rechazado → Ver motivo (con la nota del moderador abajo), Borrador → Continuar, Finalizado → su calificación.
   El título del evento abre su detalle. Solo organizadores aprobados; a los demás los manda a "Hazte organizador".
+  "Mis lugares" (no está en Figma, mismo estilo de tabla): cada lugar con su estado, Editar y, si está publicado, Ver.
 *@
 @page "/organizador"
 @implements IDisposable
 @inject Sesion Sesion
 @inject ServicioPanelOrganizador Servicio
+@inject ServicioRegistroLugar Lugares
 @inject Modales Modales
 @inject Avisos Avisos
 @inject Acciones Acciones
@@ -40,7 +42,10 @@
                         <p class="t-small texto-2">@@@_datos.NombreUsuario · Perfil revisado por moderación</p>
                     </div>
                 </div>
-                <Boton Texto="Publicar evento" Icono="mas-18" OnClick="Acciones.PublicarEvento" />
+                <div class="panel__botones">
+                    <Boton Texto="Registrar lugar" Variante="secundario" Icono="tienda-18" OnClick="Acciones.RegistrarLugar" />
+                    <Boton Texto="Publicar evento" Icono="mas-18" OnClick="Acciones.PublicarEvento" />
+                </div>
             </header>
 
             <section class="panel__metricas" aria-label="Resumen">
@@ -123,11 +128,85 @@
                 </div>
             }
 
+            <div class="panel__seccion-eventos">
+                <h2 class="t-h2">Mis lugares</h2>
+                <p class="t-small texto-2">@_lugares.Count @(_lugares.Count == 1 ? "lugar" : "lugares")</p>
+            </div>
+
+            @if (_lugares.Count == 0)
+            {
+                <div class="panel__vacio">
+                    <p class="t-card-titulo">Todavía no tienes lugares</p>
+                    <p class="t-small texto-2">Registra tu café, restaurante o espacio: sale en el mapa y en las búsquedas cuando un moderador lo aprueba.</p>
+                    <div class="panel__vacio-boton"><Boton Texto="Registrar lugar" Variante="secundario" Icono="tienda-18" OnClick="Acciones.RegistrarLugar" /></div>
+                </div>
+            }
+            else
+            {
+                <div class="tabla tabla--lugares" role="table" aria-label="Mis lugares">
+                    <div class="tabla__encabezado t-caption texto-2" role="row">
+                        <span class="col col--evento" role="columnheader">LUGAR</span>
+                        <span class="col col--estado" role="columnheader">ESTADO</span>
+                        <span class="col col--horario" role="columnheader">AHORA</span>
+                        <span class="col col--accion" role="columnheader"><span class="solo-lectores">Acción</span></span>
+                    </div>
+                    @foreach (var fila in _lugares)
+                    {
+                        var l = fila.Lugar;
+                        <div @key="l.Id" class="tabla__evento" role="rowgroup">
+                            <div class="tabla__fila" role="row">
+                                <div class="col col--evento evento" role="cell">
+                                    @if (l.ImagenUrl != null)
+                                    {
+                                        <Imagen Clase="evento__miniatura" Src="@l.ImagenUrl" Alt="" Ancho="56" Alto="56" />
+                                    }
+                                    else
+                                    {
+                                        <span class="evento__sin-foto"><Icono Nombre="imagen-gris-20" Caja="20" /></span>
+                                    }
+                                    <div class="evento__texto">
+                                        @if (l.Estado == EstadoLugar.Aprobado)
+                                        {
+                                            <button type="button" class="evento__titulo t-body-fuerte" aria-label="@($"Ver {l.Nombre}")" @onclick="() => Acciones.VerLugar(l.Id)">@l.Nombre</button>
+                                        }
+                                        else
+                                        {
+                                            <p class="t-body-fuerte">@l.Nombre</p>
+                                        }
+                                        <p class="t-small texto-2">@l.Direccion</p>
+                                    </div>
+                                </div>
+                                <div class="col col--estado estados" role="cell">@EstadoLugarChip(l.Estado)</div>
+                                <p class="col col--horario t-small" role="cell">@(l.Estado == EstadoLugar.Aprobado ? Formato.HorarioLugar(l.HorarioAhora).Texto : "—")</p>
+                                <div class="col col--accion" role="cell">
+                                    @if (l.Estado != EstadoLugar.Inactivo)
+                                    {
+                                        <button type="button" class="enlace t-small-fuerte" aria-label="@($"Editar {l.Nombre}")" @onclick="() => Acciones.EditarLugar(l.Id)">
+                                            <Icono Nombre="editar-cielo-12" Caja="12" /><span>@(l.Estado == EstadoLugar.Rechazado ? "Corregir" : "Editar")</span>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                            @if (fila.Rechazo is { } rechazo)
+                            {
+                                <div class="nota">
+                                    <Icono Nombre="comentario-error-14" Caja="14" />
+                                    <div class="nota__texto">
+                                        <p class="t-caption nota__autor">Moderación · @rechazo.ModeradorNombre</p>
+                                        <p class="t-small">@(rechazo.Comentario ?? "Sin comentario.")</p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
             <aside class="revision">
                 <span class="revision__insignia"><Icono Nombre="escudo-blanco-22" Caja="22" /></span>
                 <div class="revision__texto">
                     <p class="t-card-titulo">Todo pasa por moderación antes de publicarse</p>
-                    <p class="t-small texto-2">Un moderador aprueba o rechaza con un motivo. Si editas el título, la descripción, la imagen, la ubicación o el enlace de boletos de un evento publicado, vuelve a revisión y sale del carrusel destacado.</p>
+                    <p class="t-small texto-2">Un moderador aprueba o rechaza con un motivo. Si editas el título, la descripción, la imagen, la ubicación o el enlace de boletos de un evento publicado, vuelve a revisión y sale del carrusel destacado. Lo mismo pasa si cambias los datos o las fotos de un lugar publicado.</p>
                 </div>
             </aside>
         }
@@ -138,6 +217,7 @@
 
 @code {
     private DatosPanel? _datos;
+    private List<FilaLugarPanel> _lugares = [];
     private int? _usuarioId;
 
     private string TextoResenas => _datos!.NumResenas switch
@@ -146,6 +226,17 @@
         1 => "1 reseña de eventos finalizados",
         var n => $"{n} reseñas de eventos finalizados",
     };
+
+    private static RenderFragment EstadoLugarChip(EstadoLugar estado)
+    {
+        if (estado == EstadoLugar.Aprobado)
+            return @<Chip Texto="Publicado" Variante="exito-suave" Icono="check-circulo-exito-12" Clase="chip--estado" />;
+        if (estado == EstadoLugar.Pendiente)
+            return @<Chip Texto="En revisión" Icono="reloj-arena-12" Clase="chip--estado" />;
+        if (estado == EstadoLugar.Rechazado)
+            return @<Chip Texto="Rechazado" Variante="error-suave" Icono="x-error-12" Clase="chip--estado" />;
+        return @<Chip Texto="Inactivo" Variante="fondo" Icono="tienda-gris-12" Clase="chip--estado chip--gris" />;
+    }
 
     private static string Cifra(bool visible, int? valor) => visible && valor is { } v ? Formato.Numero(v) : "—";
 
@@ -191,7 +282,8 @@
         try
         {
             _datos = await Servicio.ObtenerPanelAsync();
-            if (_datos == null) Acciones.IrA(Acciones.Rutas.HazteOrganizador);
+            if (_datos == null) { Acciones.IrA(Acciones.Rutas.HazteOrganizador); return; }
+            _lugares = await Lugares.ListarMiosAsync();
         }
         catch (RequiereSesionException)
         {
@@ -211,6 +303,7 @@
         if (_usuarioId != null && id == null) { Acciones.Inicio(); return; }   // cerró sesión aquí
         _usuarioId = id;
         _datos = null;
+        _lugares = [];
         if (id != null) await CargarAsync();
         StateHasChanged();
     });

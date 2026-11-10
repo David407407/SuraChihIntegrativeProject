@@ -1,0 +1,51 @@
+@*
+  Confirmación de "Aprobar" en Moderación / Revisar lugar: la misma "Modal / Aprobar publicación" de Figma con
+  el lugar (miniatura, nombre y dirección). Al aprobarlo aparece en el mapa y en las búsquedas; queda en el
+  historial con el nombre del moderador. Lo abre Revisar lugar con Modales.AprobarLugarAsync(...).
+*@
+@inject ServicioModeracion Moderacion
+@inject Modales Modales
+
+<EncabezadoModal Titulo="¿Aprobar y publicar?" Icono="check-circulo-exito-24" Exito
+                 Texto="Aparece de inmediato en el mapa y en las búsquedas. Queda en el historial con tu nombre." />
+
+<div class="modal__resumen aprobar-lugar__resumen">
+    <Imagen Clase="aprobar-lugar__miniatura" Src="@Lugar.ImagenUrl" Alt="" Ancho="64" Alto="64" />
+    <div class="aprobar-lugar__texto">
+        <p class="t-body-fuerte">@Lugar.Nombre</p>
+        <p class="t-small texto-2">@Lugar.Direccion</p>
+    </div>
+</div>
+<AvisoModal Errores="_errores" />
+<div class="modal__botones">
+    <Boton Texto="Aprobar y publicar" Icono="check-18" Clase="modal__ancho" Ocupado="_enviando" OnClick="AprobarAsync" />
+    <Boton Texto="Volver" Variante="secundario" Clase="modal__ancho" data-cerrar-modal OnClick="() => Modales.Cerrar()" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public LugarTarjeta Lugar { get; set; } = default!;
+    /// <summary>Comentario opcional de la tarjeta "Decisión" (se guarda en el historial).</summary>
+    [Parameter] public string? Comentario { get; set; }
+
+    private readonly ErroresFormulario _errores = new();
+    private bool _enviando;
+
+    private async Task AprobarAsync()
+    {
+        _errores.Limpiar();
+        _enviando = true;
+        try
+        {
+            await Moderacion.AprobarLugarAsync(Lugar.Id, Comentario);
+            Modales.Cerrar(true);
+        }
+        catch (Exception ex)
+        {
+            _errores.PonerAviso(MensajesError.Para(ex));   // texto del trigger tal cual
+        }
+        finally
+        {
+            _enviando = false;
+        }
+    }
+}

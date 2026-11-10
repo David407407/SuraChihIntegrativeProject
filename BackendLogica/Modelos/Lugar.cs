@@ -47,6 +47,11 @@ namespace BackendLogica.Modelos
         public string? ImagenUrl { get; init; }
         public IReadOnlyCollection<int> EtiquetaIds { get; init; } = [];
         public IReadOnlyCollection<HorarioDia> Horario { get; init; } = [];
+        /// <summary>
+        /// Fotos extra en el orden en que se muestran (la portada es <see cref="ImagenUrl"/>): la <c>secure_url</c> de
+        /// Cloudinary. Al editar es la galería completa: las que ya no vienen se quitan de la BD.
+        /// </summary>
+        public IReadOnlyList<string> Galeria { get; init; } = [];
     }
 
     /// <summary>

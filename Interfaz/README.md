@@ -25,11 +25,13 @@ Paginas/                     una página por pantalla, con su @page
   MisPlanes.razor  /mis-planes
   Resenas.razor  /resenas/evento/{id}  y  /resenas/lugar/{id}
   Moderacion.razor  /moderacion              RevisarEvento.razor  /moderacion/evento/{id}
+  RevisarLugar.razor  /moderacion/lugar/{id}
   ModeracionOrganizadores.razor  /moderacion/organizadores
   HazteOrganizador.razor  /organizador/solicitud
   PanelOrganizador.razor  /organizador
   EstadisticasDelEvento.razor  /organizador/evento/{id}/estadisticas
   PublicarEvento.razor  /organizador/evento/nuevo  y  /organizador/evento/{id}/editar
+  RegistrarLugar.razor  /organizador/lugar/nuevo  y  /organizador/lugar/{id}/editar
   Buscar.razor  /buscar?q=...  (resultados de búsqueda, filtros y calendario)
 Componentes/
   Base/                      Boton, Campo, Chip, ChipCategoria, Pildora, BotonFavorito, Imagen, Icono,
@@ -392,3 +394,13 @@ La misma página edita un evento propio: `Acciones.EditarEvento(id)`. Los datos 
 - **Reseñas** (`/resenas/{evento|lugar}/{id}`): resumen con promedio, barras por estrellas y la lista
   (`Servicios/ServicioResenas.cs`). "Volver" regresa a la pantalla de antes con la hoja abierta.
 - `<Estrellas Valor="4.6" Tamano="14" />` pinta estrellas de solo lectura (12, 14 o 20px).
+
+## Registrar lugar
+
+- **Registrar lugar** (`/organizador/lugar/nuevo` y `/organizador/lugar/{id}/editar`): mismo estilo que Publicar evento.
+  Información (nombre, descripción, tipo), imágenes (portada + galería, se suben a Cloudinary al guardar),
+  ubicación (dirección + pin arrastrable), horario semanal (interruptor por día; si cierra antes de abrir, cierra
+  al día siguiente; "Copiar el horario del lunes") y contacto y precio. Al enviar queda **En revisión**.
+  Si estaba rechazado, al guardar vuelve a revisión; si estaba publicado y cambian datos o fotos, también.
+- **Revisar lugar** (`/moderacion/lugar/{id}`): como Revisar evento, con horario semanal y mapa para comprobar el pin.
+- **Panel de organizador**: botón "Registrar lugar" y la tabla "Mis lugares" (estado, Editar/Corregir y la nota del moderador).

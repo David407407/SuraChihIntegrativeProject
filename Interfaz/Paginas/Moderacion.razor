@@ -155,7 +155,7 @@
     private void Revisar(PendienteModeracion p)
     {
         if (p.Tipo == TipoObjetivoModeracion.Evento) Acciones.RevisarEvento(p.Id);
-        else Acciones.Proximamente("Revisar lugares");
+        else Acciones.RevisarLugar(p.Id);
     }
 
     private void AlCambiarSesion() => InvokeAsync(async () =>

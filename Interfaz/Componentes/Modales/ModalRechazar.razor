@@ -1,7 +1,8 @@
 @*
   "Modal / Rechazar" de Figma: insignia roja, motivos (Opcion, uno a la vez), comentario obligatorio y
   "Rechazar" (rojo) / "Volver". Sirve para eventos (Modales.RechazarEventoAsync; el comentario llega con lo que
-  ya se escribió en la tarjeta "Decisión") y para solicitudes de organizador (Modales.RechazarOrganizadorAsync).
+  ya se escribió en la tarjeta "Decisión"), para lugares (Modales.RechazarLugarAsync) y para solicitudes de
+  organizador (Modales.RechazarOrganizadorAsync).
   El autor ve el motivo y el comentario ("Motivo de rechazo" o la pantalla "Hazte organizador").
 *@
 @inject ServicioModeracion Moderacion
@@ -26,7 +27,7 @@
 </EditForm>
 
 @code {
-    /// <summary>Evento u Organizador (el id del usuario que solicitó).</summary>
+    /// <summary>Evento, Lugar u Organizador (el id del usuario que solicitó).</summary>
     [Parameter, EditorRequired] public TipoObjetivoModeracion Tipo { get; set; }
     [Parameter, EditorRequired] public int ObjetivoId { get; set; }
     [Parameter] public string? Comentario { get; set; }
@@ -59,6 +60,7 @@
         try
         {
             if (EsOrganizador) await Moderacion.RechazarOrganizadorAsync(ObjetivoId, _motivo, _comentario);
+            else if (Tipo == TipoObjetivoModeracion.Lugar) await Moderacion.RechazarLugarAsync(ObjetivoId, _motivo, _comentario);
             else await Moderacion.RechazarAsync(ObjetivoId, _motivo, _comentario);
             Modales.Cerrar(true);
         }

@@ -34,8 +34,16 @@ namespace BackendLogica.Contratos
         /// <returns>Id del lugar nuevo.</returns>
         Task<int> CrearAsync(int duenoId, DatosLugar datos, CancellationToken ct = default);
 
+        /// <summary>
+        /// Edita un lugar propio (datos, etiquetas, horario y galería). Si estaba aprobado y cambia su contenido o se
+        /// le agregan fotos, la BD lo regresa a moderación (<c>trg_place_bu</c>, <c>trg_placeimg_ai</c>).
+        /// </summary>
         /// <returns>false si el lugar no existe o no es de este dueño.</returns>
         Task<bool> ActualizarAsync(int lugarId, int duenoId, DatosLugar datos, CancellationToken ct = default);
+
+        /// <summary>"Enviar de nuevo a revisión" de un lugar rechazado ya corregido.</summary>
+        /// <returns>false si no existe, no es suyo o no estaba rechazado.</returns>
+        Task<bool> EnviarARevisionAsync(int lugarId, int duenoId, CancellationToken ct = default);
 
         /// <summary>Agrega una foto a la galería. Si el lugar estaba aprobado, vuelve a moderación.</summary>
         Task<int> AgregarImagenAsync(int lugarId, string url, CancellationToken ct = default);

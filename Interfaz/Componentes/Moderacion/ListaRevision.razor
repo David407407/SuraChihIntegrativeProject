@@ -1,5 +1,5 @@
 @*
-  "Lista de revisión" de Revisar evento: seis puntos que el moderador marca mientras revisa ("5 de 6").
+  "Lista de revisión" de Revisar evento y Revisar lugar (EsLugar): seis puntos que el moderador marca mientras revisa ("5 de 6").
   Es solo una ayuda visual: no se guarda (no hay tabla en la BD) ni bloquea Aprobar.
 *@
 <section class="tarjeta-lateral lista" aria-labelledby="lista-titulo">
@@ -30,7 +30,22 @@
 </section>
 
 @code {
-    private static readonly (string Texto, string? Nota)[] Puntos =
+    /// <summary>Usa los puntos de un lugar (horario, contacto) en lugar de los de un evento.</summary>
+    [Parameter] public bool EsLugar { get; set; }
+
+    private (string Texto, string? Nota)[] Puntos => EsLugar ? PuntosLugar : PuntosEvento;
+
+    private static readonly (string Texto, string? Nota)[] PuntosLugar =
+    [
+        ("Información completa y verdadera", null),
+        ("El lugar existe y está abierto al público", null),
+        ("Dirección dentro de Chihuahua", "Revisa que el pin del mapa coincida"),
+        ("Imágenes apropiadas", null),
+        ("Horario coherente", null),
+        ("Teléfono y sitio web reales", "Aplica si los agregó"),
+    ];
+
+    private static readonly (string Texto, string? Nota)[] PuntosEvento =
     [
         ("Información completa y verdadera", null),
         ("Fecha futura y coherente", null),
@@ -40,5 +55,5 @@
         ("Permisos del lugar", "Aplica si hay música en vivo o venta de alcohol"),
     ];
 
-    private readonly bool[] _marcados = new bool[Puntos.Length];
+    private readonly bool[] _marcados = new bool[6];
 }
