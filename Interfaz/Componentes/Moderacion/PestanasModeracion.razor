@@ -17,14 +17,15 @@
     </button>
     @if (Sesion.Usuario?.EsSuperModerador == true)
     {
-        <button type="button" class="pestana" @onclick="() => Acciones.IrA(Acciones.Rutas.EquipoModeracion)">
+        <button type="button" class="pestana @(Activa == Seccion.Equipo ? "pestana--activa" : "")" aria-current="@(Activa == Seccion.Equipo ? "page" : null)"
+                @onclick="() => Acciones.IrA(Acciones.Rutas.EquipoModeracion)">
             <span class="pestana__etiqueta">Equipo</span>
         </button>
     }
 </nav>
 
 @code {
-    public enum Seccion { Publicaciones, Organizadores, Reportes, Historial }
+    public enum Seccion { Publicaciones, Organizadores, Reportes, Historial, Equipo }
 
     [Parameter, EditorRequired] public Seccion Activa { get; set; }
     [Parameter] public int? Publicaciones { get; set; }

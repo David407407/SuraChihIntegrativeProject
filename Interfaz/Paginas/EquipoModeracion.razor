@@ -1,8 +1,8 @@
 @*
   "Equipo de moderación": los moderadores activos y el botón para eliminar sus cuentas. Es el único lugar
-  donde se elimina una cuenta de moderador (ellos no pueden hacerlo desde Mi perfil). No está en Figma: usa
-  las mismas piezas que la bandeja de moderación. Solo entran supermoderadores (Usuario.EsSuperModerador);
-  las cuentas de supermoderador no se eliminan desde aquí.
+  donde se elimina una cuenta de moderador (ellos no pueden hacerlo desde Mi perfil). No está en Figma: es una
+  pestaña más de moderación (mismo fondo, encabezado y pestañas que Historial). Solo entran supermoderadores
+  (Usuario.EsSuperModerador); las cuentas de supermoderador no se eliminan desde aquí.
 *@
 @page "/moderacion/equipo"
 @implements IDisposable
@@ -15,54 +15,62 @@
 
 <PageTitle>SuraChih · Equipo de moderación</PageTitle>
 
-<main class="equipo contenedor">
-    <button type="button" class="equipo__volver t-small-fuerte texto-2" @onclick="() => Acciones.IrA(Acciones.Rutas.Moderacion)">
-        <Icono Nombre="flecha-volver-gris-12" Caja="12" /><span>Volver a moderación</span>
-    </button>
-    <header class="equipo__titulo">
-        <h1 class="t-h1">Equipo de moderación</h1>
-        <p class="t-body texto-2">Los moderadores no pueden eliminar su propia cuenta: solo un supermoderador puede hacerlo.</p>
-    </header>
+<div class="pagina-fondo">
+    <main class="equipo contenedor">
+        <EncabezadoModeracion Titulo="Equipo de moderación" Usuario="Sesion.Usuario"
+                              Texto="Los moderadores no pueden eliminar su propia cuenta: solo un supermoderador puede hacerlo." />
 
-    @if (Sesion.Usuario?.EsSuperModerador != true)
-    {
-        <p class="t-body texto-2">Esta sección es solo para supermoderadores.</p>
-    }
-    else if (_equipo == null)
-    {
-        @for (int i = 0; i < 3; i++)
-        {
-            <div class="esqueleto equipo__esqueleto" aria-hidden="true"></div>
-        }
-    }
-    else
-    {
-        <ul class="equipo__lista">
-            @foreach (var moderador in _equipo)
+        <AccesoModeracion>
+            @if (Sesion.Usuario?.EsSuperModerador != true)
             {
-                <li @key="moderador.Id" class="miembro">
-                    <span class="miembro__avatar" aria-hidden="true">@Navbar.Inicial(moderador)</span>
-                    <div class="miembro__datos">
-                        <p class="t-card-titulo">@moderador.NombreUsuario</p>
-                        <p class="t-small texto-2">@moderador.Correo</p>
-                    </div>
-                    @if (moderador.EsSuperModerador)
-                    {
-                        <Chip Texto="Supermoderador" Variante="sol-suave" />
-                    }
-                    else
-                    {
-                        <Boton Texto="Eliminar cuenta" Variante="peligro" Tamano="s" Icono="bote-blanco" aria-label="@($"Eliminar la cuenta de {moderador.NombreUsuario}")"
-                               OnClick="() => EliminarAsync(moderador)" />
-                    }
-                </li>
+                <VacioModeracion Icono="candado-cielo" Titulo="Solo para supermoderadores"
+                                 Texto="Aquí se administran las cuentas del equipo de moderación.">
+                    <Boton Texto="Ir a moderación" Variante="oscuro" OnClick="() => Acciones.IrA(Acciones.Rutas.Moderacion)" />
+                </VacioModeracion>
             }
-        </ul>
-    }
-</main>
+            else
+            {
+                <PestanasModeracion Activa="PestanasModeracion.Seccion.Equipo" Publicaciones="_datos?.Conteos.Publicaciones"
+                                    Organizadores="_datos?.Conteos.Organizadores" Reportes="_datos?.Conteos.Reportes" />
+
+                @if (_datos == null)
+                {
+                    @for (int i = 0; i < 3; i++)
+                    {
+                        <div class="esqueleto equipo__esqueleto" aria-hidden="true"></div>
+                    }
+                }
+                else
+                {
+                    <ul class="equipo__lista">
+                        @foreach (var moderador in _datos.Moderadores)
+                        {
+                            <li @key="moderador.Id" class="miembro">
+                                <span class="miembro__avatar" aria-hidden="true">@Navbar.Inicial(moderador)</span>
+                                <div class="miembro__datos">
+                                    <p class="t-card-titulo">@moderador.NombreUsuario</p>
+                                    <p class="t-small texto-2">@moderador.Correo</p>
+                                </div>
+                                @if (moderador.EsSuperModerador)
+                                {
+                                    <Chip Texto="Supermoderador" Variante="sol-suave" />
+                                }
+                                else
+                                {
+                                    <Boton Texto="Eliminar cuenta" Variante="peligro" Tamano="s" Icono="bote-blanco" aria-label="@($"Eliminar la cuenta de {moderador.NombreUsuario}")"
+                                           OnClick="() => EliminarAsync(moderador)" />
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+        </AccesoModeracion>
+    </main>
+</div>
 
 @code {
-    private List<Usuario>? _equipo;
+    private DatosEquipo? _datos;
 
     protected override async Task OnInitializedAsync()
     {
@@ -76,26 +84,26 @@
         if (Sesion.Usuario?.EsSuperModerador != true) return;
         try
         {
-            _equipo = await Servicio.ListarEquipoAsync();
+            _datos = await Servicio.ObtenerEquipoAsync();
         }
         catch (Exception ex)
         {
             Registro.LogError(ex, "No se pudo cargar el equipo de moderación");
             Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
-            _equipo = [];
+            _datos = new DatosEquipo([], new ConteosModeracion(0, 0, 0));
         }
     }
 
     private async Task EliminarAsync(Usuario moderador)
     {
         if (!await Modales.ConfirmarEliminarModeradorAsync(moderador)) return;
-        _equipo?.RemoveAll(m => m.Id == moderador.Id);
+        _datos?.Moderadores.RemoveAll(m => m.Id == moderador.Id);
         Avisos.Mostrar($"Se eliminó la cuenta de {moderador.NombreUsuario}");
     }
 
     private void AlCambiarSesion() => InvokeAsync(async () =>
     {
-        _equipo = null;
+        _datos = null;
         await CargarAsync();
         StateHasChanged();
     });

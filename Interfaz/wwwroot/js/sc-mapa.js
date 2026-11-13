@@ -70,6 +70,9 @@ const NITIDAS = window.devicePixelRatio > 1 ? '@2x' : '';   // p. ej. Windows co
 const TESELAS = CARTO_KEY
   ? `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}${NITIDAS}.png?key=${encodeURIComponent(CARTO_KEY)}`
   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+// Último zoom con teselas: CARTO llega a 18 (en 19 responde 403 y el mapa se veía blanco); OpenStreetMap a 19.
+// Al acercar más, Leaflet amplía las de este nivel en vez de pedir unas que no existen.
+const ZOOM_TESELAS = CARTO_KEY ? 18 : 19;
 const ATRIBUCION = CARTO_KEY
   ? `${OSM} &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>`
   : OSM;
@@ -212,7 +215,7 @@ class Mapa extends HTMLElement {
       maxBoundsViscosity: 0.8,
     });
     this.#mapa.attributionControl.setPrefix(false);
-    L.tileLayer(TESELAS, { maxZoom: ZOOM.maximo, attribution: ATRIBUCION }).addTo(this.#mapa);
+    L.tileLayer(TESELAS, { maxZoom: ZOOM.maximo, maxNativeZoom: ZOOM_TESELAS, attribution: ATRIBUCION }).addTo(this.#mapa);
     this.#capa = L.layerGroup().addTo(this.#mapa);
 
     this.#mapa.on('moveend', () => this.#avisarZona());
