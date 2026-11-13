@@ -49,8 +49,11 @@ namespace Interfaz.Servicios
         }
     }
 
-    /// <summary>"Tipo" del modal Filtros: eventos o un tipo de lugar (por tag.icon, como las píldoras del mapa).</summary>
-    public enum TipoBusqueda { Eventos, Cafes, Museos, Parques }
+    /// <summary>
+    /// "Tipo" del modal Filtros: eventos o un tipo de lugar (por tag.icon, como las píldoras del mapa).
+    /// <see cref="Lugares"/> = cualquier lugar ("Lugares" del pie y "Explorar lugares" de la landing; no sale en el modal).
+    /// </summary>
+    public enum TipoBusqueda { Eventos, Cafes, Museos, Parques, Lugares }
 
     /// <summary>
     /// Lo que se busca. Viaja en la dirección (<see cref="Ruta"/> / <see cref="DesdeConsulta"/>) para que Atrás

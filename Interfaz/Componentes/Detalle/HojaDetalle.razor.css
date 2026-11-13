@@ -172,6 +172,22 @@
   background: var(--color-fondo);
 }
 
+/* Sitio web del lugar dentro del boleto */
+.hoja__caja ::deep .boleto__valor-enlace { color: var(--color-cielo-texto); overflow-wrap: anywhere; }
+.hoja__caja ::deep .boleto__valor-enlace:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; border-radius: 4px; }
+
+/* ---- Horario de la semana (detalle de lugar): hoy va resaltado ---- */
+.hoja__caja ::deep .hoja__horario { display: flex; flex-direction: column; gap: 2px; margin: 0; }
+.hoja__caja ::deep .hoja__horario-dia {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 12px;
+  border-radius: var(--radio-s);
+}
+.hoja__caja ::deep .hoja__horario-dia dd { margin: 0; text-align: right; }
+.hoja__caja ::deep .hoja__horario-dia--hoy { background: var(--color-fondo); }
+
 /* ---- Opiniones (detalle de lugar) ---- */
 .hoja__caja ::deep .hoja__opiniones { display: flex; flex-direction: column; gap: 12px; }
 

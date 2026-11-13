@@ -52,7 +52,7 @@
             string subtitulo = string.Join(" · ", new[] { Formato.FechaEvento(e), Formato.UbicacionEvento(e) }.Where(t => !string.IsNullOrEmpty(t)));
             return (e.Titulo, subtitulo, e.ImagenUrl);
         }
-        if (item?.Lugar is { } l) return (l.Nombre, Formato.HorarioLugar(l.HorarioAhora).Texto, l.ImagenUrl);
+        if (item?.Lugar is { } l) return (l.Nombre, Formato.HorarioLugar(l).Texto, l.ImagenUrl);
         return ("", "", null);
     }
 

@@ -177,7 +177,7 @@
                                     </div>
                                 </div>
                                 <div class="col col--estado estados" role="cell">@EstadoLugarChip(l.Estado)</div>
-                                <p class="col col--horario t-small" role="cell">@(l.Estado == EstadoLugar.Aprobado ? Formato.HorarioLugar(l.HorarioAhora).Texto : "—")</p>
+                                <p class="col col--horario t-small" role="cell">@(l.Estado == EstadoLugar.Aprobado ? Formato.HorarioLugar(l).Texto : "—")</p>
                                 <div class="col col--accion" role="cell">
                                     @if (l.Estado != EstadoLugar.Inactivo)
                                     {

@@ -87,7 +87,7 @@
     {
         if (elemento.Lugar is { } l)
         {
-            var horario = Formato.HorarioLugar(l.HorarioAhora);
+            var horario = Formato.HorarioLugar(l);
             string meta = string.Join(", ", new[] { l.Direccion, horario.Abierto ? horario.Texto.ToLowerInvariant() : null }.Where(t => !string.IsNullOrEmpty(t)));
             return new(l.Nombre, l.Descripcion, l.ImagenUrl, l.Etiquetas.FirstOrDefault()?.Nombre, "ubicacion-14-blanco", meta, () => Acciones.VerLugar(l.Id));
         }

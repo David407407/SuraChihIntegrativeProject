@@ -1,5 +1,7 @@
-@* Pie de página (landing y Home). *@
+@* Pie de página (landing y Home). La columna "Cuenta" cambia con la sesión: Iniciar sesión / Crear cuenta o Mi perfil / Mis planes. *@
+@implements IDisposable
 @inject Acciones Acciones
+@inject Sesion Sesion
 
 <footer class="pie @Clase">
     <div class="pie__contenido contenedor">
@@ -15,8 +17,16 @@
         </nav>
         <nav class="pie__columna t-small" aria-label="Cuenta">
             <p class="t-small-fuerte">Cuenta</p>
-            <button type="button" class="pie__enlace" @onclick="Acciones.IniciarSesion">Iniciar sesión</button>
-            <button type="button" class="pie__enlace" @onclick="Acciones.CrearCuenta">Crear cuenta</button>
+            @if (Sesion.Iniciada)
+            {
+                <button type="button" class="pie__enlace" @onclick="Acciones.MiPerfil">Mi perfil</button>
+                <button type="button" class="pie__enlace" @onclick="Acciones.MisPlanes">Mis planes</button>
+            }
+            else
+            {
+                <button type="button" class="pie__enlace" @onclick="Acciones.IniciarSesion">Iniciar sesión</button>
+                <button type="button" class="pie__enlace" @onclick="Acciones.CrearCuenta">Crear cuenta</button>
+            }
         </nav>
         <nav class="pie__columna t-small" aria-label="Proyecto">
             <p class="t-small-fuerte">Proyecto</p>
@@ -28,4 +38,10 @@
 
 @code {
     [Parameter] public string? Clase { get; set; }
+
+    protected override void OnInitialized() => Sesion.Cambio += AlCambiarSesion;
+
+    private void AlCambiarSesion() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
 }

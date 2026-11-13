@@ -109,6 +109,7 @@
         { Texto: { } texto } => $"Resultados para “{texto}”",
         { Cuando: FiltroCuando.Rango, Fecha: { } dia } => $"Planes para el {Formato.DiaLargo(dia)}",
         { Tipos: [TipoBusqueda.Eventos] } => "Eventos próximos",
+        { Tipos: [TipoBusqueda.Lugares] } => "Lugares para descubrir",
         _ => "Explorar",
     };
 
