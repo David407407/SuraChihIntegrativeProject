@@ -85,7 +85,9 @@ Usuarios de prueba (contraseña en el README): `mariana_r`, `diego_m`, `sofia_c`
 - Estado al 13 nov 2026: en `version-0.2` ya están moderación (reportes únicos e historial), panel de
   organizador, registrar lugar y búsqueda.
 - Los scripts de datos reales (cartelera, fotos y horarios de lugares) ya están en `BaseDeDatos/` y aplicados en
-  Aiven: no los vuelvas a correr.
+  Aiven: no los vuelvas a correr. En Aiven los eventos de ejemplo de `surachih_v1.sql` (ids 1 a 5) están
+  ocultos (cancelados o borrador, `ocultar_eventos_de_ejemplo.sql`); las pruebas de MySQL no deben esperar que
+  salgan en listas públicas.
 - Gustos del usuario (`ModalGustos`, `ServicioGustos`, tabla `user_interest`): al crear cuenta se eligen
   categorías que ordenan el Inicio. Necesita `BaseDeDatos/agregar_gustos.sql` aplicado en Aiven; sin él, el Inicio
   falla para quien tiene sesión.
