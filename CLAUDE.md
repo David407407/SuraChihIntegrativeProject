@@ -84,9 +84,10 @@ Usuarios de prueba (contraseña en el README): `mariana_r`, `diego_m`, `sofia_c`
 - Revisa qué hay con `git log --oneline -15 origin/version-0.2` y `git branch -r --sort=-committerdate`.
 - Estado al 13 nov 2026: en `version-0.2` ya están moderación (reportes únicos e historial), panel de
   organizador, registrar lugar y búsqueda.
-- Ramas subidas pero sin merge: `feature/gustos` (gustos del usuario; requiere aplicar
-  `BaseDeDatos/agregar_gustos.sql` en Aiven antes del merge) y `feature/cartelera-noviembre` (scripts de datos
-  reales; los datos ya están en Aiven).
+- Los scripts de datos reales (cartelera, fotos y horarios de lugares) ya están en `BaseDeDatos/` y aplicados en
+  Aiven: no los vuelvas a correr.
+- Rama subida pero sin merge: `feature/gustos` (gustos del usuario). Cambia el registro, el Inicio y el Perfil, y
+  requiere aplicar `BaseDeDatos/agregar_gustos.sql` en Aiven antes del merge.
 
 ## Dónde buscar (abre solo la sección que necesites)
 
