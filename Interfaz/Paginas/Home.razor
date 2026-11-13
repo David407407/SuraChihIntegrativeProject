@@ -5,7 +5,8 @@
   1. Pide todas las secciones en una sola llamada (ServicioHome).
   2. Los filtros rápidos filtran aquí, sobre lo que ya llegó, sin volver a consultar: ocultan secciones
      o quitan tarjetas.
-  3. Al iniciar o cerrar sesión se vuelve a pedir (corazones y orden de ese usuario).
+  3. Al iniciar o cerrar sesión, o al guardar gustos, se vuelve a pedir (corazones y orden de ese usuario).
+  4. Con sesión y sin gustos, ofrece elegirlos ("¿Qué te gusta hacer?" → ModalGustos).
 *@
 @page "/home"
 @implements IDisposable
@@ -13,6 +14,8 @@
 @inject Sesion Sesion
 @inject Avisos Avisos
 @inject Acciones Acciones
+@inject Modales Modales
+@inject ServicioGustos Gustos
 @inject ILogger<Home> Registro
 
 <PageTitle>SuraChih · Inicio</PageTitle>
@@ -21,7 +24,22 @@
     <Saludo Usuario="Sesion.Usuario" />
     <Carrusel Elementos="_datos?.Carrusel" />
     <FiltrosRapidos Filtro="_filtro" AlCambiar="f => _filtro = f" />
-    <Recomendados Elementos="RecomendadosFiltrados" />
+    @if (_datos is { UsuarioId: not null, TieneGustos: false } && !_sinAvisoGustos)
+    {
+        <div class="contenedor">
+            <section class="home__gustos" aria-label="Tus gustos">
+                <p class="home__gustos-texto">
+                    <span class="t-body-fuerte">¿Qué te gusta hacer?</span>
+                    <span class="t-small texto-2">Elige tus categorías y te recomendamos eventos y lugares para ti.</span>
+                </p>
+                <Boton Texto="Elegir mis gustos" Variante="oscuro" Tamano="s" OnClick="() => Modales.GustosAsync()" />
+                <button type="button" class="home__gustos-cerrar" title="Ahora no" aria-label="Ahora no" @onclick="() => _sinAvisoGustos = true">
+                    <Icono Nombre="cerrar-16" Caja="16" />
+                </button>
+            </section>
+        </div>
+    }
+    <Recomendados Elementos="RecomendadosFiltrados" DeTusGustos="_datos?.TieneGustos == true" />
     <ExploraCategorias Etiquetas="_datos?.Categorias" />
     @FilaEventos("fila-te-podrian", "Te podrían interesar", _datos?.TePodrianInteresar)
     @FilaEventos("fila-musica", "Música en vivo", _datos?.Musica)
@@ -37,6 +55,8 @@
     /// <summary>Última respuesta de ServicioHome (null mientras carga).</summary>
     private DatosHome? _datos;
     private FiltroHome _filtro = FiltroHome.Ninguno;
+    /// <summary>Cerró el aviso "¿Qué te gusta hacer?" (vuelve a salir la próxima vez que abra la app).</summary>
+    private bool _sinAvisoGustos;
 
     private IReadOnlyList<ElementoCollage>? RecomendadosFiltrados => _datos?.Recomendados
         .Where(el => el.Evento is { } e ? _filtro.MuestraEventos && _filtro.Pasa(e, DateTime.Now) : _filtro.MuestraLugares && _filtro.Pasa(el.Lugar!))
@@ -56,6 +76,7 @@
     protected override async Task OnInitializedAsync()
     {
         Sesion.Cambio += AlCambiarSesion;
+        Gustos.Cambio += AlCambiarGustos;
         await CargarAsync();
     }
 
@@ -80,5 +101,16 @@
         StateHasChanged();
     });
 
-    public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
+    /// <summary>Eligió gustos nuevos: se vuelven a pedir "Te podrían interesar" y "Recomendados para ti".</summary>
+    private void AlCambiarGustos() => InvokeAsync(async () =>
+    {
+        await CargarAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        Sesion.Cambio -= AlCambiarSesion;
+        Gustos.Cambio -= AlCambiarGustos;
+    }
 }

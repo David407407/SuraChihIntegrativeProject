@@ -100,3 +100,7 @@
   .perfil { flex-direction: column; align-items: stretch; }
   .perfil__foto { width: auto; }
 }
+
+/* "Tus gustos": chips de solo lectura, 8px entre ellos */
+.perfil__gustos { display: flex; flex-wrap: wrap; gap: 8px; }
+.perfil__esqueleto-gustos { display: block; width: 240px; height: 26px; border-radius: var(--radio-control); }

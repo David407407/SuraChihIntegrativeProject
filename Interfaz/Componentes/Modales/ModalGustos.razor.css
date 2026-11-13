@@ -1,0 +1,18 @@
+/* Mismos espacios que "Modal / Filtros": 20px entre bloques y 8px entre chips */
+.gustos { display: flex; flex-direction: column; gap: 20px; }
+.gustos__opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.gustos__esqueleto { width: 96px; height: 26px; border-radius: var(--radio-control); }
+
+/* Caja gris con el interruptor, como "Destacar en el inicio" */
+.gustos__avisos {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radio-s);
+  background: var(--color-fondo);
+}
+.gustos__avisos-texto { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+
+/* "Ahora no" a la izquierda y "Guardar" a la derecha */
+.gustos__acciones { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 8px; }

@@ -241,6 +241,7 @@ namespace BackendLogica.Falso
             Tarjetas(a, a.Eventos
                 .Where(e => AlmacenFalso.Vigente(e, Ahora))
                 .OrderByDescending(e => usuarioId != null && a.Favoritos.Any(f => f.EventoId == e.Id && f.UsuarioId == usuarioId))
+                .ThenByDescending(e => a.Gustos.Count(g => g.UsuarioId == usuarioId && e.EtiquetaIds.Contains(g.EtiquetaId)))
                 .ThenBy(AlmacenFalso.OrdenFecha)
                 .Take(limite));
 

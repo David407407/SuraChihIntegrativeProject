@@ -253,6 +253,7 @@ await Prueba("Favorito de lugar: alternar dos veces deja todo igual", async () =
     Afirmar(primero == lista.Any(l => l.Id == 1), "Mis favoritos no coincide");
     return $"{antes} → {primero} → {segundo}";
 });
+await Prueba("Gustos: se guardan, ordenan el inicio y se dejan como estaban", () => ProbarGustos(bd));
 
 if (bd.Configuracion.BaseDeDatos.EndsWith("_pruebas", StringComparison.OrdinalIgnoreCase))
     await PruebasEscrituraMySql(bd);
@@ -261,6 +262,25 @@ else
 
 Console.WriteLine(fallas == 0 ? "\nTodo bien ✓" : $"\n{fallas} prueba(s) fallaron ✗");
 return fallas == 0 ? 0 : 1;
+
+// Con el usuario 7 (sofia_c): guarda Música y Gastronomía, revisa el orden de "Te podrían interesar" y
+// le regresa los gustos que tenía.
+async Task<string> ProbarGustos(ISuraChihBD datos)
+{
+    var antes = await datos.Etiquetas.ObtenerGustosAsync(7);
+    int[] gustos = [2, 5];   // Música y Gastronomía
+    await datos.Etiquetas.GuardarGustosAsync(7, [.. gustos, 9999], true);
+    var guardados = await datos.Etiquetas.ObtenerGustosAsync(7);
+    var favoritos = await datos.Favoritos.ListarIdsAsync(7);
+    var proximos = await datos.Eventos.ListarProximosAsync(7, 50);
+    await datos.Etiquetas.GuardarGustosAsync(7, [.. antes.EtiquetaIds], antes.Avisos);
+
+    Afirmar(guardados.EtiquetaIds.SetEquals(gustos) && guardados.Avisos, "no se guardaron (o se coló la etiqueta que no existe)");
+    var coincidencias = proximos.Where(e => !favoritos.Contains(e.Id))
+                                .Select(e => e.Etiquetas.Count(t => gustos.Contains(t.Id))).ToList();
+    Afirmar(coincidencias.SequenceEqual(coincidencias.OrderByDescending(n => n)), "los de sus gustos no van primero");
+    return $"coincidencias en orden: {string.Join(",", coincidencias)}";
+}
 
 // ----------------------------------------------------------------------
 // Repositorio falso: las mismas interfaces, sin MySQL
@@ -285,6 +305,8 @@ async Task PruebasFalso()
         Afirmar(faltan.Count == 0, "no están en el SQL: " + string.Join(" | ", faltan));
         return Task.FromResult($"{mensajes.Count} mensajes");
     });
+
+    await Prueba("Gustos: se guardan, ordenan el inicio y se dejan como estaban", () => ProbarGustos(f));
 
     // --- Lecturas (mismos datos que surachih_v1.sql) ---
     await Prueba("Resumen de la landing", async () =>
