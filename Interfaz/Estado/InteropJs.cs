@@ -35,6 +35,8 @@ namespace Interfaz.Estado
         public ValueTask SubirDeInmediatoAsync() => LlamarAsync("subirDeInmediato");
         public ValueTask<bool> DesplazarAAsync(string id) => LlamarAsync<bool>("desplazarA", id);
         public ValueTask MostrarElementoAsync(ElementReference elemento) => LlamarAsync("mostrarElemento", elemento);
+        /// <summary>Color que más se ve en la foto, [r, g, b]; null si no se pudo leer.</summary>
+        public ValueTask<int[]?> ColorDeImagenAsync(string url) => LlamarAsync<int[]?>("colorDeImagen", url);
 
         public async ValueTask DisposeAsync()
         {
