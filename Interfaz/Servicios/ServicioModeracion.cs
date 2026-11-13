@@ -343,11 +343,14 @@ namespace Interfaz.Servicios
 
         // ---------------------------------------------------------------- Equipo (solo supermoderadores)
 
-        /// <summary>Moderadores activos para Paginas/EquipoModeracion.razor.</summary>
-        public Task<List<Usuario>> ListarEquipoAsync()
+        /// <summary>Moderadores activos para Paginas/EquipoModeracion.razor y los conteos de las pestañas.</summary>
+        public async Task<DatosEquipo> ObtenerEquipoAsync()
         {
             SuperModerador();
-            return bd.Usuarios.ListarModeradoresAsync();
+            var moderadores = bd.Usuarios.ListarModeradoresAsync();
+            var conteos = ContarAsync();
+            await Task.WhenAll(moderadores, conteos);
+            return new DatosEquipo(moderadores.Result, conteos.Result);
         }
 
         /// <summary>Elimina (desactiva) la cuenta de un moderador. BackendLogica vuelve a revisar el permiso.</summary>
@@ -411,6 +414,9 @@ namespace Interfaz.Servicios
 
     /// <param name="Lista">Los reportes del estado elegido, en el orden de BackendLogica.</param>
     public sealed record DatosReportes(IReadOnlyList<GrupoReportes> Lista, ConteosModeracion Conteos);
+
+    /// <summary>"Equipo": los moderadores activos (la lista se edita al eliminar uno) y los conteos de las pestañas.</summary>
+    public sealed record DatosEquipo(List<Usuario> Moderadores, ConteosModeracion Conteos);
 
     /// <param name="Filas">Las más recientes primero.</param>
     /// <param name="Total">Con el mismo filtro ("Mostrando 7 de 214").</param>
