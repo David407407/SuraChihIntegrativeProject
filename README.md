@@ -22,13 +22,19 @@ llaman directo a la librería **BackendLogica**, que habla con MySQL.
 
 | Carpeta | Qué hay |
 |---|---|
-| `BackendLogica/` | Librería de acceso a datos. Ver [BackendLogica/README.md](BackendLogica/README.md). |
-| `BackendLogica.Pruebas/` | Pruebas de humo de la librería contra la BD local. |
-| `BaseDeDatos/surachih_v1.sql` | Script de la BD (tablas, triggers, vistas y datos de prueba). |
-| `Interfaz/` | La interfaz: componentes Razor, páginas, estilos y recursos. Ver [Interfaz/README.md](Interfaz/README.md). |
+| `BackendLogica/` | Librería de acceso a datos: `Contratos/` (interfaces `I*Repository` e `ISuraChihBD`), `Repositorios/` (el SQL de cada tema: `EventoDB`, `LugarDB`, `UsuarioDB`...), `Falso/` (los mismos contratos con datos de prueba en memoria), `Modelos/`, `Datos/` (conexión, parámetros y traducción de errores de MySQL) y `Seguridad/` (validaciones y BCrypt). |
+| `BackendLogica.Pruebas/` | Pruebas de la librería, con datos falsos y contra MySQL. |
+| `BaseDeDatos/surachih_v1.sql` | Script completo de la BD: tablas, triggers (reglas de negocio), vistas y datos de prueba. |
+| `Interfaz/` | La interfaz: `Paginas/` (una por ruta), `Componentes/` (piezas reutilizables), `Servicios/` (lo que necesita cada pantalla), `Estado/` (sesión, modales, avisos, navegación), `Utilidades/` y `wwwroot/` (CSS, JavaScript del mapa, íconos y fuentes). |
 | `Interfaz.Navegador/` | Servidor de prueba para abrir la misma interfaz en un navegador (sin la app de escritorio). |
 | `App.xaml`, `MainWindow.xaml`, `wwwroot/index.html`, `Resources/AppIcon/` | App de escritorio (WPF): arranque, ventana con BlazorWebView, su página anfitriona y el icono. |
-| `Legacy/` | Pantallas y código de la versión anterior (no se compilan). |
+
+Una pantalla siempre baja por las mismas capas: página → servicio de `Interfaz/Servicios` → contrato de
+`BackendLogica/Contratos` → repositorio (`*DB.cs` con MySQL o `Falso*` en memoria) → MySQL. La interfaz nunca
+escribe SQL. Cada método nuevo de un repositorio va en la interfaz, en su `*DB.cs` y en su `Falso*Repository.cs`.
+
+Los cambios a la BD compartida se hacen con un script aparte (en una transacción), se aplican en Aiven con
+permiso del equipo y se reflejan también en `surachih_v1.sql`, que siempre debe poder crear la BD completa.
 
 ## Cómo correrlo
 
@@ -43,10 +49,11 @@ llaman directo a la librería **BackendLogica**, que habla con MySQL.
    y los triggers usan `DELIMITER`). La BD compartida tiene la zona horaria de Chihuahua (`-06:00`)
    porque la app compara `DateTime.Now` con `NOW()` de MySQL.
 2. Para trabajar pantallas **sin MySQL**, pon `"UseFakeData": true` en `dbsettings.local.json`: la app
-   usa los datos de prueba en memoria (ver [BackendLogica/README.md](BackendLogica/README.md#trabajar-sin-mysql-repositorio-falso)).
+   usa los datos de prueba en memoria (`BackendLogica/Falso`, los mismos de `surachih_v1.sql`; se pierden al
+   cerrar la app).
    Para subir fotos en "Publicar evento" agrega también `"CloudinaryCloudName"` y `"CloudinaryUploadPreset"`
    (un upload preset *unsigned* de la cuenta de Cloudinary del equipo).
-3. Verifica la conexión y la librería:
+3. Verifica la conexión y la librería (con `-- --falso` solo corren las pruebas con datos falsos, sin tocar la BD):
    ```bash
    dotnet run --project BackendLogica.Pruebas
    ```

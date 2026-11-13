@@ -115,7 +115,7 @@ await Prueba("Eventos más guardados", async () =>
     Afirmar(eventos.All(e => e.Estado == EstadoEvento.Aprobado && !e.Terminado), "solo deben salir vigentes");
     return string.Join(" | ", eventos.Select(e => $"{e.Titulo} ({e.Interesados}♥, {e.LugarNombre ?? e.Direccion})"));
 });
-// Con lugares: en la BD compartida los eventos de ejemplo están ocultos (BaseDeDatos/ocultar_eventos_de_ejemplo.sql).
+// Con lugares: en la BD compartida los eventos de ejemplo (ids 1 a 5) están ocultos (cancelados o borrador).
 await Prueba("Búsqueda sin acentos ('cafe')", async () =>
 {
     var lugares = await bd.Lugares.BuscarAsync("cafe");

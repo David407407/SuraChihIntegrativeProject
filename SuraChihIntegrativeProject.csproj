@@ -26,7 +26,7 @@
     <Version>0.2.0</Version>
 
     <!-- Otros proyectos y código viejo viven en subcarpetas: no compilarlos dentro de este -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);BackendLogica\**;BackendLogica.Pruebas\**;Interfaz\**;Interfaz.Navegador\**;Legacy\**;Prototipo\**;BaseDeDatos\**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);BackendLogica\**;BackendLogica.Pruebas\**;Interfaz\**;Interfaz.Navegador\**;Prototipo\**;BaseDeDatos\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
