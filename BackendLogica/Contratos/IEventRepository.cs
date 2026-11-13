@@ -21,7 +21,10 @@ namespace BackendLogica.Contratos
         /// <summary>"Recomendados para ti" / "Lo más guardado": vigentes con más corazones primero.</summary>
         Task<List<EventoTarjeta>> ListarMasGuardadosAsync(int limite = 5, CancellationToken ct = default);
 
-        /// <summary>Próximos eventos con los favoritos del usuario primero. Sin usuario, solo por fecha.</summary>
+        /// <summary>
+        /// Próximos eventos con los favoritos del usuario primero y luego los que más coinciden con sus gustos.
+        /// Sin usuario, solo por fecha.
+        /// </summary>
         Task<List<EventoTarjeta>> ListarProximosAsync(int? usuarioId = null, int limite = 30, CancellationToken ct = default);
 
         /// <summary>Buscador: título, lugar o nombre de etiqueta (sin distinguir acentos ni mayúsculas).</summary>

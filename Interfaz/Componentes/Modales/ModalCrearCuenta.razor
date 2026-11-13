@@ -2,7 +2,7 @@
   "Modal / Crear cuenta" de Figma. Las reglas son las de la BD (Utilidades/ReglasCuenta.cs): usuario de 3 a
   30 caracteres con letras, números, punto o guion bajo, correo válido y contraseña de 8+ con letras y números.
   Se revisan antes de mandar y BackendLogica las vuelve a revisar; sus errores (correo repetido...) se
-  pintan en su campo.
+  pintan en su campo. Con la cuenta creada, la modal cambia a "¿Qué te gusta hacer?" (ModalGustos).
 *@
 @inject ServicioCuenta Cuenta
 @inject Modales Modales
@@ -64,8 +64,8 @@
         try
         {
             Usuario usuario = await Cuenta.RegistrarAsync(nombre, correo, contrasena, _datos.Confirmacion);
-            Modales.Cerrar();
             Avisos.Mostrar($"¡Bienvenido a SuraChih, {usuario.NombreUsuario}!");
+            _ = Modales.GustosAsync(bienvenida: true);   // la modal cambia a "¿Qué te gusta hacer?"
         }
         catch (Exception ex)
         {

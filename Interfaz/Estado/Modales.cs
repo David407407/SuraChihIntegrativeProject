@@ -88,6 +88,12 @@ namespace Interfaz.Estado
         public void ContrasenaNueva(string token, string? correo = null) =>
             _ = Abrir<ModalContrasenaNueva>(new Dictionary<string, object?> { ["Token"] = token, ["Correo"] = correo });
 
+        /// <summary>"Tus gustos": categorías para las recomendaciones y si acepta avisos.</summary>
+        /// <param name="bienvenida">Recién creó su cuenta: textos de bienvenida y "Ahora no" en vez de "Cancelar".</param>
+        /// <returns>true si guardó.</returns>
+        public async Task<bool> GustosAsync(bool bienvenida = false) =>
+            await Abrir<ModalGustos>(new Dictionary<string, object?> { ["Bienvenida"] = bienvenida }) as bool? ?? false;
+
         /// <summary>Un visitante intentó algo que necesita cuenta (inscribirse, favoritos, reseñas...).</summary>
         public void RequiereSesion(string? texto = null) =>
             _ = Abrir<ModalRequiereSesion>(texto == null ? null : new Dictionary<string, object?> { ["Texto"] = texto });

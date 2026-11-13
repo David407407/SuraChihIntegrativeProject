@@ -26,6 +26,30 @@ namespace BackendLogica.Repositorios
         public async Task<int> ContarAsync(AlcanceEtiqueta? para = null, CancellationToken ct = default) =>
             await EscalarAsync<int>($"SELECT COUNT(*) FROM tag WHERE is_active {FiltroAlcance(para)}", new { alcance = para }, ct);
 
+        public async Task<Gustos> ObtenerGustosAsync(int usuarioId, CancellationToken ct = default)
+        {
+            var ids = await ConsultarAsync("""
+                SELECT ui.tag_id FROM user_interest ui
+                JOIN tag t ON t.id = ui.tag_id AND t.is_active
+                WHERE ui.user_id = @usuarioId
+                """, r => r.Entero("tag_id"), new { usuarioId }, ct);
+            bool avisos = await EscalarAsync<bool>("SELECT notify_interests FROM user WHERE id = @usuarioId", new { usuarioId }, ct);
+            return new Gustos(ids.ToHashSet(), avisos);
+        }
+
+        public Task GuardarGustosAsync(int usuarioId, IReadOnlyCollection<int> etiquetaIds, bool avisos, CancellationToken ct = default) =>
+            EnTransaccionAsync(async tx =>
+            {
+                await tx.EjecutarAsync("DELETE FROM user_interest WHERE user_id = @usuarioId", new { usuarioId });
+                if (etiquetaIds.Count > 0)
+                    await tx.EjecutarAsync("""
+                        INSERT INTO user_interest (user_id, tag_id)
+                        SELECT @usuarioId, id FROM tag WHERE is_active AND id IN @etiquetas
+                        """, new { usuarioId, etiquetas = etiquetaIds.Distinct().ToArray() });
+                await tx.EjecutarAsync("UPDATE user SET notify_interests = @avisos WHERE id = @usuarioId", new { usuarioId, avisos });
+                return true;
+            }, ct);
+
         private static string FiltroAlcance(AlcanceEtiqueta? para) =>
             para is null or AlcanceEtiqueta.Ambos ? "" : "AND scope IN (@alcance, 'both')";
 

@@ -1,0 +1,104 @@
+@*
+  "Tus gustos": chips de todas las categorías (de eventos y de lugares, varias) y un interruptor para aceptar
+  avisos de eventos nuevos de esas categorías. Lo abre Modales.GustosAsync:
+  - Bienvenida (recién creó su cuenta, desde Crear cuenta o "Continuar con Google"): "Ahora no" la cierra sin
+    guardar y "Guardar" pide al menos una categoría.
+  - Desde Mi perfil o el aviso del inicio: llega con lo que ya tenía y se puede dejar sin ninguna.
+  Se guarda con ServicioGustos (user_interest y user.notify_interests).
+*@
+@inject ServicioGustos Gustos
+@inject Modales Modales
+@inject Avisos Avisos
+
+<div class="gustos" data-ancho-modal="560">
+    <EncabezadoModal Titulo="@(Bienvenida ? "¿Qué te gusta hacer?" : "Tus gustos")"
+                     Texto="Elige las categorías que más te laten y te recomendamos eventos y lugares de Chihuahua para ti." />
+
+    <div class="gustos__opciones" role="group" aria-label="Categorías">
+        @if (_categorias == null)
+        {
+            @for (int i = 0; i < 8; i++)
+            {
+                <span class="esqueleto gustos__esqueleto" aria-hidden="true"></span>
+            }
+        }
+        else
+        {
+            @foreach (var etiqueta in _categorias)
+            {
+                <ChipCategoria @key="etiqueta.Id" Etiqueta="etiqueta" Activo="_elegidas.Contains(etiqueta.Id)"
+                               ActivoChanged="activo => Alternar(etiqueta.Id, activo)" />
+            }
+        }
+    </div>
+
+    <div class="gustos__avisos">
+        <p class="gustos__avisos-texto">
+            <span class="t-small-fuerte">Avísame de eventos nuevos que me gusten</span>
+            <span class="t-caption texto-2">Te llegarán en la app para celular cuando esté lista.</span>
+        </p>
+        <Interruptor @bind-Activo="_avisos" Etiqueta="Avísame de eventos nuevos que me gusten" />
+    </div>
+
+    <AvisoModal Errores="_errores" />
+    <div class="gustos__acciones">
+        <Boton Texto="@(Bienvenida ? "Ahora no" : "Cancelar")" Variante="fantasma" Deshabilitado="_guardando" OnClick="() => Modales.Cerrar(false)" />
+        <Boton Texto="@(_elegidas.Count == 0 || !Bienvenida ? "Guardar" : $"Guardar ({_elegidas.Count})")" Variante="oscuro"
+               Ocupado="_guardando" Deshabilitado="Bienvenida && _elegidas.Count == 0" OnClick="GuardarAsync" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool Bienvenida { get; set; }
+
+    private readonly ErroresFormulario _errores = new();
+    private List<Etiqueta>? _categorias;
+    private readonly HashSet<int> _elegidas = [];
+    /// <summary>Encendido de entrada en la bienvenida: es la razón de elegir gustos. Al editar, lo que tenía.</summary>
+    private bool _avisos = true;
+    private bool _guardando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var categorias = Gustos.ListarCategoriasAsync();
+            var actuales = Gustos.ObtenerAsync();
+            await Task.WhenAll(categorias, actuales);
+            _categorias = categorias.Result;
+            _elegidas.UnionWith(actuales.Result.EtiquetaIds);
+            if (!Bienvenida) _avisos = actuales.Result.Avisos;
+        }
+        catch (Exception ex)
+        {
+            _categorias = [];
+            _errores.PonerAviso(MensajesError.Para(ex));
+        }
+    }
+
+    private void Alternar(int id, bool activo)
+    {
+        if (activo) _elegidas.Add(id);
+        else _elegidas.Remove(id);
+    }
+
+    private async Task GuardarAsync()
+    {
+        _errores.Limpiar();
+        _guardando = true;
+        try
+        {
+            await Gustos.GuardarAsync(_elegidas, _avisos);
+            Modales.Cerrar(true);
+            Avisos.Mostrar(_elegidas.Count == 0 ? "Gustos guardados" : "¡Listo! Tus recomendaciones ya están en el inicio.");
+        }
+        catch (Exception ex)
+        {
+            _errores.PonerAviso(MensajesError.Para(ex));
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+}

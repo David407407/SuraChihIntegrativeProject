@@ -5,7 +5,7 @@
         <div class="contenedor">
             <header class="home-seccion__encabezado">
                 <h2 class="t-h2" id="titulo-recomendados">Recomendados para ti</h2>
-                <p class="t-body texto-2">Lo que más se está guardando esta semana en Chihuahua.</p>
+                <p class="t-body texto-2">@(DeTusGustos ? "Eventos y lugares de lo que te gusta." : "Lo que más se está guardando esta semana en Chihuahua.")</p>
             </header>
             <div class="rejilla-recomendadas">
                 @if (Elementos == null)
@@ -29,4 +29,6 @@
 
 @code {
     [Parameter] public IReadOnlyList<ElementoCollage>? Elementos { get; set; }
+    /// <summary>Salen de los gustos del usuario (si no, son los más guardados).</summary>
+    [Parameter] public bool DeTusGustos { get; set; }
 }

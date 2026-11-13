@@ -5,8 +5,9 @@ namespace Interfaz.Servicios
 {
     /// <summary>
     /// Datos del Home (Paginas/Home.razor). Todas sus secciones en una sola llamada; las consultas
-    /// corren en paralelo. Con sesión, "Te podrían interesar" pone primero los favoritos del usuario
-    /// (consulta de referencia «Inicio del usuario» del SQL) y los corazones salen llenos.
+    /// corren en paralelo. Con sesión, "Te podrían interesar" pone primero los favoritos del usuario y
+    /// luego los de sus gustos (ServicioGustos), "Recomendados para ti" sale de sus gustos y los corazones
+    /// salen llenos.
     /// </summary>
     public sealed class ServicioHome(ISuraChihBD bd, Sesion sesion)
     {
@@ -38,16 +39,26 @@ namespace Interfaz.Servicios
             var lugares = bd.Lugares.ListarAprobadosAsync();
             var favoritosEventos = usuarioId is int id ? bd.Favoritos.ListarIdsAsync(id) : Task.FromResult(new HashSet<int>());
             var favoritosLugares = usuarioId is int id2 ? bd.Favoritos.ListarIdsLugaresAsync(id2) : Task.FromResult(new HashSet<int>());
+            var gustos = usuarioId is int id3 ? bd.Etiquetas.ObtenerGustosAsync(id3) : Task.FromResult(Gustos.Ninguno);
             await Task.WhenAll(destacados, masGuardados, lugaresRecomendados, tePodrianInteresar, musica, actividades,
-                lugares, favoritosEventos, favoritosLugares);
+                lugares, favoritosEventos, favoritosLugares, gustos);
 
             var eventosPopulares = destacados.Result.Concat(masGuardados.Result).DistinctBy(e => e.Id).ToList();
             var mejoresLugares = lugaresRecomendados.Result;
+            var deGustos = gustos.Result.EtiquetaIds;
 
             return new DatosHome(
                 UsuarioId: usuarioId,
                 Carrusel: ArmarCarrusel(eventosPopulares, mejoresLugares),
-                Recomendados: ArmarRecomendados(masGuardados.Result, mejoresLugares),
+                Recomendados: deGustos.Count == 0
+                    ? ArmarRecomendados(masGuardados.Result, mejoresLugares)
+                    : ArmarRecomendados(
+                        // "Te podrían interesar" ya viene ordenado por gustos; los populares completan si faltan
+                        tePodrianInteresar.Result.Where(e => Coincide(e.Etiquetas, deGustos)).Concat(masGuardados.Result).DistinctBy(e => e.Id).ToList(),
+                        lugares.Result.Where(l => Coincide(l.Etiquetas, deGustos))
+                            .OrderByDescending(l => l.Calificacion ?? 0).ThenBy(l => l.Nombre)
+                            .Concat(mejoresLugares).DistinctBy(l => l.Id).ToList()),
+                TieneGustos: deGustos.Count > 0,
                 Categorias: IconosCategorias
                     .Select(icono => etiquetas.FirstOrDefault(t => t.Icono == icono))
                     .OfType<Etiqueta>().ToList(),
@@ -65,6 +76,8 @@ namespace Interfaz.Servicios
             etiquetaIds.Length == 0
                 ? Task.FromResult(new List<EventoTarjeta>())
                 : bd.Eventos.FiltrarAsync(new FiltroEventos { EtiquetaIds = etiquetaIds, Limite = PorFila });
+
+        private static bool Coincide(IEnumerable<Etiqueta> etiquetas, IReadOnlySet<int> gustos) => etiquetas.Any(t => gustos.Contains(t.Id));
 
         /// <summary>Lugares con alguna de esas etiquetas, mejor calificados primero.</summary>
         private static List<LugarTarjeta> Lugares(List<LugarTarjeta> lugares, IEnumerable<string> iconos) =>
@@ -84,7 +97,10 @@ namespace Interfaz.Servicios
             return carrusel;
         }
 
-        /// <summary>"Recomendados para ti": dos eventos que más se guardan y dos lugares, como en Figma.</summary>
+        /// <summary>
+        /// "Recomendados para ti": dos eventos y dos lugares, como en Figma. Sin gustos son los más guardados y
+        /// los mejor calificados; con gustos, primero los de sus categorías.
+        /// </summary>
         private static List<ElementoCollage> ArmarRecomendados(List<EventoTarjeta> eventos, List<LugarTarjeta> lugares)
         {
             var recomendados = eventos.Take(2).Select(ElementoCollage.DeEvento).ToList();
@@ -94,10 +110,12 @@ namespace Interfaz.Servicios
     }
 
     /// <param name="UsuarioId">Para quién se armó (null = visitante). El Home vuelve a pedir si cambia la sesión.</param>
+    /// <param name="TieneGustos">Ya eligió categorías; si no, el Home le ofrece elegirlas.</param>
     public sealed record DatosHome(
         int? UsuarioId,
         IReadOnlyList<ElementoCollage> Carrusel,
         IReadOnlyList<ElementoCollage> Recomendados,
+        bool TieneGustos,
         IReadOnlyList<Etiqueta> Categorias,
         IReadOnlyList<EventoTarjeta> TePodrianInteresar,
         IReadOnlyList<EventoTarjeta> Musica,
@@ -108,6 +126,6 @@ namespace Interfaz.Servicios
         IReadOnlySet<int> FavoritosLugares)
     {
         /// <summary>Lo que se muestra mientras no hay datos o si la consulta falló.</summary>
-        public static readonly DatosHome Vacio = new(null, [], [], [], [], [], [], [], [], new HashSet<int>(), new HashSet<int>());
+        public static readonly DatosHome Vacio = new(null, [], [], false, [], [], [], [], [], [], new HashSet<int>(), new HashSet<int>());
     }
 }

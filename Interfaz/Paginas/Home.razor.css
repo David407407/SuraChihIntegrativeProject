@@ -1,2 +1,28 @@
 /* 64px antes del pie, como en Figma */
 .home { display: block; padding-bottom: 64px; }
+
+/* Aviso "¿Qué te gusta hacer?" (con sesión y sin gustos): amarillo suave, como la sección de encuesta */
+.home__gustos {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 14px 16px;
+  border-radius: var(--radio-s);
+  background: var(--color-sol-suave);
+}
+.home__gustos-texto { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.home__gustos-cerrar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--color-texto-2);
+}
+.home__gustos-cerrar:hover { background: var(--color-superficie); }
+
+@media (max-width: 600px) {
+  .home__gustos { flex-wrap: wrap; }
+}
