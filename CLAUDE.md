@@ -86,8 +86,9 @@ Usuarios de prueba (contraseña en el README): `mariana_r`, `diego_m`, `sofia_c`
   organizador, registrar lugar y búsqueda.
 - Los scripts de datos reales (cartelera, fotos y horarios de lugares) ya están en `BaseDeDatos/` y aplicados en
   Aiven: no los vuelvas a correr.
-- Rama subida pero sin merge: `feature/gustos` (gustos del usuario). Cambia el registro, el Inicio y el Perfil, y
-  requiere aplicar `BaseDeDatos/agregar_gustos.sql` en Aiven antes del merge.
+- Gustos del usuario (`ModalGustos`, `ServicioGustos`, tabla `user_interest`): al crear cuenta se eligen
+  categorías que ordenan el Inicio. Necesita `BaseDeDatos/agregar_gustos.sql` aplicado en Aiven; sin él, el Inicio
+  falla para quien tiene sesión.
 
 ## Dónde buscar (abre solo la sección que necesites)
 
