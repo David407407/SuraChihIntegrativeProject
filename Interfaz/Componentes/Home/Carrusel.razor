@@ -3,8 +3,11 @@
   - Avanza solo cada 6 s; se pausa con el mouse o el foco encima y con "reducir movimiento" del sistema.
   - Puntos (el activo es una píldora de 28px) y flechas Anterior / Siguiente; también ← y → del teclado
     y deslizar dos dedos de lado en el touchpad.
+  - El fondo de cada slide es un degradado del color que más se ve en su foto (ColorFondo + colorDeImagen de
+    interop.js), oscurecido para que el texto blanco se lea; mientras se calcula, el color de Figma.
   Null = cargando (esqueleto); lista vacía = no se muestra.
 *@
+@using Microsoft.JSInterop
 @implements IDisposable
 @inject Acciones Acciones
 @inject InteropJs Js
@@ -24,7 +27,7 @@
                 {
                     var s = Slide(Elementos[i]);
                     bool visible = i == _actual;
-                    <article class="carrusel__slide" style="--fondo:@Fondos[i % Fondos.Length]" inert="@(!visible)" aria-hidden="@(visible ? "false" : "true")"
+                    <article class="carrusel__slide" style="--fondo:@Fondo(s.Imagen, i)" inert="@(!visible)" aria-hidden="@(visible ? "false" : "true")"
                              aria-roledescription="slide" aria-label="@($"{i + 1} de {Elementos.Count}: {s.Titulo}")">
                         <div class="carrusel__texto">
                             @if (s.Etiqueta != null)
@@ -72,8 +75,38 @@
     [Parameter] public IReadOnlyList<ElementoCollage>? Elementos { get; set; }
 
     private const int IntervaloMs = 6000;
-    /// <summary>Fondos de los 5 slides de Figma; si hay más slides se repiten.</summary>
+    /// <summary>Fondos de los 5 slides de Figma: se usan mientras se calcula el de la foto o si no se pudo.</summary>
     private static readonly string[] Fondos = ["#0a3b8c", "#9d174d", "#065f46", "#7f1d1d", "#2f7bff"];
+
+    /// <summary>Degradado calculado para cada foto (por URL); null = no se pudo leer y se queda el de Figma.</summary>
+    private readonly Dictionary<string, string?> _fondosFoto = [];
+
+    private string Fondo(string? imagen, int i) =>
+        imagen != null && _fondosFoto.GetValueOrDefault(imagen) is { } degradado ? degradado : Fondos[i % Fondos.Length];
+
+    /// <summary>
+    /// Saca el color de cada foto que todavía no tiene (de una versión de 32 × 32 que da Cloudinary) y repinta
+    /// en cuanto llega. Una foto que falla no se vuelve a pedir.
+    /// </summary>
+    private async Task CalcularFondosAsync()
+    {
+        var pendientes = (Elementos ?? []).Select(e => Slide(e).Imagen).OfType<string>()
+            .Where(url => !_fondosFoto.ContainsKey(url)).Distinct().ToList();
+        foreach (string url in pendientes) _fondosFoto[url] = null;
+
+        await Task.WhenAll(pendientes.Select(async url =>
+        {
+            try
+            {
+                _fondosFoto[url] = ColorFondo.Degradado(await Js.ColorDeImagenAsync(Cloudinary.UrlOptimizada(url, 16, 16)));
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException or TaskCanceledException)
+            {
+                // Sin JavaScript (se cerró la pantalla) o la foto no se dejó leer: queda el color de Figma.
+            }
+        }));
+    }
 
     private int _actual;
     private bool _sobre, _foco;
@@ -139,6 +172,7 @@
     protected override async Task OnAfterRenderAsync(bool primeraVez)
     {
         if (primeraVez && !await Js.ReducirMovimientoAsync()) _ = AvanzarSoloAsync();
+        if (Elementos != null) await CalcularFondosAsync();
     }
 
     /// <summary>Revisa cada segundo; a los 6 sin que el usuario lo toque (ni esté encima), avanza.</summary>

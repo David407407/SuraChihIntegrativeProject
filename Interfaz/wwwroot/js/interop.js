@@ -338,3 +338,53 @@ export function moverPista(pista, direccion) {
   const paso = Math.max(pista.clientWidth * 0.8, 300);
   pista.scrollBy({ left: direccion * paso, behavior: reducido() ? 'auto' : 'smooth' });
 }
+
+// ---------------------------------------------------------------------
+// Carrusel del Home (Carrusel.razor): color de fondo según la foto
+// ---------------------------------------------------------------------
+
+/**
+ * Color que más se ve en la foto, como [r, g, b] (0-255), o null si no se pudo leer (sin CORS, no cargó...).
+ * Dibuja la foto en 32 × 32, agrupa los píxeles en cubetas de color y se queda con la que más pesa; los
+ * colores vivos pesan más y los casi blancos, casi negros o grises casi no cuentan, para que un fondo
+ * blanco o negro no gane al color del cartel. C# lo ajusta después para que el texto blanco se lea.
+ */
+export function colorDeImagen(url) {
+  return new Promise((resolver) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onerror = () => resolver(null);
+    img.onload = () => {
+      try {
+        const lado = 32;
+        const lienzo = document.createElement('canvas');
+        lienzo.width = lienzo.height = lado;
+        const ctx = lienzo.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, lado, lado);
+        const datos = ctx.getImageData(0, 0, lado, lado).data;
+
+        const cubetas = new Map();
+        for (let i = 0; i < datos.length; i += 4) {
+          if (datos[i + 3] < 128) continue;   // transparente
+          const [r, g, b] = [datos[i], datos[i + 1], datos[i + 2]];
+          const max = Math.max(r, g, b), min = Math.min(r, g, b);
+          const saturacion = max === 0 ? 0 : (max - min) / max;
+          const extremo = max < 28 || min > 232;   // casi negro o casi blanco
+          // Los colores vivos pesan mucho más que los apagados, y los muy oscuros poco: en un cartel negro con
+          // letras rojas gana el rojo.
+          const peso = extremo ? 0.02 : (0.1 + 2 * saturacion * saturacion) * (max < 70 ? 0.3 : 1);
+          const clave = (r >> 5) << 6 | (g >> 5) << 3 | (b >> 5);   // 8 niveles por canal
+          const c = cubetas.get(clave) ?? { peso: 0, r: 0, g: 0, b: 0 };
+          c.peso += peso; c.r += r * peso; c.g += g * peso; c.b += b * peso;
+          cubetas.set(clave, c);
+        }
+        let mejor = null;
+        for (const c of cubetas.values()) if (!mejor || c.peso > mejor.peso) mejor = c;
+        resolver(mejor ? [mejor.r / mejor.peso, mejor.g / mejor.peso, mejor.b / mejor.peso].map(Math.round) : null);
+      } catch {
+        resolver(null);   // canvas "contaminado": la imagen no permite leer sus píxeles
+      }
+    };
+    img.src = url;
+  });
+}
