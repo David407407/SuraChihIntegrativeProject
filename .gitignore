@@ -365,3 +365,6 @@ FodyWeavers.xsd
 dbsettings.local.json
 # Salida de dotnet publish (ver README)
 publicar/
+
+# Instalador generado (lleva dbsettings.local.json con la contraseña de la BD: nunca a git)
+Instalador/salida/

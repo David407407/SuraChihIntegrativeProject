@@ -74,6 +74,18 @@ permiso del equipo y se reflejan también en `surachih_v1.sql`, que siempre debe
 
    La app solo abre en Windows.
 
+### Crear el instalador
+
+Con [Inno Setup 6](https://jrsoftware.org/isinfo.php) instalado (`winget install JRSoftware.InnoSetup`), desde la raíz:
+
+```bash
+powershell -ExecutionPolicy Bypass -File Instalador\crear-instalador.ps1
+```
+
+Publica la app y arma `Instalador\salida\SuraChih-Instalador.exe`: un asistente en español que instala SuraChih
+para el usuario (sin permisos de administrador), con acceso en el menú Inicio y opcional en el escritorio. Lleva
+`dbsettings.local.json`, así que el instalador **no se sube a GitHub** (git ya lo ignora); compártelo por Drive.
+
 Usuarios de prueba (contraseña `Test1234!`): `mariana_r`, `diego_m`, `sofia_c` (normales),
 `cafe_dande` y `misiones_cuu` (organizadores), `mod_luis` (moderador) y `mod_ana` (supermoderadora).
 
