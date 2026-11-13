@@ -2,9 +2,7 @@
 
   <!--
     Interfaz de SuraChih en Blazor (componentes .razor, estilos y recursos de wwwroot).
-    La usan dos anfitriones:
-      - SuraChihIntegrativeProject: la app de escritorio (.NET MAUI para Windows + BlazorWebView).
-      - Interfaz.Navegador: un servidor de prueba para abrir la misma interfaz en el navegador.
+    La usa la app de escritorio (SuraChihIntegrativeProject: WPF + BlazorWebView).
     Los archivos de wwwroot se sirven como _content/Interfaz/... (ver Utilidades/Recursos.cs).
   -->
   <PropertyGroup>
@@ -13,10 +11,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Interfaz</RootNamespace>
   </PropertyGroup>
-
-  <ItemGroup>
-    <SupportedPlatform Include="browser" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.12" />

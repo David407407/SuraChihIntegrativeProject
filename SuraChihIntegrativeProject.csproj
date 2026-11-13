@@ -25,8 +25,9 @@
     <Product>SuraChih</Product>
     <Version>0.2.0</Version>
 
-    <!-- Otros proyectos y código viejo viven en subcarpetas: no compilarlos dentro de este -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);BackendLogica\**;BackendLogica.Pruebas\**;Interfaz\**;Interfaz.Navegador\**;Prototipo\**;BaseDeDatos\**</DefaultItemExcludes>
+    <!-- Otros proyectos viven en subcarpetas: no compilarlos dentro de este. Legacy, Interfaz.Navegador y
+         Prototipo ya no existen, pero en copias viejas pueden quedar sus bin/obj (git no los borra). -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);BackendLogica\**;BackendLogica.Pruebas\**;Interfaz\**;BaseDeDatos\**;Legacy\**;Interfaz.Navegador\**;Prototipo\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

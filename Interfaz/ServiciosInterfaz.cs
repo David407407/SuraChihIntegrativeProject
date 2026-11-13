@@ -9,14 +9,10 @@ namespace Interfaz
     public static class ServiciosInterfaz
     {
         /// <summary>
-        /// Registra todo lo que usan los componentes. Lo llaman los dos anfitriones (la ventana de
-        /// escritorio y el servidor de prueba del navegador).
+        /// Registra todo lo que usan los componentes. Lo llama la ventana de escritorio (MainWindow.xaml.cs).
         /// </summary>
         /// <param name="bd">MySQL o los datos de prueba en memoria (<c>BackendLogica.FabricaBD.Crear()</c>).</param>
-        /// <remarks>
-        /// Todo es Scoped: en la app de escritorio vive lo que vive la ventana; en el navegador, lo que
-        /// vive la pestaña (al recargarla se pierde la sesión).
-        /// </remarks>
+        /// <remarks>Todo es Scoped: vive lo que vive la ventana.</remarks>
         public static IServiceCollection AgregarInterfaz(this IServiceCollection servicios, ISuraChihBD bd)
         {
             servicios.AddSingleton(bd);

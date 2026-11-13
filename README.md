@@ -26,7 +26,6 @@ llaman directo a la librería **BackendLogica**, que habla con MySQL.
 | `BackendLogica.Pruebas/` | Pruebas de la librería, con datos falsos y contra MySQL. |
 | `BaseDeDatos/surachih_v1.sql` | Script completo de la BD: tablas, triggers (reglas de negocio), vistas y datos de prueba. |
 | `Interfaz/` | La interfaz: `Paginas/` (una por ruta), `Componentes/` (piezas reutilizables), `Servicios/` (lo que necesita cada pantalla), `Estado/` (sesión, modales, avisos, navegación), `Utilidades/` y `wwwroot/` (CSS, JavaScript del mapa, íconos y fuentes). |
-| `Interfaz.Navegador/` | Servidor de prueba para abrir la misma interfaz en un navegador (sin la app de escritorio). |
 | `App.xaml`, `MainWindow.xaml`, `wwwroot/index.html`, `Resources/AppIcon/` | App de escritorio (WPF): arranque, ventana con BlazorWebView, su página anfitriona y el icono. |
 
 Una pantalla siempre baja por las mismas capas: página → servicio de `Interfaz/Servicios` → contrato de
@@ -73,20 +72,7 @@ permiso del equipo y se reflejan también en `surachih_v1.sql`, que siempre debe
    `wwwroot` y `SuraChih.staticwebassets.endpoints.json`, que son la interfaz: se copian juntos. Los
    `.pdb` y `.xml` no hacen falta. `dbsettings.local.json` va junto al .exe (o en una carpeta de arriba).
 
-   La app WPF solo abre en Windows. Desde macOS o Linux se puede compilar (para revisar errores) pero no
-   abrir: para ver la interfaz ahí usa `Interfaz.Navegador` (abajo).
-
-### Probar la interfaz en el navegador
-
-El mismo proyecto `Interfaz` se puede abrir en un navegador normal, sin Python ni la app de escritorio:
-
-```bash
-dotnet run --project Interfaz.Navegador --DatosFalsos true
-```
-
-Abre <http://localhost:5180>. Con `--DatosFalsos true` usa los datos de prueba en memoria aunque tu
-`dbsettings.local.json` apunte a MySQL; sin esa opción usa tu configuración, igual que la app.
-Recargar la pestaña cierra la sesión.
+   La app solo abre en Windows.
 
 Usuarios de prueba (contraseña `Test1234!`): `mariana_r`, `diego_m`, `sofia_c` (normales),
 `cafe_dande` y `misiones_cuu` (organizadores), `mod_luis` (moderador) y `mod_ana` (supermoderadora).

@@ -2,7 +2,7 @@ namespace Interfaz.Utilidades
 {
     /// <summary>
     /// Rutas de los archivos de <c>Interfaz/wwwroot</c>. Al ser una biblioteca Razor, sus archivos se
-    /// sirven bajo <c>_content/Interfaz/</c> tanto en la app de escritorio como en el navegador.
+    /// sirven bajo <c>_content/Interfaz/</c>.
     /// </summary>
     public static class Recursos
     {
