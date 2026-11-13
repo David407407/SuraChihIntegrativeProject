@@ -1,0 +1,60 @@
+/* Miniaturas: 160 × 112, 12px entre ellas; si no caben, bajan de renglón */
+.galeria { display: flex; flex-wrap: wrap; gap: 12px; }
+.galeria__miniatura {
+  width: 160px;
+  height: 112px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radio-m);
+  background: var(--color-fondo);
+  cursor: zoom-in;
+}
+.galeria__miniatura:hover { opacity: 0.9; }
+.galeria__miniatura:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; }
+
+/* Visor: la foto completa (sin recortar) sobre un velo oscuro, encima de la hoja */
+.galeria__visor {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 80px;
+  background: var(--color-velo-tarjeta);
+}
+.galeria__grande {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radio-m);
+  object-fit: contain;
+}
+
+.galeria__boton {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-superficie);
+  cursor: pointer;
+}
+.galeria__boton:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; }
+.galeria__boton--cerrar { top: 16px; right: 16px; }
+.galeria__boton--anterior { left: 16px; }
+.galeria__boton--siguiente { right: 16px; }
+
+.galeria__contador {
+  position: absolute;
+  bottom: 20px;
+  color: var(--color-superficie);
+}
+
+@media (max-width: 600px) {
+  .galeria__miniatura { width: calc(50% - 6px); }
+  .galeria__visor { padding: 64px 12px; }
+}

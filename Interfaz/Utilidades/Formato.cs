@@ -182,6 +182,22 @@ namespace Interfaz.Utilidades
             return ("Cerrado", false);
         }
 
+        /// <summary>Como <see cref="HorarioLugar(EstadoHorario?)"/>, pero sin horario capturado dice "Horario no disponible" (no "Cerrado").</summary>
+        public static (string Texto, bool Abierto) HorarioLugar(LugarTarjeta lugar) =>
+            lugar.Horario.Count == 0 ? ("Horario no disponible", false) : HorarioLugar(lugar.HorarioAhora);
+
+        /// <summary>Los días en el orden del horario semanal (lunes primero).</summary>
+        public static readonly (DayOfWeek Dia, string Nombre)[] Semana =
+        [
+            (DayOfWeek.Monday, "Lunes"), (DayOfWeek.Tuesday, "Martes"), (DayOfWeek.Wednesday, "Miércoles"),
+            (DayOfWeek.Thursday, "Jueves"), (DayOfWeek.Friday, "Viernes"), (DayOfWeek.Saturday, "Sábado"),
+            (DayOfWeek.Sunday, "Domingo"),
+        ];
+
+        /// <summary>"10 a.m. – 9 p.m." (y "(día siguiente)" si cierra después de medianoche).</summary>
+        public static string HorasDia(HorarioDia h) =>
+            $"{Hora(h.Abre)} – {Hora(h.Cierra)}{(h.CruzaMedianoche ? " (día siguiente)" : "")}";
+
         /// <summary>Calificación con un decimal: 4.8</summary>
         public static string Calificacion(decimal? valor) =>
             valor == null ? "" : valor.Value.ToString("0.0", CultureInfo.InvariantCulture);

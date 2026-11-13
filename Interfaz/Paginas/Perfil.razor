@@ -1,6 +1,7 @@
 @*
   Mi perfil (frame "Mi perfil" de Figma, con "Modal / Eliminar cuenta" y "Toast / Cambios guardados").
-  - Columna izquierda: avatar (foto o inicial), nombre, correo y "Cambiar foto".
+  - Columna izquierda: avatar (foto o inicial), nombre, correo y "Cambiar foto" (sube a Cloudinary y guarda
+    user.avatar_url con ServicioPerfil.CambiarFotoAsync).
   - "Datos de la cuenta": nombre de usuario y correo → ServicioPerfil.ActualizarAsync y "Cambios guardados".
   - "Contraseña": actual y nueva → ServicioPerfil.CambiarContrasenaAsync.
   - Los dos bloques están bloqueados: los campos no se pueden tocar hasta picarle a su lápiz, y "Cancelar"
@@ -39,7 +40,12 @@
                 </span>
                 <p class="t-h2 perfil__nombre">@usuario.NombreUsuario</p>
                 <p class="t-small texto-2 perfil__correo">@usuario.Correo</p>
-                <Boton Texto="Cambiar foto" Variante="secundario" Tamano="s" Icono="camara" OnClick='() => Acciones.Proximamente("Cambiar la foto")' />
+                @* El selector de archivo (invisible) va encima del botón: el clic y el teclado llegan a él *@
+                <label class="perfil__cambiar-foto @(_subiendoFoto ? "perfil__cambiar-foto--ocupado" : "")">
+                    <InputFile class="perfil__archivo" OnChange="CambiarFotoAsync" accept="@ServicioImagenes.Formatos"
+                               disabled="@_subiendoFoto" aria-label="Cambiar foto de perfil (JPG o PNG, hasta 5 MB)" />
+                    <Boton Texto="@(_subiendoFoto ? "Subiendo foto…" : "Cambiar foto")" Variante="secundario" Tamano="s" Icono="camara" Decorativo />
+                </label>
             </section>
 
             <div class="perfil__formulario">
@@ -115,7 +121,7 @@
                     }
                     @if (_avisos)
                     {
-                        <p class="t-caption texto-2">Aceptaste avisos de eventos nuevos de tus gustos (llegarán en la app para celular).</p>
+                        <p class="t-caption texto-2">Te enviaremos una notificación cuando haya eventos nuevos de tus gustos.</p>
                     }
                 </section>
 
@@ -150,7 +156,7 @@
     private readonly DatosContrasena _contrasena = new();
     private readonly ErroresFormulario _erroresDatos = new();
     private readonly ErroresFormulario _erroresContrasena = new();
-    private bool _guardandoDatos, _guardandoContrasena;
+    private bool _guardandoDatos, _guardandoContrasena, _subiendoFoto;
     /// <summary>Se le picó al lápiz de ese bloque: sus campos se pueden editar.</summary>
     private bool _editandoDatos, _editandoContrasena;
     /// <summary>true después de mostrar a un usuario: si luego se cierra la sesión es que la cerró aquí.</summary>
@@ -283,6 +289,29 @@
         finally
         {
             _guardandoDatos = false;
+        }
+    }
+
+    /// <summary>Eligió una foto: se sube y la sesión cambia (el avatar de aquí y del navbar se actualizan).</summary>
+    private async Task CambiarFotoAsync(InputFileChangeEventArgs e)
+    {
+        _subiendoFoto = true;
+        try
+        {
+            await Servicio.CambiarFotoAsync(e.File);
+            Avisos.Mostrar("Foto actualizada");
+        }
+        catch (RequiereSesionException)
+        {
+            Modales.RequiereSesion();
+        }
+        catch (Exception ex)
+        {
+            Avisos.Mostrar(MensajesError.Para(ex), TipoAviso.Error);
+        }
+        finally
+        {
+            _subiendoFoto = false;
         }
     }
 

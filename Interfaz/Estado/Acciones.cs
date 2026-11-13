@@ -109,9 +109,10 @@ namespace Interfaz.Estado
         /// <summary>Logo y enlace "Inicio" del navbar: al Home (la landing solo es la primera pantalla de la app).</summary>
         public void Inicio() => IrA(Rutas.Home);
         public void Mapa() => IrA(Rutas.Mapa);
-        /// <summary>Botones "Explorar" de la landing: llevan al Home.</summary>
-        public void ExplorarEventos() => IrA(Rutas.Home);
-        public void ExplorarLugares() => IrA(Rutas.Home);
+        /// <summary>"Explorar eventos" de la landing y "Eventos" del pie: todos los eventos próximos.</summary>
+        public void ExplorarEventos() => VerTodosEventos();
+        /// <summary>"Lugares" del pie: todos los lugares (cafés, museos, parques...).</summary>
+        public void ExplorarLugares() => Buscar(new FiltroBusqueda { Tipos = [TipoBusqueda.Lugares] });
         /// <summary>"Ver todo" de las filas de eventos del Home: todos los eventos próximos.</summary>
         public void VerTodosEventos() => Buscar(new FiltroBusqueda { Tipos = [TipoBusqueda.Eventos] });
         /// <summary>Buscador del navbar.</summary>

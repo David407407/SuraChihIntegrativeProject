@@ -1,0 +1,60 @@
+@*
+  "Fotos" del detalle de evento y de lugar: las de la galería (event_image / place_image); la portada ya va
+  arriba. Sin fotos no se pinta nada. Miniaturas en fila; al tocar una se ve grande encima de la hoja, con
+  anterior / siguiente y "Cerrar" (tocar fuera de la foto también cierra).
+
+  <GaleriaHoja Fotos="Datos.Galeria" Titulo="@E.Titulo" />
+*@
+@if (Fotos.Count > 0)
+{
+    <h2 class="t-h3">Fotos</h2>
+    <div class="galeria">
+        @foreach (var (foto, i) in Fotos.Select((f, i) => (f, i)))
+        {
+            <button type="button" class="galeria__miniatura" aria-label="@($"Ver foto {i + 1} de {Fotos.Count}")" @onclick="() => _abierta = i">
+                <Imagen Src="@foto" Alt="" Ancho="160" Alto="112" />
+            </button>
+        }
+    </div>
+
+    @if (_abierta is int actual)
+    {
+        <div class="galeria__visor" role="dialog" aria-modal="true" aria-label="@($"Foto {actual + 1} de {Fotos.Count} de {Titulo}")" @onclick="() => _abierta = null">
+            <img class="galeria__grande" src="@Fotos[actual]" alt="@($"Foto {actual + 1} de {Titulo}")" @onclick:stopPropagation />
+            <button type="button" class="galeria__boton galeria__boton--cerrar" aria-label="Cerrar foto" @onclick="() => _abierta = null" @onclick:stopPropagation>
+                <Icono Nombre="cerrar-16" />
+            </button>
+            @if (Fotos.Count > 1)
+            {
+                <button type="button" class="galeria__boton galeria__boton--anterior" aria-label="Foto anterior" @onclick="() => Mover(-1)" @onclick:stopPropagation>
+                    <Icono Nombre="chevron-izquierda-tinta-12" Caja="12" />
+                </button>
+                <button type="button" class="galeria__boton galeria__boton--siguiente" aria-label="Foto siguiente" @onclick="() => Mover(1)" @onclick:stopPropagation>
+                    <Icono Nombre="chevron-tinta-12" Caja="12" />
+                </button>
+                <p class="galeria__contador t-small-fuerte">@(actual + 1) / @Fotos.Count</p>
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<string> Fotos { get; set; } = [];
+    /// <summary>Nombre del evento o lugar (para los lectores de pantalla).</summary>
+    [Parameter] public string Titulo { get; set; } = "";
+
+    /// <summary>Foto que se ve grande, o null si el visor está cerrado.</summary>
+    private int? _abierta;
+
+    /// <summary>Anterior / siguiente; al llegar al final da la vuelta.</summary>
+    private void Mover(int paso)
+    {
+        if (_abierta is int i) _abierta = (i + paso + Fotos.Count) % Fotos.Count;
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Otra hoja (otro evento o lugar): el visor no se queda abierto con fotos que ya no están.
+        if (_abierta >= Fotos.Count) _abierta = null;
+    }
+}

@@ -5,7 +5,7 @@
 
   Partes (de arriba a abajo, igual que las capas de Figma):
     Portada   foto + Compartir, favorito y Cerrar (PortadaHoja).
-    Info      categorías, título, "Acerca del evento", "Ubicación" con el mini mapa.
+    Info      categorías, título, "Acerca del evento", "Fotos" (galería, GaleriaHoja) y "Ubicación" con el mini mapa.
     Boleto    Fecha, Horario, Lugar, Precio y las acciones según el estado.
     Te podría interesar   hasta 3 Card evento que elige ServicioEvento.
 
@@ -38,6 +38,7 @@
         <h1 @ref="_titulo" class="t-h1 hoja__titulo" id="hoja-titulo" tabindex="-1">@E.Titulo</h1>
         <h2 class="t-h3">Acerca del evento</h2>
         <p class="t-body texto-2 hoja__descripcion">@(string.IsNullOrWhiteSpace(E.Descripcion) ? "El organizador todavía no agrega una descripción." : E.Descripcion)</p>
+        <GaleriaHoja Fotos="Datos.Galeria" Titulo="@E.Titulo" />
         <h2 class="t-h3">Ubicación</h2>
         @if (E.Latitud != null && E.Longitud != null)
         {

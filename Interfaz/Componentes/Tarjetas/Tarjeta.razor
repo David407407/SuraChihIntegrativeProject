@@ -43,7 +43,7 @@
         }
         else if (Lugar is { } l)
         {
-            var horario = Formato.HorarioLugar(l.HorarioAhora);
+            var horario = Formato.HorarioLugar(l);
             <h3 class="t-card-titulo tarjeta__titulo">
                 <button type="button" class="tarjeta__enlace" @onclick="() => Acciones.VerLugar(l.Id)"><span class="tarjeta__titulo-texto">@l.Nombre</span></button>
             </h3>

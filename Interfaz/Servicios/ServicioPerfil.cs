@@ -1,6 +1,7 @@
 using BackendLogica.Contratos;
 using BackendLogica.Datos;
 using BackendLogica.Modelos;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace Interfaz.Servicios
 {
@@ -12,7 +13,7 @@ namespace Interfaz.Servicios
     /// Los mensajes de error se pintan en su campo según el texto (ver <c>Utilidades/ReglasCuenta.cs</c>),
     /// así que los de contraseña mencionan "contraseña" y los de duplicados son los de BackendLogica.
     /// </remarks>
-    public sealed class ServicioPerfil(ISuraChihBD bd, Sesion sesion)
+    public sealed class ServicioPerfil(ISuraChihBD bd, Sesion sesion, ServicioImagenes imagenes)
     {
         // ---------------------------------------------------------------- Datos de la cuenta
 
@@ -23,7 +24,26 @@ namespace Interfaz.Servicios
             Usuario usuario = sesion.Requerir("editar tu perfil");
 
             // BackendLogica valida el formato y la BD (UNIQUE) los duplicados: "Ese correo ya está registrado."
-            bool guardado = await bd.Usuarios.ActualizarPerfilAsync(usuario.Id, nombreUsuario ?? "", correo ?? "", usuario.AvatarUrl);
+            await GuardarAsync(usuario, nombreUsuario ?? "", correo ?? "", usuario.AvatarUrl);
+        }
+
+        /// <summary>
+        /// "Cambiar foto": sube la foto elegida a Cloudinary (JPG o PNG, hasta 5 MB) y guarda su URL en
+        /// <c>user.avatar_url</c>. El nombre y el correo se conservan.
+        /// </summary>
+        public async Task CambiarFotoAsync(IBrowserFile archivo)
+        {
+            Usuario usuario = sesion.Requerir("cambiar tu foto");
+
+            FotoFormulario foto = await ServicioImagenes.PrepararAsync(archivo);
+            await imagenes.SubirPendientesAsync([foto]);
+            await GuardarAsync(usuario, usuario.NombreUsuario, usuario.Correo, foto.Url);
+        }
+
+        /// <summary>Guarda el perfil y actualiza la sesión con lo que quedó en la BD.</summary>
+        private async Task GuardarAsync(Usuario usuario, string nombreUsuario, string correo, string? avatarUrl)
+        {
+            bool guardado = await bd.Usuarios.ActualizarPerfilAsync(usuario.Id, nombreUsuario, correo, avatarUrl);
             if (!guardado) throw new ReglaNegocioException("Tu cuenta ya no está activa.");
 
             Usuario actualizado = await bd.Usuarios.ObtenerAsync(usuario.Id)
