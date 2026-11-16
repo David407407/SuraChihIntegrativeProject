@@ -26,8 +26,10 @@
     <Version>0.2.0</Version>
 
     <!-- Otros proyectos viven en subcarpetas: no compilarlos dentro de este. Legacy, Interfaz.Navegador y
-         Prototipo ya no existen, pero en copias viejas pueden quedar sus bin/obj (git no los borra). -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);BackendLogica\**;BackendLogica.Pruebas\**;Interfaz\**;BaseDeDatos\**;Legacy\**;Interfaz.Navegador\**;Prototipo\**</DefaultItemExcludes>
+         Prototipo ya no existen, pero en copias viejas pueden quedar sus bin/obj (git no los borra).
+         publicar e Instalador son la salida de Instalador\crear-instalador.ps1: si se compilaran, sus .razor.js
+         publicados darían el error BLAZOR106. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);BackendLogica\**;BackendLogica.Pruebas\**;Interfaz\**;BaseDeDatos\**;Legacy\**;Interfaz.Navegador\**;Prototipo\**;publicar\**;Instalador\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
