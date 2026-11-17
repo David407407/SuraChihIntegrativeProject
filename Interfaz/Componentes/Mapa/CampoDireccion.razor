@@ -1,0 +1,120 @@
+@*
+  Campo "Dirección" de "Registrar lugar" y "Publicar evento" que mueve solo el pin del minimapa.
+  Cuando el usuario deja de escribir (1.2 s) busca la dirección con ServicioGeocodificacion (OpenStreetMap) y avisa
+  las coordenadas con AlEncontrar; la página las pone en su <Mapa Arrastrable Lat=... Lng=...> y el pin se mueve.
+  También se puede buscar a mano con "Ubicar en el mapa". El pin se puede seguir arrastrando para afinarlo.
+
+  <CampoDireccion @bind-Valor="_direccion" Errores="_errores" AlEncontrar="PonerPin" />
+*@
+@implements IDisposable
+@inject ServicioGeocodificacion Geo
+
+<div class="direccion">
+    <Campo Nombre="@Nombre" Etiqueta="Dirección" EtiquetaVisible Icono="ubicacion-gris-16" Maximo="255"
+           Placeholder="Calle, número y colonia" Valor="@Valor" ValorChanged="AlEscribir" Errores="Errores" />
+    <div class="direccion__fila">
+        <p class="direccion__estado t-caption @(_esError ? "direccion__estado--error" : "texto-2")" aria-live="polite">@(_estado ?? "Al escribir la dirección, el pin se coloca solo en el mapa.")</p>
+        <Boton Texto="Ubicar en el mapa" Variante="secundario" Tamano="s" Icono="ubicacion-gris-16" Ocupado="_buscando"
+               Deshabilitado="@(!ServicioGeocodificacion.ValeLaPena(Valor))" OnClick="BuscarAhoraAsync" />
+    </div>
+</div>
+
+@code {
+    /// <summary>Atributo name y clave en <see cref="Errores"/> (por defecto "direccion").</summary>
+    [Parameter] public string Nombre { get; set; } = "direccion";
+    [Parameter] public string? Valor { get; set; }
+    [Parameter] public EventCallback<string> ValorChanged { get; set; }
+    [Parameter] public ErroresFormulario? Errores { get; set; }
+    /// <summary>Se encontró la dirección: coordenadas con 6 decimales, dentro del estado de Chihuahua.</summary>
+    [Parameter] public EventCallback<(decimal Lat, decimal Lng)> AlEncontrar { get; set; }
+
+    /// <summary>Tiempo sin escribir antes de buscar (Nominatim pide no buscar en cada tecla).</summary>
+    private const int EsperaMs = 1200;
+
+    private CancellationTokenSource? _espera;
+    private bool _buscando;
+    private string? _estado;
+    private bool _esError;
+
+    private async Task AlEscribir(string valor)
+    {
+        await ValorChanged.InvokeAsync(valor);
+        Cancelar();
+        if (!ServicioGeocodificacion.ValeLaPena(valor))
+        {
+            _estado = null;
+            _esError = false;
+            return;
+        }
+        _espera = new CancellationTokenSource();
+        _ = EsperarYBuscarAsync(valor, _espera.Token);   // no se espera aquí: el usuario sigue escribiendo
+    }
+
+    private async Task EsperarYBuscarAsync(string valor, CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(EsperaMs, ct);
+        }
+        catch (TaskCanceledException)
+        {
+            return;   // siguió escribiendo: esta búsqueda ya no sirve
+        }
+        await InvokeAsync(() => BuscarAsync(valor, ct));
+    }
+
+    private Task BuscarAhoraAsync()
+    {
+        Cancelar();
+        _espera = new CancellationTokenSource();
+        return BuscarAsync(Valor ?? "", _espera.Token);
+    }
+
+    private async Task BuscarAsync(string valor, CancellationToken ct)
+    {
+        if (!ServicioGeocodificacion.ValeLaPena(valor)) return;
+        _buscando = true;
+        _esError = false;
+        _estado = "Buscando la dirección…";
+        StateHasChanged();
+        try
+        {
+            var punto = await Geo.BuscarAsync(valor, ct);
+            if (ct.IsCancellationRequested) return;
+            if (punto is { } p)
+            {
+                _estado = "Listo: el pin está en esa dirección. Arrástralo si hace falta afinarlo.";
+                await AlEncontrar.InvokeAsync(p);
+            }
+            else
+            {
+                _esError = true;
+                _estado = "No encontramos esa dirección en Chihuahua. Revisa calle y colonia, o marca el punto en el mapa.";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Otra búsqueda la reemplazó.
+        }
+        catch (Exception ex)
+        {
+            _esError = true;
+            _estado = MensajesError.Para(ex);
+        }
+        finally
+        {
+            if (!ct.IsCancellationRequested) _buscando = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancelar()
+    {
+        _espera?.Cancel();
+        _espera?.Dispose();
+        _espera = null;
+        _buscando = false;
+    }
+
+    public void Dispose() => Cancelar();
+}

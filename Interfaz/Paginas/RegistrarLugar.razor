@@ -155,8 +155,8 @@
                 @* ---- 3. Ubicación ---- *@
                 <section class="seccion" id="seccion-ubicacion" aria-labelledby="seccion-ubicacion-titulo">
                     @Cabeza("ubicacion-cielo-16", "seccion-ubicacion-titulo", "3. Ubicación", "Solo direcciones dentro del estado de Chihuahua.")
-                    <Campo Nombre="direccion" Etiqueta="Dirección" EtiquetaVisible Icono="ubicacion-gris-16" Maximo="255"
-                           Placeholder="Calle, número y colonia" @bind-Valor="_direccion" Errores="_errores" />
+                    @* Al escribir la dirección, CampoDireccion la busca y PonerPin mueve el pin del mapa. *@
+                    <CampoDireccion @bind-Valor="_direccion" Errores="_errores" AlEncontrar="PonerPin" />
                     <div class="mapa-caja @(_errores["mapa"] != null ? "mapa-caja--error" : "")">
                         <Mapa Clase="mapa-caja__mapa" Arrastrable Lat="_lat" Lng="_lng" Titulo="@(string.IsNullOrWhiteSpace(_nombre) ? "Tu lugar" : _nombre)"
                               AlMoverUbicacion="MoverPin" AriaLabel="Mapa para marcar la ubicación del lugar" />
@@ -511,6 +511,9 @@
         (_lat, _lng) = punto;
         _errores.Quitar("mapa");
     }
+
+    /// <summary>Se encontró la dirección escrita: el pin del mapa se mueve ahí (y se puede seguir arrastrando).</summary>
+    private void PonerPin((decimal Lat, decimal Lng) punto) => MoverPin(punto);
 
     private void CambiarAbierto(DiaFormulario dia, bool abierto)
     {

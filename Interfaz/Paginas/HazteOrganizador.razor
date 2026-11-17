@@ -12,6 +12,7 @@
 @implements IDisposable
 @inject Sesion Sesion
 @inject ServicioOrganizador Servicio
+@inject ServicioImagenes Imagenes
 @inject Modales Modales
 @inject Avisos Avisos
 @inject Acciones Acciones
@@ -87,6 +88,62 @@
                         <Campo Nombre="whatsApp" Etiqueta="WhatsApp de contacto" EtiquetaVisible Tipo="tel" Icono="telefono-gris-16" Placeholder="52 614 111 0002"
                                Ayuda="Con lada. Se mostrará en tus eventos para dudas de asistentes." Requerido Maximo="20"
                                @bind-Valor="_whatsApp" Errores="_errores" />
+                        <Campo Nombre="rfc" Etiqueta="RFC del negocio" EtiquetaVisible Icono="documento-gris-16" Placeholder="GODE561231GR8"
+                               Ayuda="12 caracteres si es persona moral, 13 si es persona física. Solo lo ve moderación." Requerido Maximo="16"
+                               Autocompletar="off" @bind-Valor="_rfc" Errores="_errores" />
+
+                        @* ---- Videos del local: se suben a Cloudinary hasta que se envía la solicitud ---- *@
+                        <div class="videos">
+                            <p class="t-small-fuerte">Videos de tu local</p>
+                            <p class="t-caption texto-2">Muestra la entrada y el interior para que moderación confirme que el negocio existe.</p>
+                            @if (_videos.Count > 0)
+                            {
+                                <ul class="videos__lista">
+                                    @for (int i = 0; i < _videos.Count; i++)
+                                    {
+                                        int indice = i;
+                                        VideoFormulario video = _videos[i];
+                                        <li @key="video" class="video">
+                                            <Icono Nombre="video-cielo-24" Caja="24" />
+                                            <div class="video__texto">
+                                                <p class="t-small-fuerte video__nombre">@video.Nombre</p>
+                                                <p class="t-caption texto-2">@(video.Pendiente ? $"{TamanoLegible(video.Bytes)} · se sube al enviar" : "Ya subido")</p>
+                                            </div>
+                                            @if (!video.Pendiente)
+                                            {
+                                                <a class="video__ver t-caption" href="@video.Url" target="_blank" rel="noopener noreferrer">Ver</a>
+                                            }
+                                            <button type="button" class="video__quitar" aria-label="@($"Quitar el video {video.Nombre}")" title="Quitar"
+                                                    disabled="@_enviando" @onclick="() => QuitarVideo(indice)">
+                                                <Icono Nombre="cerrar" Caja="12" />
+                                            </button>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            @if (_videos.Count < ServicioImagenes.MaximoVideos)
+                            {
+                                <label class="subir-video @(_preparandoVideos > 0 ? "subir-video--ocupado" : "") @(_errores["videos"] != null ? "subir-video--error" : "")">
+                                    <InputFile class="subir-video__archivo" OnChange="AgregarVideosAsync" multiple accept="@ServicioImagenes.FormatosVideo"
+                                               disabled="@(_preparandoVideos > 0 || _enviando)" aria-describedby="videos-ayuda" />
+                                    @if (_preparandoVideos > 0)
+                                    {
+                                        <FluentSpinner Size="SpinnerSize.Tiny" />
+                                        <span class="t-small-fuerte">Preparando @(_preparandoVideos == 1 ? "1 video" : $"{_preparandoVideos} videos")…</span>
+                                    }
+                                    else
+                                    {
+                                        <Icono Nombre="subir-nube-cielo-24" Caja="24" />
+                                        <span class="t-small-fuerte">Arrastra o sube videos</span>
+                                    }
+                                    <span class="t-caption texto-2" id="videos-ayuda">MP4, MOV o WEBM · hasta @ServicioImagenes.MaximoVideos videos · 50 MB c/u</span>
+                                </label>
+                            }
+                            @if (_errores["videos"] is { } errorVideos)
+                            {
+                                <p class="videos__error t-caption" role="alert">@errorVideos</p>
+                            }
+                        </div>
 
                         <div class="reglas">
                             <label class="reglas__fila">
@@ -118,7 +175,7 @@
         </div>
 
         <ol class="pasos" aria-label="Cómo funciona">
-            @Paso(1, "Envías tu solicitud", "Nombre, red social y WhatsApp.", conFlecha: true)
+            @Paso(1, "Envías tu solicitud", "Nombre, RFC, videos de tu local y WhatsApp.", conFlecha: true)
             @Paso(2, "Moderación la revisa", "Aprobada o rechazada con un motivo.", conFlecha: true)
             @Paso(3, "Publicas eventos", "Cada evento pasa por revisión antes de salir.", conFlecha: false)
         </ol>
@@ -138,6 +195,9 @@
     private string? _descripcion;
     private string? _redSocial;
     private string? _whatsApp;
+    private string? _rfc;
+    private readonly List<VideoFormulario> _videos = [];
+    private int _preparandoVideos;
     private bool _acepta;
     private string? _errorReglas;
 
@@ -171,6 +231,14 @@
         @<dl class="resumen">
             <div><dt class="t-small texto-2">Red social</dt><dd class="t-small-fuerte">@Formato.SinProtocolo(perfil.RedSocialUrl)</dd></div>
             <div><dt class="t-small texto-2">WhatsApp</dt><dd class="t-small-fuerte">@Formato.Telefono(perfil.WhatsApp)</dd></div>
+            @if (perfil.Rfc != null)
+            {
+                <div><dt class="t-small texto-2">RFC</dt><dd class="t-small-fuerte">@perfil.Rfc</dd></div>
+            }
+            @if (perfil.Videos is { Count: > 0 } videos)
+            {
+                <div><dt class="t-small texto-2">Videos</dt><dd class="t-small-fuerte">@(videos.Count == 1 ? "1 video" : $"{videos.Count} videos")</dd></div>
+            }
             <div><dt class="t-small texto-2">Enviada</dt><dd class="t-small-fuerte">@Formato.RangoFechas(perfil.SolicitadoEn)</dd></div>
         </dl>;
 
@@ -212,6 +280,10 @@
                 _descripcion = p.Descripcion;
                 _redSocial = Formato.SinProtocolo(p.RedSocialUrl);
                 _whatsApp = p.WhatsApp;
+                _rfc = p.Rfc;
+                _videos.Clear();
+                if (p.Videos != null)
+                    for (int i = 0; i < p.Videos.Count; i++) _videos.Add(VideoFormulario.Existente(p.Videos[i], i + 1));
             }
         }
         catch (RequiereSesionException)
@@ -245,7 +317,7 @@
             return;
         }
 
-        foreach (var (campo, mensaje) in ServicioOrganizador.Revisar(_nombre, _descripcion, _redSocial, _whatsApp).Reverse())
+        foreach (var (campo, mensaje) in ServicioOrganizador.Revisar(_nombre, _descripcion, _redSocial, _whatsApp, _rfc, _videos.Count).Reverse())
             _errores.Poner(campo, mensaje);   // al revés: el foco se queda en el primero con error
         if (!_acepta) _errorReglas = "Acepta las reglas de publicación para enviar tu solicitud.";
         if (_errores.HayErrores || _errorReglas != null) return;
@@ -253,7 +325,9 @@
         _enviando = true;
         try
         {
-            await Servicio.EnviarAsync(_nombre!, _descripcion, _redSocial!, _whatsApp!);
+            // Primero se suben los videos nuevos; si alguno falla, los que ya subieron conservan su URL.
+            await Imagenes.SubirVideosPendientesAsync(_videos);
+            await Servicio.EnviarAsync(_nombre!, _descripcion, _redSocial!, _whatsApp!, _rfc!, [.. _videos.Select(v => v.Url!)]);
             await CargarAsync();
             await Modales.SolicitudEnviadaAsync(_nombre!.Trim());
         }
@@ -274,11 +348,54 @@
         if (_usuarioId != null && id == null) { Acciones.Inicio(); return; }   // cerró sesión aquí
         _usuarioId = id;
         _datos = null;
-        _nombre = _descripcion = _redSocial = _whatsApp = null;
+        _nombre = _descripcion = _redSocial = _whatsApp = _rfc = null;
+        _videos.Clear();
         _acepta = false;
         if (id != null) await CargarAsync();
         StateHasChanged();
     });
+
+    /// <summary>Lee los videos elegidos (o arrastrados) sin subirlos, hasta llegar al máximo.</summary>
+    private async Task AgregarVideosAsync(InputFileChangeEventArgs e)
+    {
+        _errores.Quitar("videos");
+        int lugares = ServicioImagenes.MaximoVideos - _videos.Count;
+        // GetMultipleFiles lanza una excepción si se eligen más de los que se piden: se piden todos y se cortan aquí.
+        var archivos = e.GetMultipleFiles(Math.Max(e.FileCount, 1)).ToList();
+        if (archivos.Count > lugares)
+            _errores.Poner("videos", $"Solo caben {ServicioImagenes.MaximoVideos} videos: se agregaron los primeros {lugares}.", enfocar: false);
+
+        var porAgregar = archivos.Take(lugares).ToList();
+        _preparandoVideos = porAgregar.Count;
+        foreach (IBrowserFile archivo in porAgregar)
+        {
+            try
+            {
+                _videos.Add(await ServicioImagenes.PrepararVideoAsync(archivo));
+            }
+            catch (Exception ex)
+            {
+                if (ex is not BackendLogica.Datos.SuraChihException) Registro.LogError(ex, "No se pudo leer el video {Nombre}", archivo.Name);
+                _errores.Poner("videos", $"{archivo.Name}: {MensajesError.Para(ex)}", enfocar: false);
+            }
+            finally
+            {
+                _preparandoVideos--;
+                StateHasChanged();
+            }
+        }
+        _preparandoVideos = 0;
+    }
+
+    private void QuitarVideo(int indice)
+    {
+        if (indice >= 0 && indice < _videos.Count) _videos.RemoveAt(indice);
+        _errores.Quitar("videos");
+    }
+
+    /// <summary>52428800 → "50 MB"; 734003 → "717 KB".</summary>
+    private static string TamanoLegible(long bytes) =>
+        bytes >= 1024 * 1024 ? $"{bytes / (1024.0 * 1024.0):0.#} MB" : $"{Math.Max(1, bytes / 1024)} KB";
 
     public void Dispose() => Sesion.Cambio -= AlCambiarSesion;
 }

@@ -1,6 +1,6 @@
 @*
   "Solicitud:..." de "Moderación / Organizadores": negocio, @usuario y fecha, "Pendiente", descripción, datos para
-  verificarlo (red social, WhatsApp, antigüedad de la cuenta) y "Rechazar" / "Aprobar". La solicitud propia sale
+  verificarlo (red social, WhatsApp, RFC, antigüedad de la cuenta, videos del local) y "Rechazar" / "Aprobar". La solicitud propia sale
   con candado y sin botones: el trigger trg_moderation_bi no dejaría decidirla.
 *@
 <article class="solicitud">
@@ -29,6 +29,10 @@
             <dt class="t-small texto-2"><Icono Nombre="telefono-gris-14" Caja="14" /><span>WhatsApp</span></dt>
             <dd class="t-small-fuerte">@Formato.Telefono(P.WhatsApp)</dd>
         </div>
+        <div class="solicitud__dato">
+            <dt class="t-small texto-2"><Icono Nombre="documento-gris-14" Caja="14" /><span>RFC</span></dt>
+            <dd class="t-small-fuerte">@(P.Rfc ?? "Sin RFC")</dd>
+        </div>
         @if (S.CuentaCreada is { } creada)
         {
             <div class="solicitud__dato">
@@ -37,6 +41,25 @@
             </div>
         }
     </dl>
+
+    @if (P.Videos is { Count: > 0 } videos)
+    {
+        <div class="solicitud__videos">
+            <p class="t-small texto-2 solicitud__videos-titulo"><Icono Nombre="video-gris-14" Caja="14" /><span>Videos del local (@videos.Count)</span></p>
+            <div class="solicitud__videos-lista">
+                @for (int i = 0; i < videos.Count; i++)
+                {
+                    string url = videos[i];
+                    <video @key="url" class="solicitud__video" src="@url" controls preload="metadata"
+                           aria-label="@($"Video {i + 1} de {P.NombreNegocio}")"></video>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <p class="t-small texto-2 solicitud__sin-videos"><Icono Nombre="video-gris-14" Caja="14" /><span>Esta solicitud no trae videos del local.</span></p>
+    }
 
     @if (S.EsPropia)
     {

@@ -20,6 +20,9 @@ namespace Interfaz.Componentes.Modales
             if (Dice("incorrect")) return Existe("contrasena");
             if (Dice("contraseña")) return Existe("contrasena");
             if (Dice("nombre de usuario")) return Existe("nombreUsuario");
+            if (Dice("fecha de nacimiento")) return Existe("nacimiento");
+            if (Dice("apellidos")) return Existe("apellidos");
+            if (Dice("^el nombre")) return Existe("nombre");
             if (Dice("correo")) return Existe("correo") ?? Existe("identificador");
             return null;
         }

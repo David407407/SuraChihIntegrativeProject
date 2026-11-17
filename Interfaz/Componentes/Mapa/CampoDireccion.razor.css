@@ -1,0 +1,5 @@
+/* Campo "Dirección" + estado de la búsqueda + "Ubicar en el mapa". */
+.direccion { display: flex; flex-direction: column; gap: 8px; }
+.direccion__fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.direccion__estado { flex: 1; min-width: 0; margin: 0; }
+.direccion__estado--error { color: var(--color-error); }

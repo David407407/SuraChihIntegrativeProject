@@ -97,14 +97,17 @@ namespace Interfaz.Servicios
 
         // ---------------------------------------------------------------- Crear cuenta
 
-        public async Task<Usuario> RegistrarAsync(string? nombreUsuario, string? correoElectronico, string? contrasena, string? confirmacion)
+        /// <param name="personales">Nombre, apellidos y fecha de nacimiento que pide "Crear cuenta".</param>
+        public async Task<Usuario> RegistrarAsync(string? nombreUsuario, string? correoElectronico, string? contrasena, string? confirmacion,
+            DatosPersonales personales)
         {
             // BackendLogica valida usuario (3-30, letras, números, punto o guion bajo, igual que el CHECK
-            // ck_user_username), correo y contraseña; aquí solo lo que es de la pantalla.
+            // ck_user_username), correo, contraseña, nombre, apellidos y fecha de nacimiento; aquí solo lo que
+            // es de la pantalla.
             if (contrasena != confirmacion)
                 throw new DatosInvalidosException("Las contraseñas no coinciden.");
 
-            Usuario usuario = await bd.Usuarios.RegistrarAsync(nombreUsuario ?? "", correoElectronico ?? "", contrasena ?? "");
+            Usuario usuario = await bd.Usuarios.RegistrarAsync(nombreUsuario ?? "", correoElectronico ?? "", contrasena ?? "", personales);
             return await AbrirSesionAsync(usuario);
         }
 

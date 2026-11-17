@@ -42,3 +42,17 @@
 .solicitud__botones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .solicitud__botones ::deep .boton { width: 100%; }
 .solicitud__propia { display: flex; align-items: center; gap: 8px; }
+
+/* ---- Videos del local: el moderador los ve aquí mismo antes de decidir ---- */
+.solicitud__videos { display: flex; flex-direction: column; gap: 10px; }
+.solicitud__videos-titulo,
+.solicitud__sin-videos { display: flex; align-items: center; gap: 10px; }
+.solicitud__videos-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.solicitud__video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  background: #0b1b3a;   /* mientras carga se ve un recuadro oscuro, no un hueco */
+  object-fit: contain;
+}

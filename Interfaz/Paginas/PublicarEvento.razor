@@ -193,8 +193,8 @@
                     }
                     else
                     {
-                        <Campo Nombre="direccion" Etiqueta="Dirección" EtiquetaVisible Icono="ubicacion-gris-16" Maximo="255"
-                               Placeholder="Calle, número y colonia" @bind-Valor="_direccion" Errores="_errores" />
+                        @* Al escribir la dirección, CampoDireccion la busca y PonerPin mueve el pin del mapa. *@
+                        <CampoDireccion @bind-Valor="_direccion" Errores="_errores" AlEncontrar="PonerPin" />
                     }
                     <div class="mapa-caja @(_errores["mapa"] != null ? "mapa-caja--error" : "")">
                         <Mapa @key="_usarLugar" Clase="mapa-caja__mapa" Arrastrable="!_usarLugar" Lat="Latitud" Lng="Longitud"
@@ -529,6 +529,12 @@
     {
         (_lat, _lng) = punto;
         _errores.Quitar("mapa");
+    }
+
+    /// <summary>Se encontró la dirección escrita ("Otra dirección"): el pin del mapa se mueve ahí.</summary>
+    private void PonerPin((decimal Lat, decimal Lng) punto)
+    {
+        if (!_usarLugar) MoverPin(punto);
     }
 
     private void CambiarPrecio(bool dePago)

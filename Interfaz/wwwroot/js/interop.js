@@ -215,6 +215,51 @@ export function mapaSeleccionar(mapa, punto, mover) {
   mapa.seleccionar(punto, { mover });
 }
 
+/**
+ * "Agrandar" de los mini mapas (Componentes/Mapa/MapaAgrandable.razor): abre una ventana <dialog> grande con
+ * otro <sc-mapa> en la misma ubicación. Se crea aquí y se agrega a <body> (no dentro de la hoja de detalle):
+ * así queda encima de todo y su Esc cierra solo el mapa grande, no la hoja. Al cerrarse se borra sola y el
+ * foco regresa al botón que la abrió.
+ * @param {number} lat
+ * @param {number} lng
+ * @param {string} titulo Texto del pin y de la ventana.
+ */
+export function mapaAgrandar(lat, lng, titulo) {
+  const origen = document.activeElement;
+  const dialogo = document.createElement('dialog');
+  dialogo.className = 'mapa-grande';
+  dialogo.setAttribute('aria-label', `Mapa grande: ${titulo || 'ubicación'}`);
+  dialogo.innerHTML = `
+    <div class="mapa-grande__cabeza">
+      <p class="mapa-grande__titulo"></p>
+      <button type="button" class="mapa-grande__cerrar" aria-label="Cerrar el mapa grande">
+        <img src="${new URL('../assets/iconos/cerrar.svg', import.meta.url).href}" alt="">
+      </button>
+    </div>
+    <sc-mapa class="mapa-grande__mapa" zoom="16"></sc-mapa>`;
+  dialogo.querySelector('.mapa-grande__titulo').textContent = titulo || 'Ubicación';   // textContent: el título viene de la BD
+  const mapa = dialogo.querySelector('sc-mapa');
+  mapa.setAttribute('lat', String(lat));
+  mapa.setAttribute('lng', String(lng));
+  mapa.setAttribute('titulo', titulo || '');
+  mapa.setAttribute('aria-label', `Mapa grande: ${titulo || 'ubicación'}`);
+
+  const cerrar = () => dialogo.close();
+  dialogo.querySelector('.mapa-grande__cerrar').addEventListener('click', cerrar);
+  // Clic en el velo (fuera de la caja): el evento llega al propio <dialog>.
+  dialogo.addEventListener('click', (e) => { if (e.target === dialogo) cerrar(); });
+  // Esc no debe llegar a la hoja de detalle que está debajo.
+  dialogo.addEventListener('keydown', (e) => { if (e.key === 'Escape') e.stopPropagation(); });
+  dialogo.addEventListener('close', () => {
+    dialogo.remove();
+    origen?.focus?.({ preventScroll: true });
+  });
+
+  document.body.appendChild(dialogo);
+  dialogo.showModal();
+  dialogo.querySelector('.mapa-grande__cerrar').focus({ preventScroll: true });
+}
+
 // ---------------------------------------------------------------------
 // Compartir (ModalCompartir)
 // ---------------------------------------------------------------------

@@ -122,3 +122,67 @@
 @media (max-width: 640px) {
   .mensaje .t-display { font-size: 38px; line-height: 44px; }
 }
+
+/* ---- Videos del local: lista de los elegidos y la zona para subir (igual que las fotos de "Publicar evento") ---- */
+.videos { display: flex; flex-direction: column; gap: 8px; }
+.videos__lista { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.video {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-linea);
+  border-radius: 14px;
+  background: var(--color-fondo);
+}
+.video__texto { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.video__nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.video__ver { color: var(--color-cielo); font-weight: 700; text-decoration: none; }
+.video__ver:hover { text-decoration: underline; }
+.video__quitar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio-pildora);
+  background: var(--color-superficie);
+  box-shadow: 0 2px 8px rgba(11, 27, 58, 0.18);
+  cursor: pointer;
+}
+.video__quitar:disabled { cursor: not-allowed; opacity: 0.5; }
+.video__quitar:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; }
+
+.subir-video {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 120px;
+  padding: 16px;
+  border: 1.5px dashed var(--color-linea);
+  border-radius: var(--radio-m);
+  background: var(--color-fondo);
+  color: var(--color-tinta);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--duracion-rapida), background var(--duracion-rapida);
+}
+.subir-video:hover,
+.subir-video:focus-within { border-color: var(--color-cielo); background: var(--color-cielo-suave); }
+.subir-video--ocupado { cursor: progress; }
+.subir-video--error { border-color: var(--color-error); }
+/* El input cubre toda la zona: así funciona arrastrar y soltar sin JavaScript */
+.subir-video ::deep .subir-video__archivo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: inherit;
+}
+.videos__error { color: var(--color-error); }
