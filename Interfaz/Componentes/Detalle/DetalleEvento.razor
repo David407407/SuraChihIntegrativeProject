@@ -42,8 +42,8 @@
         <h2 class="t-h3">Ubicación</h2>
         @if (E.Latitud != null && E.Longitud != null)
         {
-            <Mapa Clase="hoja__mapa" Lat="E.Latitud" Lng="E.Longitud" Titulo="@(Lugar ?? E.Titulo)"
-                  AriaLabel="@($"Mapa: {Lugar ?? "ubicación del evento"}")" />
+            <MapaAgrandable Clase="hoja__mapa" Lat="E.Latitud" Lng="E.Longitud" Titulo="@(Lugar ?? E.Titulo)"
+                            AriaLabel="@($"Mapa: {Lugar ?? "ubicación del evento"}")" />
         }
         <p class="t-small texto-2">@Formato.DireccionConCiudad(E.LugarNombre, E.Direccion)</p>
     </div>

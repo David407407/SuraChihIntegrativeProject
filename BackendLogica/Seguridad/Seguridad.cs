@@ -49,6 +49,69 @@ namespace BackendLogica.Seguridad
         [GeneratedRegex("^[A-Za-z0-9_.]{3,30}$")] private static partial Regex NombreUsuarioRegex();
         [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$")] private static partial Regex CorreoRegex();
         [GeneratedRegex("^[0-9]{10,15}$")] private static partial Regex WhatsAppRegex();
+        /// <summary>Letras (con acentos), espacios, apóstrofo, punto y guion: "María José", "De la O", "Pérez-Ruiz".</summary>
+        [GeneratedRegex(@"^[\p{L}][\p{L} .'\-]*$")] private static partial Regex NombrePersonaRegex();
+        /// <summary>RFC del SAT: 3 (persona moral) o 4 (persona física) letras, fecha AAMMDD y homoclave de 3.</summary>
+        [GeneratedRegex("^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$")] private static partial Regex RfcRegex();
+
+        /// <summary>Máximos de las columnas user.first_name / user.last_name.</summary>
+        public const int MaximoNombre = 60, MaximoApellidos = 80;
+        /// <summary>Edad mínima para crear cuenta.</summary>
+        public const int EdadMinima = 13;
+        /// <summary>Videos del local en "Hazte organizador".</summary>
+        public const int MinimoVideos = 1, MaximoVideos = 3;
+
+        /// <summary>Nombre(s) de la persona: 2 a 60 caracteres, solo letras.</summary>
+        public static void Nombre(string valor)
+        {
+            valor = valor.Trim();
+            if (valor.Length < 2 || valor.Length > MaximoNombre || !NombrePersonaRegex().IsMatch(valor))
+                throw new DatosInvalidosException($"El nombre debe tener de 2 a {MaximoNombre} letras.");
+        }
+
+        /// <summary>Apellidos: 2 a 80 caracteres, solo letras.</summary>
+        public static void Apellidos(string valor)
+        {
+            valor = valor.Trim();
+            if (valor.Length < 2 || valor.Length > MaximoApellidos || !NombrePersonaRegex().IsMatch(valor))
+                throw new DatosInvalidosException($"Los apellidos deben tener de 2 a {MaximoApellidos} letras.");
+        }
+
+        /// <summary>No puede ser futura, hay que tener al menos <see cref="EdadMinima"/> años y no más de 120.</summary>
+        public static void FechaNacimiento(DateOnly fecha)
+        {
+            DateOnly hoy = DateOnly.FromDateTime(DateTime.Today);
+            if (fecha > hoy || fecha < hoy.AddYears(-120))
+                throw new DatosInvalidosException("La fecha de nacimiento no es válida.");
+            if (fecha > hoy.AddYears(-EdadMinima))
+                throw new DatosInvalidosException($"La fecha de nacimiento indica que tienes menos de {EdadMinima} años.");
+        }
+
+        public static void DatosPersonales(Modelos.DatosPersonales datos)
+        {
+            Nombre(datos.Nombre);
+            Apellidos(datos.Apellidos);
+            FechaNacimiento(datos.FechaNacimiento);
+        }
+
+        /// <summary>RFC ya en mayúsculas y sin espacios (ck_orgprof_rfc).</summary>
+        public static void Rfc(string? valor)
+        {
+            if (valor == null || !RfcRegex().IsMatch(valor))
+                throw new DatosInvalidosException("El RFC debe tener 12 caracteres (persona moral) o 13 (persona física). Ej.: GODE561231GR8.");
+        }
+
+        /// <summary>Videos del local: de 1 a 3 URL https (secure_url de Cloudinary).</summary>
+        public static void Videos(IReadOnlyList<string>? urls)
+        {
+            if (urls == null || urls.Count < MinimoVideos)
+                throw new DatosInvalidosException("Sube al menos un video de tu local.");
+            if (urls.Count > MaximoVideos)
+                throw new DatosInvalidosException($"Puedes subir hasta {MaximoVideos} videos.");
+            foreach (string url in urls)
+                if (url.Length > 500 || !Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri.Scheme != Uri.UriSchemeHttps)
+                    throw new DatosInvalidosException("Cada video debe ser una URL https (la secure_url que devuelve Cloudinary).");
+        }
 
         public static void NombreUsuario(string valor)
         {

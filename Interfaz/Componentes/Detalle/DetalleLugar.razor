@@ -43,7 +43,7 @@
             </dl>
         }
         <h2 class="t-h3">Ubicación</h2>
-        <Mapa Clase="hoja__mapa" Lat="L.Latitud" Lng="L.Longitud" Titulo="@L.Nombre" AriaLabel="@($"Mapa: {L.Nombre}")" />
+        <MapaAgrandable Clase="hoja__mapa" Lat="L.Latitud" Lng="L.Longitud" Titulo="@L.Nombre" AriaLabel="@($"Mapa: {L.Nombre}")" />
         <p class="t-small texto-2">@Formato.DireccionConCiudad(L.Direccion)</p>
         <h2 class="t-h3">Opiniones</h2>
         @if (Datos.Opiniones.Count > 0)

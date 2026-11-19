@@ -1,0 +1,33 @@
+/* "Crear cuenta": nombre y apellidos lado a lado, y la fecha de nacimiento con la forma de "Campo". */
+.crear__fila { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 520px) { .crear__fila { grid-template-columns: 1fr; } }
+
+.nacimiento { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.nacimiento__etiqueta { padding-left: 4px; }
+.nacimiento__caja {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 18px;
+  border: 1.5px solid var(--color-linea);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  transition: border-color var(--duracion-rapida), box-shadow var(--duracion-rapida);
+}
+.nacimiento__caja:hover { border-color: #c9d3e3; }
+.nacimiento__caja:focus-within { border-color: var(--color-cielo); box-shadow: 0 0 0 3px rgba(47, 123, 255, 0.15); }
+.nacimiento--error .nacimiento__caja { border-color: var(--color-error); }
+.nacimiento__control {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--color-tinta);
+  font: 400 16px/24px var(--fuente-cuerpo);
+  cursor: pointer;
+}
+.nacimiento__error { color: var(--color-error); padding-left: 4px; }

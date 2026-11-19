@@ -39,6 +39,7 @@ namespace Interfaz
             servicios.AddScoped<ServicioPublicacion>();
             servicios.AddScoped<ServicioRegistroLugar>();
             servicios.AddScoped<ServicioImagenes>();
+            servicios.AddScoped<ServicioGeocodificacion>();
 
             servicios.AddScoped<InteropJs>();
             servicios.AddScoped<Avisos>();

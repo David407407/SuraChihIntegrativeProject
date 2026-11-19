@@ -315,6 +315,9 @@ namespace BackendLogica.Falso
         public int Id;
         public string NombreUsuario = "", Correo = "", Hash = "";
         public string? AvatarUrl;
+        /// <summary>user.first_name, user.last_name y user.birth_date</summary>
+        public string? Nombre, Apellidos;
+        public DateOnly? FechaNacimiento;
         public bool EsModerador, EsSuperModerador, Activo;
         /// <summary>user.notify_interests</summary>
         public bool AvisosGustos;
@@ -328,12 +331,16 @@ namespace BackendLogica.Falso
         public int UsuarioId;
         public string NombreNegocio = "", RedSocialUrl = "", WhatsApp = "";
         public string? Descripcion;
+        /// <summary>organizer_profile.rfc</summary>
+        public string? Rfc;
+        /// <summary>organizer_video.url, en orden.</summary>
+        public List<string> Videos = [];
         public EstadoOrganizador Estado;
         public bool Verificado;
         public DateTime SolicitadoEn;
 
         public PerfilOrganizador ADatos() =>
-            new(UsuarioId, NombreNegocio, Descripcion, RedSocialUrl, WhatsApp, Estado, Verificado, SolicitadoEn);
+            new(UsuarioId, NombreNegocio, Descripcion, RedSocialUrl, WhatsApp, Estado, Verificado, SolicitadoEn, Rfc, [.. Videos]);
     }
 
     internal sealed class FilaRecuperacion

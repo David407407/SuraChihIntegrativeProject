@@ -36,7 +36,9 @@ namespace Interfaz.Servicios
         }
 
         /// <summary>"Enviar solicitud". Si la anterior fue rechazada, BackendLogica la reenvía con estos datos.</summary>
-        public Task EnviarAsync(string nombre, string? descripcion, string redSocial, string whatsApp)
+        /// <param name="rfc">Como lo escribió (se limpia con <see cref="LimpiarRfc"/>).</param>
+        /// <param name="videos">URL de Cloudinary de los videos del local (ya subidos).</param>
+        public Task EnviarAsync(string nombre, string? descripcion, string redSocial, string whatsApp, string rfc, IReadOnlyList<string> videos)
         {
             Usuario usuario = sesion.Requerir("solicitar ser organizador");
             return bd.Organizadores.SolicitarAsync(new SolicitudOrganizador(
@@ -44,15 +46,22 @@ namespace Interfaz.Servicios
                 nombre.Trim(),
                 string.IsNullOrWhiteSpace(descripcion) ? null : descripcion.Trim(),
                 Formato.UrlPublica(redSocial),
-                SoloDigitos(whatsApp)));
+                SoloDigitos(whatsApp),
+                LimpiarRfc(rfc),
+                videos));
         }
+
+        /// <summary>" gode-561231 gr8" → "GODE561231GR8": sin espacios ni guiones y en mayúsculas, como lo pide la BD.</summary>
+        public static string LimpiarRfc(string? rfc) =>
+            new([.. (rfc ?? "").Where(c => !char.IsWhiteSpace(c) && c != '-').Select(char.ToUpperInvariant)]);
 
         /// <summary>"52 614 111 0002" → "526141110002", como lo pide la BD. Si trae letras se deja igual para que no pase.</summary>
         public static string SoloDigitos(string whatsApp) =>
             new([.. whatsApp.Where(c => !char.IsWhiteSpace(c) && c is not ('+' or '-' or '(' or ')'))]);
 
         /// <summary>Errores del formulario por campo, con los mismos mensajes que daría BackendLogica al guardar.</summary>
-        public static IEnumerable<(string Campo, string Mensaje)> Revisar(string? nombre, string? descripcion, string? redSocial, string? whatsApp)
+        public static IEnumerable<(string Campo, string Mensaje)> Revisar(string? nombre, string? descripcion, string? redSocial, string? whatsApp,
+            string? rfc, int videos)
         {
             if (string.IsNullOrWhiteSpace(nombre)) yield return ("nombre", "Escribe el nombre de tu negocio o colectivo.");
             else if (nombre.Trim().Length > MaximoNombre) yield return ("nombre", $"El nombre puede tener hasta {MaximoNombre} caracteres.");
@@ -63,6 +72,12 @@ namespace Interfaz.Servicios
             else if (redSocial.Trim().Length > MaximoRedSocial || !EsEnlace(redSocial)) yield return ("redSocial", "Escribe un enlace válido, por ejemplo instagram.com/tu_negocio.");
 
             if (ReglasCuenta.ErrorWhatsApp(SoloDigitos(whatsApp ?? "")) is { } error) yield return ("whatsApp", error);
+
+            if (string.IsNullOrWhiteSpace(rfc)) yield return ("rfc", "Escribe el RFC de tu negocio.");
+            else if (ReglasCuenta.ErrorRfc(LimpiarRfc(rfc)) is { } errorRfc) yield return ("rfc", errorRfc);
+
+            if (videos < BackendLogica.Seguridad.Validar.MinimoVideos) yield return ("videos", "Sube al menos un video de tu local.");
+            else if (videos > BackendLogica.Seguridad.Validar.MaximoVideos) yield return ("videos", $"Puedes subir hasta {BackendLogica.Seguridad.Validar.MaximoVideos} videos.");
         }
 
         private static bool EsEnlace(string valor) =>

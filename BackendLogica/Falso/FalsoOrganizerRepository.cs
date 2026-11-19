@@ -16,6 +16,8 @@ namespace BackendLogica.Falso
                 Validar.Requerido(s.NombreNegocio, "El nombre del negocio");
                 Validar.Requerido(s.RedSocialUrl, "El enlace a tu red social");
                 Validar.WhatsApp(s.WhatsApp);
+                if (s.Rfc != null) Validar.Rfc(s.Rfc);
+                if (s.Videos != null) Validar.Videos(s.Videos);
                 if (a.Usuario(s.UsuarioId) == null) throw AlmacenFalso.NoExiste();
 
                 var fila = a.Organizador(s.UsuarioId);
@@ -31,6 +33,8 @@ namespace BackendLogica.Falso
                 fila.Descripcion = s.Descripcion;
                 fila.RedSocialUrl = s.RedSocialUrl.Trim();
                 fila.WhatsApp = s.WhatsApp;
+                fila.Rfc = s.Rfc;
+                fila.Videos = s.Videos?.ToList() ?? [];
                 fila.Estado = EstadoOrganizador.Pendiente;
                 fila.SolicitadoEn = Ahora;
             }, ct);

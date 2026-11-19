@@ -17,17 +17,26 @@ namespace BackendLogica.Repositorios
         /// <summary>Crea una cuenta nueva y la devuelve.</summary>
         /// <exception cref="DatosInvalidosException">Nombre, correo o contraseña con formato incorrecto.</exception>
         /// <exception cref="DuplicadoException">El nombre de usuario o el correo ya existen.</exception>
-        public async Task<Usuario> RegistrarAsync(string nombreUsuario, string correo, string contrasena, CancellationToken ct = default)
+        public async Task<Usuario> RegistrarAsync(string nombreUsuario, string correo, string contrasena, DatosPersonales? personales = null, CancellationToken ct = default)
         {
             nombreUsuario = nombreUsuario.Trim();
             correo = correo.Trim().ToLowerInvariant();
             Validar.NombreUsuario(nombreUsuario);
             Validar.Correo(correo);
             Contrasenas.Validar(contrasena);
+            if (personales != null) Validar.DatosPersonales(personales);
 
             int id = await InsertarAsync("""
-                INSERT INTO user (username, email, password_hash) VALUES (@nombreUsuario, @correo, @hash)
-                """, new { nombreUsuario, correo, hash = Contrasenas.Hashear(contrasena) }, ct);
+                INSERT INTO user (username, email, password_hash, first_name, last_name, birth_date)
+                VALUES (@nombreUsuario, @correo, @hash, @nombre, @apellidos, @nacimiento)
+                """, new
+                {
+                    nombreUsuario, correo, hash = Contrasenas.Hashear(contrasena),
+                    nombre = personales?.Nombre.Trim(),
+                    apellidos = personales?.Apellidos.Trim(),
+                    // MySql.Data recibe la fecha como DateTime (la columna es DATE: la hora se ignora)
+                    nacimiento = personales?.FechaNacimiento.ToDateTime(TimeOnly.MinValue),
+                }, ct);
             return (await ObtenerAsync(id, ct))!;
         }
 

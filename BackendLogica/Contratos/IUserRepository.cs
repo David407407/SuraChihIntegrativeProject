@@ -11,7 +11,8 @@ namespace BackendLogica.Contratos
         /// <summary>Crea una cuenta nueva y la devuelve.</summary>
         /// <exception cref="Datos.DatosInvalidosException">Nombre, correo o contraseña con formato incorrecto.</exception>
         /// <exception cref="Datos.DuplicadoException">El nombre de usuario o el correo ya existen.</exception>
-        Task<Usuario> RegistrarAsync(string nombreUsuario, string correo, string contrasena, CancellationToken ct = default);
+        /// <param name="personales">Nombre, apellidos y fecha de nacimiento ("Crear cuenta"). Null en cuentas de Google.</param>
+        Task<Usuario> RegistrarAsync(string nombreUsuario, string correo, string contrasena, DatosPersonales? personales = null, CancellationToken ct = default);
 
         /// <summary><paramref name="identificador"/> puede ser el correo o el nombre de usuario.</summary>
         /// <returns>El usuario, o null si las credenciales no coinciden o la cuenta está desactivada.</returns>

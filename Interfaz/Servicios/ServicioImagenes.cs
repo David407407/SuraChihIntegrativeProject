@@ -29,8 +29,17 @@ namespace Interfaz.Servicios
         /// <summary>"JPG o PNG".</summary>
         public const string Formatos = "image/jpeg,image/png";
 
+        /// <summary>Videos del local en "Hazte organizador": hasta 3, de 50 MB c/u (Cloudinary gratis acepta hasta 100 MB).</summary>
+        public const int MaximoVideos = BackendLogica.Seguridad.Validar.MaximoVideos;
+        public const long MaximoBytesVideo = 50 * 1024 * 1024;
+        /// <summary>"MP4, MOV o WEBM".</summary>
+        public const string FormatosVideo = "video/mp4,video/quicktime,video/webm";
+
         private const string FotoDemo = "https://res.cloudinary.com/demo/image/upload/sample.jpg";
+        private const string VideoDemo = "https://res.cloudinary.com/demo/video/upload/dog.mp4";
         private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(60) };
+        /// <summary>Los videos pesan más: se les da más tiempo para subir.</summary>
+        private static readonly HttpClient HttpVideos = new() { Timeout = TimeSpan.FromMinutes(5) };
         private static int _demo;
 
         private readonly ConfiguracionBD _config = ConfiguracionBD.Predeterminada;
@@ -93,16 +102,55 @@ namespace Interfaz.Servicios
             }
         }
 
-        /// <returns>La <c>secure_url</c> (https) de la foto subida.</returns>
-        private async Task<string> SubirAsync(Stream contenido, string nombre, string tipo, CancellationToken ct = default)
+        // ---------------------------------------------------------------- Videos ("Hazte organizador")
+
+        /// <summary>Revisa tipo y tamaño de un video antes de leerlo.</summary>
+        public static void ValidarVideo(string tipo, long bytes)
         {
+            if (tipo is not ("video/mp4" or "video/quicktime" or "video/webm"))
+                throw new DatosInvalidosException("Solo se pueden subir videos MP4, MOV o WEBM.");
+            if (bytes > MaximoBytesVideo)
+                throw new DatosInvalidosException("Cada video puede pesar hasta 50 MB.");
+        }
+
+        /// <summary>Lee el video elegido en memoria, sin subirlo (se sube al enviar la solicitud).</summary>
+        public static async Task<VideoFormulario> PrepararVideoAsync(IBrowserFile archivo, CancellationToken ct = default)
+        {
+            ValidarVideo(archivo.ContentType, archivo.Size);
+            using var memoria = new MemoryStream();
+            await using (Stream entrada = archivo.OpenReadStream(MaximoBytesVideo, ct))
+                await entrada.CopyToAsync(memoria, ct);
+            return VideoFormulario.Nuevo(memoria.ToArray(), archivo.Name, archivo.ContentType);
+        }
+
+        /// <summary>Sube a Cloudinary, en orden, los videos que todavía no tienen URL.</summary>
+        public async Task SubirVideosPendientesAsync(IEnumerable<VideoFormulario> videos, CancellationToken ct = default)
+        {
+            foreach (VideoFormulario video in videos.Where(v => v.Pendiente).ToList())
+            {
+                try
+                {
+                    using var contenido = new MemoryStream(video.Contenido!, writable: false);
+                    video.MarcarSubido(await SubirAsync(contenido, video.Nombre, video.Tipo!, ct, esVideo: true));
+                }
+                catch (SuraChihException ex)
+                {
+                    throw new ReglaNegocioException($"No se pudo subir el video {video.Nombre}. {ex.Message}", ex);
+                }
+            }
+        }
+
+        /// <returns>La <c>secure_url</c> (https) de la foto o el video subido.</returns>
+        private async Task<string> SubirAsync(Stream contenido, string nombre, string tipo, CancellationToken ct = default, bool esVideo = false)
+        {
+            string que = esVideo ? "videos" : "fotos";
             if (!Configurado)
             {
                 if (ModoPrueba)
                     // La galería no repite URLs: el número las distingue (Cloudinary ignora la query).
-                    return $"{FotoDemo}?foto={Interlocked.Increment(ref _demo)}";
+                    return $"{(esVideo ? VideoDemo : FotoDemo)}?{(esVideo ? "video" : "foto")}={Interlocked.Increment(ref _demo)}";
                 throw new ReglaNegocioException(
-                    "Para subir fotos falta configurar Cloudinary (CloudinaryCloudName y CloudinaryUploadPreset en dbsettings.local.json).");
+                    $"Para subir {que} falta configurar Cloudinary (CloudinaryCloudName y CloudinaryUploadPreset en dbsettings.local.json).");
             }
 
             using var formulario = new MultipartFormDataContent();
@@ -114,11 +162,17 @@ namespace Interfaz.Servicios
             HttpResponseMessage respuesta;
             try
             {
-                respuesta = await Http.PostAsync($"https://api.cloudinary.com/v1_1/{_config.CloudinaryNube}/image/upload", formulario, ct);
+                // Cloudinary separa fotos (image/upload) y videos (video/upload); el mismo preset sirve si permite videos.
+                HttpClient cliente = esVideo ? HttpVideos : Http;
+                respuesta = await cliente.PostAsync($"https://api.cloudinary.com/v1_1/{_config.CloudinaryNube}/{(esVideo ? "video" : "image")}/upload", formulario, ct);
             }
             catch (HttpRequestException)
             {
-                throw new ReglaNegocioException("No se pudo subir la foto. Revisa tu conexión a internet.");
+                throw new ReglaNegocioException($"No se pudo subir {(esVideo ? "el video" : "la foto")}. Revisa tu conexión a internet.");
+            }
+            catch (TaskCanceledException) when (!ct.IsCancellationRequested)
+            {
+                throw new ReglaNegocioException($"Se tardó demasiado en subir {(esVideo ? "el video" : "la foto")}. Revisa tu conexión a internet.");
             }
 
             using (respuesta)
@@ -127,12 +181,14 @@ namespace Interfaz.Servicios
                 if (!respuesta.IsSuccessStatusCode)
                 {
                     System.Diagnostics.Debug.WriteLine($"[Cloudinary] {(int)respuesta.StatusCode}: {cuerpo}");
-                    throw new ReglaNegocioException("Cloudinary no aceptó la foto. Intenta con otra.");
+                    throw new ReglaNegocioException(esVideo
+                        ? "Cloudinary no aceptó el video. Revisa que tu upload preset permita videos, o intenta con otro."
+                        : "Cloudinary no aceptó la foto. Intenta con otra.");
                 }
                 using JsonDocument json = JsonDocument.Parse(cuerpo);
                 return json.RootElement.TryGetProperty("secure_url", out JsonElement url) && url.GetString() is { } segura
                     ? segura
-                    : throw new ReglaNegocioException("Cloudinary no devolvió la dirección de la foto.");
+                    : throw new ReglaNegocioException($"Cloudinary no devolvió la dirección {(esVideo ? "del video" : "de la foto")}.");
             }
         }
     }
@@ -166,6 +222,38 @@ namespace Interfaz.Servicios
             Url = url;
             Vista = url;
             Contenido = null;   // ya no hace falta tenerla en memoria
+        }
+    }
+
+    /// <summary>
+    /// Un video del local en "Hazte organizador": ya subido (<see cref="Url"/> de Cloudinary) o elegido pero aún
+    /// sin subir (<see cref="Pendiente"/>, con el archivo en memoria).
+    /// </summary>
+    public sealed class VideoFormulario
+    {
+        private VideoFormulario() { }
+
+        /// <summary><c>secure_url</c> de Cloudinary; null mientras no se sube.</summary>
+        public string? Url { get; private set; }
+        public byte[]? Contenido { get; private set; }
+        /// <summary>Nombre del archivo (o "Video 1" si ya estaba guardado).</summary>
+        public string Nombre { get; private init; } = "";
+        public string? Tipo { get; private init; }
+        /// <summary>Tamaño en bytes (0 si ya estaba guardado).</summary>
+        public long Bytes { get; private init; }
+
+        public bool Pendiente => Url == null;
+
+        /// <summary>Video que ya estaba guardado (al reenviar una solicitud rechazada).</summary>
+        public static VideoFormulario Existente(string url, int numero) => new() { Url = url, Nombre = $"Video {numero}" };
+
+        public static VideoFormulario Nuevo(byte[] contenido, string nombre, string tipo) =>
+            new() { Contenido = contenido, Nombre = nombre, Tipo = tipo, Bytes = contenido.LongLength };
+
+        internal void MarcarSubido(string url)
+        {
+            Url = url;
+            Contenido = null;   // ya no hace falta tenerlo en memoria
         }
     }
 }

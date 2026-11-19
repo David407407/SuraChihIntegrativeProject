@@ -7,6 +7,80 @@
 /* Estilos propios de Leaflet (empaquetado en /vendor, sin internet). */
 @import url("../vendor/leaflet/leaflet.css");
 
+/* ---- Mini mapa con botón "Agrandar" (Componentes/Mapa/MapaAgrandable.razor) ---- */
+.mapa-agrandable { position: relative; overflow: hidden; }
+.mapa-agrandable > sc-mapa { width: 100%; height: 100%; min-height: 0; border-radius: inherit; }
+.mapa-agrandable__boton {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;            /* encima del mapa (que se aísla con z-index: 0) */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radio-pildora);
+  background: var(--color-superficie);
+  box-shadow: 0 2px 8px rgba(11, 27, 58, 0.25);
+  color: var(--color-tinta);
+  font: 700 13px/1 var(--fuente-cuerpo);
+  cursor: pointer;
+  transition: transform var(--duracion-rapida);
+}
+.mapa-agrandable__boton:hover { transform: scale(1.04); }
+.mapa-agrandable__boton:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; }
+
+/* ---- Ventana del mapa grande (la crea mapaAgrandar en js/interop.js) ---- */
+.mapa-grande {
+  display: flex;
+  flex-direction: column;
+  width: min(1100px, 92vw);
+  height: min(760px, 86vh);
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio-l, 20px);
+  overflow: hidden;
+  background: var(--color-superficie);
+  box-shadow: 0 24px 64px rgba(11, 27, 58, 0.35);
+}
+.mapa-grande:not([open]) { display: none; }
+.mapa-grande::backdrop { background: rgba(11, 27, 58, 0.55); }
+.mapa-grande__cabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px 14px 24px;
+  border-bottom: 1px solid var(--color-linea);
+}
+.mapa-grande__titulo {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-tinta);
+  font: 700 18px/26px var(--fuente-cuerpo);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mapa-grande__cerrar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio-pildora);
+  background: var(--color-fondo);
+  cursor: pointer;
+}
+.mapa-grande__cerrar:hover { background: var(--color-linea); }
+.mapa-grande__cerrar:focus-visible { outline: 2px solid var(--color-cielo); outline-offset: 2px; }
+.mapa-grande__mapa { flex: 1; min-height: 0; }
+
 /* ---- <sc-mapa>: ocupa la caja que le dé el padre (el padre decide alto y redondeo) ---- */
 sc-mapa {
   position: relative;

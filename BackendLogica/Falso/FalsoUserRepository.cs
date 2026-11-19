@@ -10,7 +10,7 @@ namespace BackendLogica.Falso
     {
         internal FalsoUserRepository(AlmacenFalso almacen) : base(almacen) { }
 
-        public Task<Usuario> RegistrarAsync(string nombreUsuario, string correo, string contrasena, CancellationToken ct = default) =>
+        public Task<Usuario> RegistrarAsync(string nombreUsuario, string correo, string contrasena, DatosPersonales? personales = null, CancellationToken ct = default) =>
             Hacer(a =>
             {
                 nombreUsuario = nombreUsuario.Trim();
@@ -18,12 +18,15 @@ namespace BackendLogica.Falso
                 Validar.NombreUsuario(nombreUsuario);
                 Validar.Correo(correo);
                 Contrasenas.Validar(contrasena);
+                if (personales != null) Validar.DatosPersonales(personales);
                 RevisarDuplicados(a, nombreUsuario, correo, excepto: null);
 
                 var fila = new FilaUsuario
                 {
                     Id = AlmacenFalso.Siguiente(a.Usuarios, u => u.Id),
                     NombreUsuario = nombreUsuario, Correo = correo, Hash = Contrasenas.Hashear(contrasena),
+                    Nombre = personales?.Nombre.Trim(), Apellidos = personales?.Apellidos.Trim(),
+                    FechaNacimiento = personales?.FechaNacimiento,
                     Activo = true, CreadoEn = Ahora
                 };
                 a.Usuarios.Add(fila);

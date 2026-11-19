@@ -24,6 +24,9 @@ CREATE TABLE user (
     username       VARCHAR(30)  NOT NULL,
     email          VARCHAR(254) NOT NULL,
     password_hash  CHAR(60)     NOT NULL,              -- BCrypt (BCrypt.Net-Next)
+    first_name     VARCHAR(60)  NULL,                  -- nombre(s); NULL en cuentas de Google o anteriores
+    last_name      VARCHAR(80)  NULL,                  -- apellidos
+    birth_date     DATE         NULL,                  -- fecha de nacimiento
     avatar_url     VARCHAR(500) NULL,                  -- URL en la nube
     is_mod         BOOLEAN      NOT NULL DEFAULT FALSE,
     is_super_mod   BOOLEAN      NOT NULL DEFAULT FALSE, -- elimina cuentas de moderador; siempre es moderador
@@ -45,11 +48,23 @@ CREATE TABLE organizer_profile (
     description    VARCHAR(500) NULL,
     social_url     VARCHAR(500) NOT NULL,              -- evidencia publica que revisa el moderador
     whatsapp       VARCHAR(15)  NOT NULL,              -- solo digitos con lada: 526141234567
+    rfc            VARCHAR(13)  NULL,                  -- RFC del negocio (12 persona moral, 13 persona fisica)
     status         ENUM('pending','approved','rejected','suspended') NOT NULL DEFAULT 'pending',
     is_verified    BOOLEAN      NOT NULL DEFAULT FALSE, -- badge tras historial limpio
     requested_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_orgprof_user FOREIGN KEY (user_id) REFERENCES user(id),
-    CONSTRAINT ck_orgprof_whatsapp CHECK (REGEXP_LIKE(whatsapp, '^[0-9]{10,15}$'))
+    CONSTRAINT ck_orgprof_whatsapp CHECK (REGEXP_LIKE(whatsapp, '^[0-9]{10,15}$')),
+    CONSTRAINT ck_orgprof_rfc CHECK (rfc IS NULL OR REGEXP_LIKE(rfc, '^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$', 'c'))
+);
+
+-- Videos del local que manda el organizador con su solicitud (URL de Cloudinary). El moderador los revisa.
+CREATE TABLE organizer_video (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT UNSIGNED     NOT NULL,
+    url         VARCHAR(500)     NOT NULL,
+    position    TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    CONSTRAINT fk_orgvideo_profile FOREIGN KEY (user_id) REFERENCES organizer_profile(user_id) ON DELETE CASCADE,
+    INDEX ix_orgvideo_user (user_id, position)
 );
 
 -- Recuperacion de contrasena por correo. Se guarda el HASH del token, nunca el token.

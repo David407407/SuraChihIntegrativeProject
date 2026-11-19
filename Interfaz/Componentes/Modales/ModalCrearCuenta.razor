@@ -1,9 +1,11 @@
 @*
-  "Modal / Crear cuenta" de Figma. Las reglas son las de la BD (Utilidades/ReglasCuenta.cs): usuario de 3 a
-  30 caracteres con letras, números, punto o guion bajo, correo válido y contraseña de 8+ con letras y números.
+  "Modal / Crear cuenta" de Figma. Las reglas son las de la BD (Utilidades/ReglasCuenta.cs): nombre y apellidos
+  de 2+ letras, fecha de nacimiento (mínimo 13 años), usuario de 3 a 30 caracteres con letras, números, punto o
+  guion bajo, correo válido y contraseña de 8+ con letras y números.
   Se revisan antes de mandar y BackendLogica las vuelve a revisar; sus errores (correo repetido...) se
   pintan en su campo. Con la cuenta creada, la modal cambia a "¿Qué te gusta hacer?" (ModalGustos).
 *@
+@using System.Globalization
 @inject ServicioCuenta Cuenta
 @inject Modales Modales
 @inject Avisos Avisos
@@ -12,6 +14,29 @@
 <BotonesSociales Errores="_errores" AlAvisar="StateHasChanged" />
 <EditForm Model="_datos" OnSubmit="EnviarAsync" class="modal__formulario" novalidate>
     <AvisoModal Errores="_errores" />
+    <div class="crear__fila">
+        <Campo Nombre="nombre" Etiqueta="Nombre(s)" Icono="usuario" @bind-Valor="_datos.Nombre"
+               Requerido Autocompletar="given-name" Maximo="ReglasCuenta.MaximoNombre" Errores="_errores" />
+        <Campo Nombre="apellidos" Etiqueta="Apellidos" Icono="usuario" @bind-Valor="_datos.Apellidos"
+               Requerido Autocompletar="family-name" Maximo="ReglasCuenta.MaximoApellidos" Errores="_errores" />
+    </div>
+
+    @* Fecha nativa con la forma de "Campo" (48px, píldora, icono): FluentTextInput no tiene tipo fecha. *@
+    <div class="nacimiento @(_errores["nacimiento"] != null ? "nacimiento--error" : "")">
+        <label class="nacimiento__etiqueta t-small texto-2" for="campo-nacimiento">Fecha de nacimiento</label>
+        <div class="nacimiento__caja">
+            <Icono Nombre="calendario-gris-16" />
+            <input id="campo-nacimiento" name="nacimiento" type="date" class="nacimiento__control" required
+                   autocomplete="bday" min="@ReglasCuenta.NacimientoMinimo" max="@ReglasCuenta.NacimientoMaximo"
+                   value="@_datos.Nacimiento" aria-invalid="@(_errores["nacimiento"] != null ? "true" : null)"
+                   @onchange="CambiarNacimiento" />
+        </div>
+        @if (_errores["nacimiento"] is { } errorNacimiento)
+        {
+            <p class="nacimiento__error t-caption" role="alert">@errorNacimiento</p>
+        }
+    </div>
+
     <Campo Nombre="nombreUsuario" Etiqueta="Nombre de usuario" Icono="usuario" @bind-Valor="_datos.NombreUsuario"
            Requerido Autocompletar="username" Maximo="30" Errores="_errores" />
     <Campo Nombre="correo" Etiqueta="Correo electrónico" Tipo="email" Icono="correo" @bind-Valor="_datos.Correo"
@@ -37,6 +62,10 @@
 
     private sealed class Datos
     {
+        public string? Nombre { get; set; }
+        public string? Apellidos { get; set; }
+        /// <summary>Lo que da el input type="date": "aaaa-mm-dd" (o vacío).</summary>
+        public string? Nacimiento { get; set; }
         public string? NombreUsuario { get; set; }
         public string? Correo { get; set; }
         public string? Contrasena { get; set; }
@@ -48,14 +77,31 @@
         if (ReglasCuenta.EsCorreo(Correo)) _datos.Correo = Correo;
     }
 
+    private void CambiarNacimiento(ChangeEventArgs e)
+    {
+        _datos.Nacimiento = e.Value?.ToString();
+        _errores.Quitar("nacimiento");
+    }
+
     private async Task EnviarAsync()
     {
         _errores.Limpiar();
-        string nombre = _datos.NombreUsuario?.Trim() ?? "";
+        string nombre = _datos.Nombre?.Trim() ?? "";
+        string apellidos = _datos.Apellidos?.Trim() ?? "";
+        string nombreUsuario = _datos.NombreUsuario?.Trim() ?? "";
         string correo = _datos.Correo?.Trim() ?? "";
         string contrasena = _datos.Contrasena ?? "";
 
-        if (ReglasCuenta.ErrorNombreUsuario(nombre) is { } errorNombre) { _errores.Poner("nombreUsuario", errorNombre); return; }
+        // Se revisan en el orden en que aparecen: el primero con error se queda con el foco.
+        if (ReglasCuenta.ErrorNombre(nombre) is { } errorNombre) { _errores.Poner("nombre", errorNombre); return; }
+        if (ReglasCuenta.ErrorApellidos(apellidos) is { } errorApellidos) { _errores.Poner("apellidos", errorApellidos); return; }
+        if (!DateOnly.TryParseExact(_datos.Nacimiento, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly nacimiento))
+        {
+            _errores.Poner("nacimiento", "Escribe tu fecha de nacimiento.");
+            return;
+        }
+        if (ReglasCuenta.ErrorNacimiento(nacimiento) is { } errorNacimiento) { _errores.Poner("nacimiento", errorNacimiento); return; }
+        if (ReglasCuenta.ErrorNombreUsuario(nombreUsuario) is { } errorUsuario) { _errores.Poner("nombreUsuario", errorUsuario); return; }
         if (ReglasCuenta.ErrorCorreo(correo) is { } errorCorreo) { _errores.Poner("correo", errorCorreo); return; }
         if (ReglasCuenta.ErrorContrasena(contrasena) is { } debil) { _errores.Poner("contrasena", debil); return; }
         if (contrasena != _datos.Confirmacion) { _errores.Poner("confirmacion", ReglasCuenta.NoCoinciden); return; }
@@ -63,14 +109,16 @@
         _enviando = true;
         try
         {
-            Usuario usuario = await Cuenta.RegistrarAsync(nombre, correo, contrasena, _datos.Confirmacion);
-            Avisos.Mostrar($"¡Bienvenido a SuraChih, {usuario.NombreUsuario}!");
+            Usuario usuario = await Cuenta.RegistrarAsync(nombreUsuario, correo, contrasena, _datos.Confirmacion,
+                new DatosPersonales(nombre, apellidos, nacimiento));
+            Avisos.Mostrar($"¡Bienvenido a SuraChih, {nombre}!");
             _ = Modales.GustosAsync(bienvenida: true);   // la modal cambia a "¿Qué te gusta hacer?"
         }
         catch (Exception ex)
         {
             string mensaje = MensajesError.Para(ex);
-            if (ErroresCuenta.CampoDe(mensaje, "nombreUsuario", "correo", "contrasena", "confirmacion") is { } campo) _errores.Poner(campo, mensaje);
+            if (ErroresCuenta.CampoDe(mensaje, "nombre", "apellidos", "nacimiento", "nombreUsuario", "correo", "contrasena", "confirmacion") is { } campo)
+                _errores.Poner(campo, mensaje);
             else _errores.PonerAviso(mensaje);
         }
         finally

@@ -1,0 +1,40 @@
+@*
+  Mini mapa (un pin fijo) con un botón "Agrandar" que abre el mismo mapa en una ventana grande.
+  Se usa en la ubicación del detalle de evento, del detalle de lugar y de "Revisar lugar".
+  El tamaño del mini mapa lo da la clase que le pases con Clase (igual que <Mapa>).
+
+  <MapaAgrandable Clase="hoja__mapa" Lat="evento.Latitud" Lng="evento.Longitud" Titulo="@evento.LugarNombre" />
+
+  La ventana grande la crea js/interop.js (mapaAgrandar) fuera de la hoja de detalle, para que quede encima
+  de todo y que Esc cierre solo el mapa grande.
+*@
+@inject InteropJs Js
+
+<div class="mapa-agrandable @Clase">
+    <Mapa Lat="Lat" Lng="Lng" Titulo="@Titulo" Zoom="Zoom" AriaLabel="@AriaLabel" />
+    @if (Lat != null && Lng != null)
+    {
+        <button type="button" class="mapa-agrandable__boton" title="Ver el mapa más grande"
+                aria-label="@($"Agrandar el mapa{(string.IsNullOrWhiteSpace(Titulo) ? "" : $" de {Titulo}")}")" @onclick="AgrandarAsync">
+            <Icono Nombre="expandir-tinta-16" Caja="16" />
+            <span>Agrandar</span>
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public decimal? Lat { get; set; }
+    [Parameter] public decimal? Lng { get; set; }
+    /// <summary>Texto del pin y título de la ventana grande.</summary>
+    [Parameter] public string? Titulo { get; set; }
+    [Parameter] public int? Zoom { get; set; }
+    [Parameter] public string? AriaLabel { get; set; }
+    /// <summary>Tamaño y redondeo del mini mapa (p. ej. "hoja__mapa").</summary>
+    [Parameter] public string? Clase { get; set; }
+
+    private async Task AgrandarAsync()
+    {
+        if (Lat is not { } lat || Lng is not { } lng) return;
+        await Js.LlamarAsync("mapaAgrandar", lat, lng, Titulo ?? "");
+    }
+}
